@@ -383,6 +383,25 @@ jobs:
             perl -pi -e 's/^\s*"protected_exports_list"\s*:\s*"android\/abi_gki_protected_exports_aarch64",\s*$//;' ./common/BUILD.bazel
           fi
 
+      - name: Set file name
+        run: |
+          # Set artifact name base for consistent naming
+          # Prepare sublevel for naming
+          SUBLEVEL_FOR_NAME="${{ inputs.sub_level }}"
+          if [ -n "$ACTUAL_SUBLEVEL" ]; then
+            SUBLEVEL_FOR_NAME="$ACTUAL_SUBLEVEL"
+          fi
+          # Set artifact name base for consistent naming
+          ARTIFACT_BASE="WKSU-${{ env.KSUVER }}-SUSFS_${{ matrix.apply_susfs_v1_5_9 }}-${{ inputs.android_version }}-${{ inputs.kernel_version }}.${SUBLEVEL_FOR_NAME}-${{ inputs.os_patch_level }}-${{ matrix.apply_module_check_bypass == 'bypass' && 'Module_Check_Bypass' || 'Normal' }}"
+          echo "ARTIFACT_BASE=$ARTIFACT_BASE" >> $GITHUB_ENV
+          echo "FILE_NAME=$ARTIFACT_BASE" >> $GITHUB_ENV
+          
+          # Debug output to show the actual artifact name being used
+          echo "🔍 DEBUG: Generated artifact name: $ARTIFACT_BASE"
+          echo "🔍 DEBUG: Matrix values - SUSFS: ${{ matrix.apply_susfs_v1_5_9 }}, Module Check: ${{ matrix.apply_module_check_bypass }}"
+          echo "🔍 DEBUG: Input values - Android: ${{ inputs.android_version }}, Kernel: ${{ inputs.kernel_version }}, Sub-level: ${{ inputs.sub_level }}, OS Patch: ${{ inputs.os_patch_level }}"
+          echo "🔍 DEBUG: Runtime values - Run ID: ${{ github.run_id }}, Job: ${{ github.job }}, KSU Version: ${{ env.KSUVER }}"
+
       - name: Build
         run : |
           set -e
@@ -394,19 +413,6 @@ jobs:
           else
             tools/bazel build --config=fast --lto=thin //common:kernel_aarch64_dist || exit 1
           fi
-
-      - name: Set file name
-        run: |
-          # Set artifact name base for consistent naming
-          # Prepare sublevel for naming
-          SUBLEVEL_FOR_NAME="${{ inputs.sub_level }}"
-          if [ -n "$ACTUAL_SUBLEVEL" ]; then
-            SUBLEVEL_FOR_NAME="$ACTUAL_SUBLEVEL"
-          fi
-          # Add workflow run ID to ensure uniqueness across multiple workflow calls
-          ARTIFACT_BASE="WKSU-${{ env.KSUVER }}-SUSFS_${{ matrix.apply_susfs_v1_5_9 }}-${{ inputs.android_version }}-${{ inputs.kernel_version }}.${SUBLEVEL_FOR_NAME}-${{ inputs.os_patch_level }}-${{ matrix.apply_module_check_bypass == 'bypass' && 'Module_Check_Bypass' || 'Normal' }}-${{ github.run_id }}"
-          echo "ARTIFACT_BASE=$ARTIFACT_BASE" >> $GITHUB_ENV
-          echo "FILE_NAME=$ARTIFACT_BASE" >> $GITHUB_ENV
 
       - name: Prepare AnyKernel3
         run: |
