@@ -139,7 +139,7 @@ jobs:
           fi
 
       - name: Apply glibc 2.38 Compatibility Fix
-        if: inputs.android_version == 'android14' && (inputs.kernel_version == '5.15' || inputs.kernel_version == '6.1')
+        if: inputs.android_version == 'android14' &&  inputs.kernel_version == '6.1'
         run: |
           if [ ! -e build/build.sh ]; then 
             GLIBC_VERSION=$(ldd --version 2>/dev/null | head -n 1 | awk '{print $NF}') 
@@ -257,6 +257,7 @@ jobs:
           wget -O- https://github.com/vc-teahouse/Baseband-guard/raw/main/setup.sh | bash
           echo "CONFIG_BBG=y" >> arch/arm64/configs/gki_defconfig
           sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/landlock/landlock,baseband_guard/ } }' security/Kconfig
+          sed -i '/^obj-\$$(CONFIG_BBG) += baseband_guard.o/i # Include kernel config symbols (safe point)\n-include $(srctree)/include/config/auto.conf' security/baseband_guard/Makefile
 
       - name: Apply Module Check Bypass
         if: ${{ matrix.apply_module_check_bypass == 'bypass' }}
