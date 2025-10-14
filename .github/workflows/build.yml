@@ -91,21 +91,6 @@ jobs:
           if [ "${{ matrix.apply_susfs_v1_5_9 }}" = "v1.5.9" ]; then
             cd susfs4ksu
             case "${{ inputs.android_version }}-${{ inputs.kernel_version }}" in
-              "android15-6.6")
-                git checkout 2598fee8963adab11c255bf28521df32912e027f
-                ;;
-              "android14-6.1")
-                git checkout 646cfabce9d5dba5b806e9cbe2c198128ebd0e69
-                ;;
-              "android14-5.15")
-                git checkout ab4d9570a9494a67c290002f3b28e69dd370a0f5
-                ;;
-              "android13-5.15")
-                git checkout a21f265695f2869a6f3fc71a70328aa6d0f4a3ae
-                ;;
-              "android13-5.10")
-                git checkout 8acbd10775a447f546b14c6bded6f476a7f4733f
-                ;;
               "android12-5.10")
                 git checkout 6f42c0e24e35a6fa0fc43051a5f1e7dfe568e8c2
                 ;;
