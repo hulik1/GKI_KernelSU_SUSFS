@@ -89,28 +89,28 @@ jobs:
           git clone https://gitlab.com/simonpunk/susfs4ksu.git -b "$SUSFS_BRANCH"
 
           # Checkout specific commits for SUSFS v1.5.12
-          cd susfs4ksu
-          case "${{ inputs.android_version }}-${{ inputs.kernel_version }}" in
-            "android12-5.10")
-              git checkout ed19454a4b5905e6718c9a22fad769b906837931
-              ;;
-            "android13-5.10")
-              git checkout 8919927b63d95e62d33842452b9a60546187fb7b
-              ;;
-            "android13-5.15")
-              git checkout 700b9316b5a1cab174401b57f4198782a17154fb
-              ;;
-            "android14-5.15")
-              git checkout e1b1bba04b3cada700b8fd5bda4cfd4c59de07a2
-              ;;
-            "android14-6.1")
-              git checkout f16560ce8263fbfa9b2f259e9531f72d6fda4e3f
-              ;;
-            "android15-6.6")
-              git checkout c49b1dab205bbc4ef20b120e84c5b7530355961d
-              ;;
-          esac
-          cd ..
+          #cd susfs4ksu
+          #case "${{ inputs.android_version }}-${{ inputs.kernel_version }}" in
+          #  "android12-5.10")
+          #    git checkout ed19454a4b5905e6718c9a22fad769b906837931
+          #    ;;
+          #  "android13-5.10")
+          #    git checkout 8919927b63d95e62d33842452b9a60546187fb7b
+          #    ;;
+          #  "android13-5.15")
+          #    git checkout 700b9316b5a1cab174401b57f4198782a17154fb
+          #    ;;
+          #  "android14-5.15")
+          #    git checkout e1b1bba04b3cada700b8fd5bda4cfd4c59de07a2
+          #    ;;
+          #  "android14-6.1")
+          #    git checkout f16560ce8263fbfa9b2f259e9531f72d6fda4e3f
+          #    ;;
+          #  "android15-6.6")
+          #    git checkout c49b1dab205bbc4ef20b120e84c5b7530355961d
+          #    ;;
+          #esac
+          #cd ..
           
 
       - name: Initialize and Sync Kernel Source
@@ -250,6 +250,11 @@ jobs:
             sed -i 's/i_uid_into_mnt(i_user_ns(inode), inode)/i_uid_into_mnt(inode->i_sb->s_user_ns, inode)/g' fs/susfs.c
           fi
 
+          if ${{ inputs.sub_level }} == 'X'; then
+            cp ../../kernel_patches/wild/susfs_fix_patches/v${SUSFS_VERSION}/fix_base.c.patch ./
+            patch -p1 < fix_base.c.patch || true
+          fi
+
           # Apply KSU integration patches
           cd ../Wild_KSU
           cp ../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch .
@@ -306,27 +311,7 @@ jobs:
           echo "Adding BBG..."
           wget -O- https://github.com/vc-teahouse/Baseband-guard/raw/main/setup.sh | bash
           echo "CONFIG_BBG=y" >> common/arch/arm64/configs/gki_defconfig
-          
-          # Before sed: Show the original LSM default line for comparison
-          echo "=== Before sed ==="
-          sed -n '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ p }' common/security/Kconfig
-          
-          # Apply the sed command to add baseband_guard to default security configurations
           sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/lockdown/lockdown,baseband_guard/ } }' common/security/Kconfig
-          
-          # After sed: Show the updated LSM default line
-          echo "=== After sed ==="
-          sed -n '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ p }' common/security/Kconfig
-          
-          # Confirm baseband_guard is now present (should output the line if successful)
-          echo "=== Confirmation: grep for baseband_guard ==="
-          if ! grep -q "baseband_guard" common/security/Kconfig; then
-            echo "ERROR: baseband_guard not found after sed - stopping workflow"
-            exit 1
-          else
-            echo "SUCCESS: baseband_guard found in security configuration"
-            grep "baseband_guard" common/security/Kconfig
-          fi
 
       - name: Apply Module Check Bypass
         if: ${{ matrix.apply_bypass == 'bypass' }}
@@ -340,7 +325,7 @@ jobs:
           fi
 
       - name: Fix WiFi and Bluetooth on Samsung 6.6 GKI devices
-        if: ${{ ( inputs.kernel_version == '6.6' ) }} && true
+        if: ${{ ( inputs.kernel_version == '6.6' ) }}
         run: |
           SYMBOL_LIST=$CONFIG/common/android/abi_gki_aarch64_galaxy
           echo "kdp_set_cred_non_rcu" >> $SYMBOL_LIST
@@ -453,7 +438,7 @@ jobs:
           echo "CONFIG_KSU_SUSFS_SUS_SU=n" >> "${{ env.DEFCONFIG }}"
 
       - name: Configure Sound
-        if: true
+        if: false
         run: |
           cd "$CONFIG"
           # Sound Configuration
