@@ -142,8 +142,7 @@ jobs:
           cd "$CONFIG"
           du -BG -d 2 | sort -nr
 
-      - name: Extract Actual Sublevel for LTS Builds
-        if: inputs.sub_level == 'X'
+      - name: Extract Actual Sublevel
         run: |
           cd "$CONFIG/common"
           
@@ -250,17 +249,17 @@ jobs:
           fi
 
           # Use ACTUAL_SUBLEVEL for LTS or actual kernel sublevel if available
-          if ( [[ "${{ inputs.android_version }}" == "android14" ]] && [[ "${{ inputs.kernel_version }}" == "6.1" ]] && (( $ACTUAL_SUBLEVEL >= 145 )) ) \
+          if ( [[ "${{ inputs.android_version }}" == "android12" ]] && [[ "${{ inputs.kernel_version }}" == "5.10" ]] && (( $ACTUAL_SUBLEVEL <= 43 )) ) \
+            || ( [[ "${{ inputs.android_version }}" == "android14" ]] && [[ "${{ inputs.kernel_version }}" == "6.1" ]] && (( $ACTUAL_SUBLEVEL >= 145 )) ) \
             || ( [[ "${{ inputs.android_version }}" == "android15" ]] && [[ "${{ inputs.kernel_version }}" == "6.6" ]] && (( $ACTUAL_SUBLEVEL >= 98 )) ); then
             cp ../../kernel_patches/wild/susfs_fix_patches/v${SUSFS_VERSION}/1_fix_base.c.patch ./
             patch -p1 < 1_fix_base.c.patch || true
           fi
 
-          #if ( [[ "${{ inputs.android_version }}" == "android14" ]] && [[ "${{ inputs.kernel_version }}" == "6.1" ]] && (( $ACTUAL_SUBLEVEL >= 145 )) ) \
-          #  || ( [[ "${{ inputs.android_version }}" == "android15" ]] && [[ "${{ inputs.kernel_version }}" == "6.6" ]] && (( $ACTUAL_SUBLEVEL >= 98 )) ); then
-          #  cp ../../kernel_patches/wild/susfs_fix_patches/v${SUSFS_VERSION}/2_fix_base.c.patch ./
-          #  patch -p1 < 2_fix_base.c.patch || true
-          #fi
+          if [[ "${{ inputs.android_version }}" == "android12" ]] && [[ "${{ inputs.kernel_version }}" == "5.10" ]] && (( $ACTUAL_SUBLEVEL <= 43 )); then
+            cp ../../kernel_patches/wild/susfs_fix_patches/v${SUSFS_VERSION}/2_fix_base.c.patch ./
+            patch -p1 < 2_fix_base.c.patch || true
+          fi
 
           if ( [[ "${{ inputs.android_version }}" == "android15" ]] && [[ "${{ inputs.kernel_version }}" == "6.6" ]] && (( $ACTUAL_SUBLEVEL <= 58 )) ); then
             cp ../../kernel_patches/wild/susfs_fix_patches/v${SUSFS_VERSION}/fix_task_mmu.c.patch ./
@@ -700,6 +699,7 @@ jobs:
           compression-level: 9
 
       - name: Upload Boot Image
+        if: hashFiles('*-boot.img') != ''
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.FILE_NAME }}-boot.img
@@ -708,6 +708,7 @@ jobs:
           compression-level: 9
           
       - name: Upload Boot Image (GZ)
+        if: hashFiles('*-boot-gz.img') != ''
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.FILE_NAME }}-boot-gz.img
@@ -716,6 +717,7 @@ jobs:
           compression-level: 9
           
       - name: Upload Boot Image (LZ4)
+        if: hashFiles('*-boot-lz4.img') != ''
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.FILE_NAME }}-boot-lz4.img
@@ -802,8 +804,8 @@ jobs:
           # Add artifact summary with presence verification
           echo "## Build Artifacts" >> $GITHUB_STEP_SUMMARY
       
-          # Verify AnyKernel3 contents
-          if [ -d "AnyKernel3" ] && [ "$(find AnyKernel3 -type f | wc -l)" -gt 0 ]; then
+          # Verify AnyKernel3 contents - check if kernel Image was actually copied (indicates successful build)
+          if [ -d "AnyKernel3" ] && [ -f "AnyKernel3/Image" ]; then
             AK3_STATUS="✅"
           else
             AK3_STATUS="❌"
