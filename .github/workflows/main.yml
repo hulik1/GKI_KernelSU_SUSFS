@@ -25,7 +25,6 @@ on:
           - Actions
           - Pre-Release
           - Release
-          - Release (No Artifacts)
         default: Actions
       build_selection:
         description: "Choose which kernels to build"
@@ -39,56 +38,49 @@ on:
           - Android14-5.15
           - Android14-6.1
           - Android15-6.6
-          - Build Test
         default: All
 
 jobs:
 
   build-a12-5-10:
-    if: (inputs.build_selection == 'All' || inputs.build_selection == 'Android12-5.10') && inputs.release_type != 'Release (No Artifacts)'
+    if: (inputs.build_selection == 'All' || inputs.build_selection == 'Android12-5.10')
     uses: ./.github/workflows/kernel-a12-5-10.yml
     secrets: inherit
 
 
   build-a13-5-10:
-    if: (inputs.build_selection == 'All' || inputs.build_selection == 'Android13-5.10') && inputs.release_type != 'Release (No Artifacts)'
+    if: (inputs.build_selection == 'All' || inputs.build_selection == 'Android13-5.10')
     uses: ./.github/workflows/kernel-a13-5-10.yml
     secrets: inherit
 
 
   build-a13-5-15:
-    if: (inputs.build_selection == 'All' || inputs.build_selection == 'Android13-5.15') && inputs.release_type != 'Release (No Artifacts)'
+    if: (inputs.build_selection == 'All' || inputs.build_selection == 'Android13-5.15')
     uses: ./.github/workflows/kernel-a13-5-15.yml
     secrets: inherit
 
 
   build-a14-5-15:
-    if: (inputs.build_selection == 'All' || inputs.build_selection == 'Android14-5.15') && inputs.release_type != 'Release (No Artifacts)'
+    if: (inputs.build_selection == 'All' || inputs.build_selection == 'Android14-5.15')
     uses: ./.github/workflows/kernel-a14-5-15.yml
     secrets: inherit
 
 
   build-a14-6-1:
-    if: (inputs.build_selection == 'All' || inputs.build_selection == 'Android14-6.1') && inputs.release_type != 'Release (No Artifacts)'
+    if: (inputs.build_selection == 'All' || inputs.build_selection == 'Android14-6.1')
     uses: ./.github/workflows/kernel-a14-6-1.yml
     secrets: inherit
 
 
   build-a15-6-6:
-    if: (inputs.build_selection == 'All' || inputs.build_selection == 'Android15-6.6') && inputs.release_type != 'Release (No Artifacts)'
+    if: (inputs.build_selection == 'All' || inputs.build_selection == 'Android15-6.6')
     uses: ./.github/workflows/kernel-a15-6-6.yml
-    secrets: inherit
-
-
-  build-test:
-    if: inputs.build_selection == 'Build Test'
-    uses: ./.github/workflows/kernel-build-check.yml
     secrets: inherit
 
 
   release:
     runs-on: ubuntu-latest
-    if: (inputs.build_selection == 'All' || inputs.build_selection == 'Build Test') && (inputs.release_type == 'Release (No Artifacts)' || inputs.release_type != 'Actions')
+    if: inputs.release_type != 'Actions'
     needs:
       - build-a12-5-10
       - build-a13-5-10
@@ -119,11 +111,10 @@ jobs:
             echo "NEW_TAG=${NEW_TAG}" >> $GITHUB_ENV
 
       - name: Download Artifacts
-        if: inputs.release_type != 'Release (No Artifacts)'
         uses: actions/download-artifact@v5
         with:
           path: ./downloaded-artifacts
-          pattern: 'WKSU-*-AnyKernel3'
+          pattern: '*-AnyKernel3'
 
       - name: Set release body
         run: |
@@ -182,42 +173,37 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.NEW_TAG }}
-          prerelease: ${{ inputs.release_type == 'Pre-Release' || inputs.build_selection == 'Build Test' }}
+          prerelease: ${{ inputs.release_type == 'Pre-Release' }}
           files: ""
           name: ${{ env.RELEASE_NAME }}
           body_path: release_body.md
 
       - name: Upload Release Assets
-        if: inputs.release_type != 'Release (No Artifacts)'
         run: |
-          for dir in ./downloaded-artifacts/*/; do
-            # Check if this is an AnyKernel3 artifact directory
-            if [[ "$(basename "$dir")" == *"-AnyKernel3" ]]; then
-              artifact_name=$(basename "$dir")
-              echo "Creating ZIP for $artifact_name..."
-              # The entire directory IS the AnyKernel3 content, so zip it directly
-              zip -r -9 "${artifact_name}.zip" "$dir"
-              echo "Uploading ${artifact_name}.zip..."
-              gh release upload ${{ env.NEW_TAG }} "${artifact_name}.zip"
-            fi
-          done
-
-      - name: Display Files Uploaded
-        if: inputs.release_type != 'Release (No Artifacts)'
-        run: |
-          echo "GitHub release created with the following files:"
-          ls ./downloaded-artifacts/**/*
+          shopt -s nullglob
+          anykernel_dirs=(./downloaded-artifacts/*/)
+          if [ ${#anykernel_dirs[@]} -eq 0 ]; then
+            echo "No artifact directories found under ./downloaded-artifacts; skipping upload."
+          else
+            for dir in "${anykernel_dirs[@]}"; do
+              # Check if this is an AnyKernel3 artifact directory
+              if [[ "$(basename "$dir")" == *"-AnyKernel3" ]]; then
+                artifact_name=$(basename "$dir")
+                echo "Creating ZIP for $artifact_name..."
+                # The entire directory IS the AnyKernel3 content, so zip it directly
+                zip -r -9 "${artifact_name}.zip" "$dir"
+                echo "Uploading ${artifact_name}.zip..."
+                gh release upload ${{ env.NEW_TAG }} "${artifact_name}.zip"
+              fi
+            done
+          fi
             
       - name: Send Telegram Notification
-        if: inputs.release_type != 'Build Test'
+        if: inputs.release_type != 'Actions'
         run: |
           RELEASE_TYPE_TEXT=""
           if [ "${{ inputs.release_type }}" == "Pre-Release" ]; then
             RELEASE_TYPE_TEXT="🧪 *Pre-Release*"
-          elif [ "${{ inputs.build_selection }}" == "Build Test" ]; then
-            RELEASE_TYPE_TEXT="🔧 *Build Test*"
-          elif [ "${{ inputs.release_type }}" == "Release (No Artifacts)" ]; then
-            RELEASE_TYPE_TEXT="🚀 *Release*"
           else
             RELEASE_TYPE_TEXT="🚀 *Release*"
           fi
