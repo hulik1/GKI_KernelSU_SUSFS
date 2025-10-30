@@ -21,6 +21,7 @@ on:
 
 jobs:
   build-gki:
+    name: "${{ inputs.kernel_version }}.${{ inputs.sub_level }}-${{ inputs.android_version }}-${{ inputs.os_patch_level }} (${{ matrix.apply_bypass }})"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -422,7 +423,7 @@ jobs:
           echo "CONFIG_KSU_SUSFS_SUS_SU=n" >> "${{ env.DEFCONFIG }}"
 
       - name: Configure Sound 1
-        if: false
+        if: true
         run: |
           cd "$CONFIG"
           # Sound Configuration
@@ -440,14 +441,14 @@ jobs:
           #  echo "sound/drivers/snd-aloop.ko" >> common/android/gki_aarch64_modules
           #else
           #  sed -i '/_COMMON_GKI_MODULES_LIST = \\[/,/\\]/ s/\\]/    "sound\/drivers\/snd-aloop.ko",\\n&/' common/modules.bzl
-          3fi
+          #fi
           
           # Add symbols to abi_gki_aarch64
           #SYMBOL_LIST=common/android/abi_gki_aarch64
           #cat Wild_KSU/kernel/export_symbol.txt | awk '{sub("[ \t]+","");print "  "$0}' >> $SYMBOL_LIST
 
       - name: Configure Sound 2
-        if: false
+        if: true
         run: |
           cd "$CONFIG"
           cp ../kernel_patches/wild/bypass_patches/abi_bypass_gki.patch ./
