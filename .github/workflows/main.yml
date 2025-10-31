@@ -32,6 +32,7 @@ on:
         type: choice
         options:
           - All
+          - Test Build
           - Android12-5.10
           - Android13-5.10
           - Android13-5.15
@@ -41,6 +42,11 @@ on:
         default: All
 
 jobs:
+
+  build-test:
+    if: inputs.build_selection == 'Test Build'
+    uses: ./.github/workflows/test-build.yml
+    secrets: inherit
 
   build-a12-5-10:
     if: (inputs.build_selection == 'All' || inputs.build_selection == 'Android12-5.10')
