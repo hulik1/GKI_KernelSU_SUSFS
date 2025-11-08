@@ -100,6 +100,12 @@ jobs:
       RELEASE_NAME: "GKI Kernels With WKSU & SUSFS v1.5.12"
       RELEASE_BODY: ""
     steps:
+      - name: Download Apache Arrow's util_free_space.sh
+        run: |
+          curl -L -o util_free_space.sh https://raw.githubusercontent.com/apache/arrow/main/ci/scripts/util_free_space.sh
+          chmod +x util_free_space.sh
+          ./util_free_space.sh
+      
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -151,6 +157,7 @@ jobs:
           -> IPSet Support for Advanced Network Filtering
           -> Wireguard Support
           -> BBR v1 Support
+          -> Kernel Sound System: Basic audio support with PCM, timers, procfs info, dynamic devices, and loopback module (module found at /data/adb/lkm after install)
           -> Added BBG support to prevent unauthorised writes to certain partitions: https://github.com/vc-teahouse/Baseband-guard
 
           🔹 BBG (Baseband-guard)
@@ -163,9 +170,9 @@ jobs:
           Notes:
           -> SUS SU Mode 2 will show as disabled or not compatible due to non-kprobe hooks and is not needed anymore!
           -> Official Kernel Flasher is broken with latest susfs, try https://github.com/fatalcoder524/KernelFlasher/
-          -> **boot.img files**: Available as CI artifacts only (not included in releases) - download from the Actions tab 
+          -> **boot.img files**: Available as CI artifacts only - download from the Actions tab in the "Misc" Artifact
           -> **Warning**: boot.img files may not boot on some devices
-          -> **Note:** For detailed commit information and component versions, please check the [build summary](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) in the GitHub Actions workflow that generated this release.
+          -> **Note:** For detailed commit information and component versions, please check the build summary in the "Misc" Artifact
 
           Module: 
           -> https://github.com/sidex15/ksu_module_susfs
