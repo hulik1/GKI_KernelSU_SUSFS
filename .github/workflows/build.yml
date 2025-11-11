@@ -497,7 +497,7 @@ jobs:
           #Add Wild to Kernel Version
           sed -i '$s|echo "\$res"|echo "\$res-Wild"|' ./common/scripts/setlocalversion
           #Set Kernel Timestamp
-          perl -pi -e 's{UTS_VERSION="\$\(echo \$UTS_VERSION \$CONFIG_FLAGS \$TIMESTAMP \| cut -b -\$UTS_LEN\)"}{UTS_VERSION="#1 SMP PREEMPT Sun Apr 20 04:20:00 UTC 2025"}' ./common/scripts/mkcompile_h
+          perl -pi -e 's{UTS_VERSION="\$\(echo \$UTS_VERSION \$CONFIG_FLAGS \$TIMESTAMP \| cut -b -\$UTS_LEN\)"}{UTS_VERSION="#1 SMP PREEMPT \$(date -u +%a\ %b\ %d\ %H:%M:%S\ UTC\ %Y)"}' ./common/scripts/mkcompile_h
           if [ -f "build/build.sh" ]; then
             #Remove Dirty Flag
             sed -i 's/-dirty//' ./common/scripts/setlocalversion
@@ -538,6 +538,7 @@ jobs:
             echo "Error: Image file not found in any expected location"
             exit 1
           fi
+          sed -i 's|^do\.modules=.*|do.modules=1|' ./AnyKernel3/anykernel.sh
 
       - name: Copy snd-aloop module for Android 12-13
         if: inputs.android_version == 'android12' || inputs.android_version == 'android13'
