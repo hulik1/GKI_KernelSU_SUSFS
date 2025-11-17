@@ -178,10 +178,6 @@ jobs:
       - name: Getting KernelSU Version
         run: |
           cd "$CONFIG/Wild_KSU/kernel"
-          BASE_VERSION=10200
-          COMMIT_COUNT=$(/usr/bin/git rev-list --count HEAD)
-          KSU_VERSION=$(expr $COMMIT_COUNT "+" $BASE_VERSION)
-          echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
 
       - name: Apply SUSFS Patches for KernelSU Variants
         run: |
