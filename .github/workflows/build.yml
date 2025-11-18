@@ -18,6 +18,9 @@ on:
       os_patch_level:
         required: true
         type: string
+      variant:
+        required: false
+        type: string
 
 jobs:
   build-gki:
@@ -26,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        apply_bypass: ["normal", "bypass"]
+        apply_bypass: ${{ fromJSON(inputs.variant == 'vTomsonek' && '["vTomsonek"]' || '["normal","bypass"]') }}
 
     steps:
       - name: Check Initial Disk Space
@@ -88,6 +91,19 @@ jobs:
           git clone https://github.com/WildKernels/AnyKernel3.git -b "$ANYKERNEL_BRANCH"
           git clone https://github.com/WildKernels/kernel_patches.git
           git clone https://gitlab.com/simonpunk/susfs4ksu.git -b "$SUSFS_BRANCH"
+
+          cd susfs4ksu
+          TARGET="${{ inputs.android_version }}-${{ inputs.kernel_version }}"
+          COMMIT=""
+          case "$TARGET" in
+            android12-5.10) COMMIT="8a76ba240d1f7315352b49d97d854a4b166e5b47" ;;
+            android13-5.10) COMMIT="e5c9eabfc6dcfc677d11f46ce1d5ff786de60a92" ;;
+            android13-5.15) COMMIT="babf6be195576f09aae79650d47abf6a76e8a21b" ;;
+            android14-5.15) COMMIT="19f339e804ba9aebd9c6d735b965e2b9396c73ae" ;;
+            android14-6.1) COMMIT="a162e2469d0b472545e5e46457eee171c0975fb0" ;;
+            android15-6.6) COMMIT="f450ec00bf592d080f59b01ff6f9242456c9a427" ;;
+          esac
+          git checkout "$COMMIT"
 
       - name: Initialize and Sync Kernel Source
         run: |
@@ -423,7 +439,7 @@ jobs:
           echo "CONFIG_KSU_SUSFS_SUS_SU=n" >> "${{ env.DEFCONFIG }}"
 
       - name: Configure SND
-        if: true
+        if: ${{ inputs.variant == 'vTomsonek' && inputs.android_version == 'android12' && inputs.kernel_version == '5.10' && inputs.sub_level == '226' && inputs.os_patch_level == '2024-11' }}
         run: |
           cd "$CONFIG"
           # Sound Configuration
@@ -436,26 +452,55 @@ jobs:
           echo "CONFIG_SND_PROC_FS=y" >> "${{ env.DEFCONFIG }}"
           echo "CONFIG_SND_ALOOP=m" >> "${{ env.DEFCONFIG }}"
           
+          echo "CONFIG_USB_GADGET=y" >> "${{ env.DEFCONFIG }}"
+          echo "CONFIG_CONFIGFS_FS=y" >> "${{ env.DEFCONFIG }}"
+          echo "CONFIG_USB_CONFIGFS=y" >> "${{ env.DEFCONFIG }}"
+
+          # The modules they want to load on-demand (=m)
+          echo "CONFIG_USB_LIBCOMPOSITE=m" >> "${{ env.DEFCONFIG }}"
+          echo "CONFIG_USB_AUDIO=m" >> "${{ env.DEFCONFIG }}"
+
+          # Function support - can be =y (only active when configured)
+          echo "CONFIG_USB_CONFIGFS_F_UAC1=y" >> "${{ env.DEFCONFIG }}"
+          echo "CONFIG_USB_CONFIGFS_F_UAC2=y" >> "${{ env.DEFCONFIG }}"
+
            # Add snd-aloop.ko to modules list
+          echo "drivers/usb/gadget/legacy/g_audio.ko" >> common/android/gki_aarch64_modules
           echo "sound/drivers/snd-aloop.ko" >> common/android/gki_aarch64_modules
+          #echo "drivers/usb/gadget/libcomposite.ko" >> common/android/gki_aarch64_modules
 
           if [[ -f common/modules.bzl ]]; then
             # Insert before the closing bracket of COMMON_GKI_MODULES_LIST or _COMMON_GKI_MODULES_LIST
-            echo "snd-aloop injection: adding to module list"
+            echo "Audio modules injection: adding to module list"
             if ( [[ "${{ inputs.android_version }}" == "android14" ]] && [[ "${{ inputs.kernel_version }}" == "5.15" ]] && (( $ACTUAL_SUBLEVEL <= 110 )) && [[ "${{ inputs.os_patch_level }}" != "2023-09" ]] ) \
             || ( [[ "${{ inputs.android_version }}" == "android14" ]] && [[ "${{ inputs.kernel_version }}" == "6.1" ]] && (( $ACTUAL_SUBLEVEL <= 25 )) && [[ "${{ inputs.os_patch_level }}" != "2023-09" ]] ); then
+              # snd-aloop
               sed -i '/COMMON_GKI_MODULES_LIST = \[/,/^[[:space:]]*\]/{/^[[:space:]]*\]$/i\    "sound/drivers/snd-aloop.ko",
               }' common/modules.bzl
+              # USB Gadget Audio modules
+              sed -i '/COMMON_GKI_MODULES_LIST = \[/,/^[[:space:]]*\]/{/^[[:space:]]*\]$/i\    "drivers/usb/gadget/libcomposite.ko",
+              }' common/modules.bzl
+              sed -i '/COMMON_GKI_MODULES_LIST = \[/,/^[[:space:]]*\]/{/^[[:space:]]*\]$/i\    "drivers/usb/gadget/legacy/g_audio.ko",
+              }' common/modules.bzl
             else
+              # snd-aloop
               sed -i '/_COMMON_GKI_MODULES_LIST = \[/,/^[[:space:]]*\]/{/^[[:space:]]*\]$/i\    "sound/drivers/snd-aloop.ko",
+              }' common/modules.bzl
+              # USB Gadget Audio modules
+              sed -i '/_COMMON_GKI_MODULES_LIST = \[/,/^[[:space:]]*\]/{/^[[:space:]]*\]$/i\    "drivers/usb/gadget/libcomposite.ko",
+              }' common/modules.bzl
+              sed -i '/_COMMON_GKI_MODULES_LIST = \[/,/^[[:space:]]*\]/{/^[[:space:]]*\]$/i\    "drivers/usb/gadget/legacy/g_audio.ko",
               }' common/modules.bzl
             fi
             
             # Verify the injection was successful
-            if grep -q '"sound/drivers/snd-aloop.ko"' common/modules.bzl; then
-              echo "✓ snd-aloop injection: successfully added to module list"
+            if grep -q '"sound/drivers/snd-aloop.ko"' common/modules.bzl && \
+              grep -q '"drivers/usb/gadget/libcomposite.ko"' common/modules.bzl && \
+              grep -q '"drivers/usb/gadget/legacy/g_audio.ko"' common/modules.bzl && \
+              grep -q '"drivers/usb/gadget/configfs.ko"' common/modules.bzl; then
+              echo "✓ Audio modules injection: successfully added all modules to list"
             else
-              echo "✗ snd-aloop injection: failed to add to module list"
+              echo "✗ Audio modules injection: failed to add one or more modules"
               exit 1
             fi
           fi
@@ -480,17 +525,6 @@ jobs:
             perl -i -pe 's/^(\s*)return 1$/$1print("Who Cares? Bypassing Now!")\n$1return 0/g if /if missing_symbols:/../return 1/' build/kernel/abi/check_buildtime_symbol_protection.py
           fi
 
-      - name: Configure Build Optimization
-        run: |
-          cd "$CONFIG"
-          # Build Optimization Configuration
-          echo "# Build Optimization Configuration" >> "${{ env.DEFCONFIG }}"
-          echo "CONFIG_LTO_CLANG_THIN=y" >> "${{ env.DEFCONFIG }}"
-          echo "CONFIG_LTO_CLANG=y" >> "${{ env.DEFCONFIG }}"
-          echo "CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE=y" >> "${{ env.DEFCONFIG }}"
-          echo "CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE_O3=n" >> "${{ env.DEFCONFIG }}"
-          echo "CONFIG_OPTIMIZE_INLINING=y" >> "${{ env.DEFCONFIG }}"
-
       - name: Change Kernel Name
         run: |
           cd "$CONFIG"
@@ -511,7 +545,7 @@ jobs:
 
       - name: Set file name
         run: |
-          ARTIFACT_BASE="${{ inputs.kernel_version }}.$ACTUAL_SUBLEVEL-${{ inputs.android_version }}-${{ inputs.os_patch_level }}-${{ matrix.apply_bypass == 'bypass' && 'Bypass' || 'Normal' }}"
+          ARTIFACT_BASE="${{ inputs.kernel_version }}.$ACTUAL_SUBLEVEL-${{ inputs.android_version }}-${{ inputs.os_patch_level }}-${{ matrix.apply_bypass == 'bypass' && 'Bypass' || (inputs.variant == 'vTomsonek' && 'vTomsonek' || 'Normal') }}"
           echo "ARTIFACT_BASE=$ARTIFACT_BASE" >> $GITHUB_ENV
           echo "FILE_NAME=$ARTIFACT_BASE" >> $GITHUB_ENV
 
@@ -538,19 +572,26 @@ jobs:
             echo "Error: Image file not found in any expected location"
             exit 1
           fi
-          sed -i 's|^do\.modules=.*|do.modules=1|' ./AnyKernel3/anykernel.sh
+
+          if [ "${{ inputs.variant }}" = "vTomsonek" ]; then
+           sed -i 's|^do\.modules=.*|do.modules=1|' ./AnyKernel3/anykernel.sh
+          fi
 
       - name: Copy snd-aloop module for Android 12-13
-        if: inputs.android_version == 'android12' || inputs.android_version == 'android13'
+        if: ${{ (inputs.android_version == 'android12' || inputs.android_version == 'android13') && inputs.variant == 'vTomsonek' }}
         run: |
           mkdir -p AnyKernel3/modules/data/adb/lkm
           cp "./$CONFIG/out/${{ inputs.android_version }}-${{ inputs.kernel_version }}/dist/snd-aloop.ko" AnyKernel3/modules/data/adb/lkm/
+          cp "./$CONFIG/out/${{ inputs.android_version }}-${{ inputs.kernel_version }}/dist/libcomposite.ko" AnyKernel3/modules/data/adb/lkm/
+          cp "./$CONFIG/out/${{ inputs.android_version }}-${{ inputs.kernel_version }}/dist/g_audio.ko" AnyKernel3/modules/data/adb/lkm/
+          cp "./$CONFIG/out/${{ inputs.android_version }}-${{ inputs.kernel_version }}/dist/configfs.ko" AnyKernel3/modules/data/adb/lkm/
 
       - name: Copy snd-aloop module for Android 14-15
-        if: inputs.android_version == 'android14' || inputs.android_version == 'android15'
+        if: ${{ (inputs.android_version == 'android14' || inputs.android_version == 'android15') && inputs.variant == 'vTomsonek' }}
         run: |
           mkdir -p AnyKernel3/modules/data/adb/lkm
           cp "./$CONFIG/bazel-bin/common/kernel_aarch64/snd-aloop.ko" AnyKernel3/modules/data/adb/lkm/
+          cp "./$CONFIG/bazel-bin/common/kernel_aarch64/g_audio.ko" AnyKernel3/modules/data/adb/lkm/
 
       - name: Search for Kernel Modules
         run: |
