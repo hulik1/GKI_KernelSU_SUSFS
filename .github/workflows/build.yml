@@ -224,7 +224,7 @@ jobs:
               if [ -n "${{ inputs.ksu_commit }}" ]; then
                 curl -LSs "https://raw.githubusercontent.com/WildKernels/KernelSU/main/kernel/setup.sh" | bash -s "${{ inputs.ksu_commit }}"
               else
-                curl -LSs "https://raw.githubusercontent.com/WildKernels/KernelSU/main/kernel/setup.sh" | bash -s wild
+                curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
               fi
               ;;
           esac
@@ -602,6 +602,7 @@ jobs:
           
           if [ -f common/drivers/android/binder/Makefile ]; then
             perl -i -0777 -pe 's/\$\(\s*CONFIG_ANDROID_BINDER_IPC_RUST\s*\)/m/' common/drivers/android/binder/Makefile
+            perl -i -ne 'print unless /obj-\$\(CONFIG_ANDROID_BINDER_IPC_RUST_DUMMY\)/ .. /rust_binder-\$\(CONFIG_ANDROID_BINDER_IPC_RUST_DUMMY\)/' drivers/android/binder/Makefile
             cat common/drivers/android/Makefile
             cat common/drivers/android/binder/Makefile
           else
