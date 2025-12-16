@@ -213,7 +213,7 @@ jobs:
             if [ -n "${{ inputs.ksu_commit }}" ]; then
               curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s "${{ inputs.ksu_commit }}"
             else
-              curl -LSs "https://raw.githubusercontent.com/WildKernels/KernelSU-Next/next/kernel/setup.sh" | bash -s dev
+              curl -LSs "https://raw.githubusercontent.com/WildKernels/KernelSU-Next/dev/kernel/setup.sh" | bash -
             fi
             ;;
           KSU)
@@ -285,40 +285,69 @@ jobs:
           cd "$KERNEL_ROOT/KernelSU"
         fi
         cp "$SUSFS4KSU/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" .
+        echo "================================================="
         echo "Applying 10_enable_susfs_for_ksu.patch"
+        echo "================================================="
         patch -p1 < 10_enable_susfs_for_ksu.patch || true
 
         case "${{ inputs.ksu_variant }}" in
           WKSU)
             cp "$KERNEL_PATCHES/wild/susfs_fix_patches/v${SUSFS_VERSION}/fix_core_hook.c.patch" ./
+            echo "================================================="
+            echo "Applying fix_core_hook.c.patch"
+            echo "================================================="
             patch -p1 < fix_core_hook.c.patch
             
             cp "$KERNEL_PATCHES/wild/susfs_fix_patches/v${SUSFS_VERSION}/fix_sucompat.c.patch" ./
+            echo "================================================="
+            echo "Applying fix_sucompat.c.patch"
+            echo "================================================="
             patch -p1 < fix_sucompat.c.patch
             
             cp "$KERNEL_PATCHES/wild/susfs_fix_patches/v${SUSFS_VERSION}/fix_kernel_compat.c.patch" ./
+            echo "================================================="
+            echo "Applying fix_kernel_compat.c.patch"
+            echo "================================================="
             patch -p1 < fix_kernel_compat.c.patch
             ;;
           Next)
             echo "Applying Next-specific SUSFS patches"
-            cp "$KERNEL_PATCHES/next/susfs_fix_patches/v${SUSFS_VERSION}/"*.patch ./
+            cp "$KERNEL_PATCHES/wild/susfs_fix_patches/v${SUSFS_VERSION}/"*.patch ./
+            echo "================================================="
             echo "Applying allowlist.c.patch"
+            echo "================================================="
             patch -p1 < allowlist.c.patch
+            echo "================================================="
             echo "Applying apk_sign.c.patch"
+            echo "================================================="
             patch -p1 < apk_sign.c.patch
+            echo "================================================="
             echo "Applying kernel_umount.c.patch"
+            echo "================================================="
             patch -p1 < kernel_umount.c.patch
+            echo "================================================="
             echo "Applying ksu.c.patch"
+            echo "================================================="
             patch -p1 < ksu.c.patch
+            echo "================================================="
             echo "Applying ksud.c.patch"
+            echo "================================================="
             patch -p1 < ksud.c.patch
-            echo "Applying Makefile.patch"
-            patch -p1 < Makefile.patch
+            echo "================================================="
+            echo "Applying Kbuild.patch"
+            echo "================================================="
+            patch -p1 < Kbuild.patch
+            echo "================================================="
             echo "Applying selinux.c.patch"
+            echo "================================================="
             patch -p1 < selinux.c.patch
+            echo "================================================="
             echo "Applying sucompat.c.patch"
+            echo "================================================="
             patch -p1 < sucompat.c.patch
+            echo "================================================="
             echo "Applying supercalls.c.patch"
+            echo "================================================="
             patch -p1 < supercalls.c.patch
             ;;
           KSU)
@@ -368,7 +397,13 @@ jobs:
             fi
             ;;
           Next)
-            # Your Next-specific code goes here
+            if [[ "${{ inputs.android_version }}" == "android12" && "${{ inputs.kernel_version }}" == "5.10" && $ACTUAL_SUBLEVEL -le 209 ]] ||
+               [[ "${{ inputs.android_version }}" == "android13" && "${{ inputs.kernel_version }}" == "5.10" && "${{ inputs.os_patch_level }}" != "2024-05" && $ACTUAL_SUBLEVEL -le 209 ]] ||
+               [[ "${{ inputs.android_version }}" == "android13" && "${{ inputs.kernel_version }}" == "5.15" && "${{ inputs.os_patch_level }}" != "2024-05" && $ACTUAL_SUBLEVEL -le 148 ]] ||
+               [[ "${{ inputs.android_version }}" == "android14" && "${{ inputs.kernel_version }}" == "5.15" && "${{ inputs.os_patch_level }}" != "2024-05" && $ACTUAL_SUBLEVEL -le 148 ]] ||
+               [[ "${{ inputs.android_version }}" == "android14" && "${{ inputs.kernel_version }}" == "6.1" && "${{ inputs.os_patch_level }}" != "2024-05" && $ACTUAL_SUBLEVEL -le 75 ]]; then
+              sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
+            fi
             ;;
           KSU)
             if [[ "${{ inputs.android_version }}" == "android12" && "${{ inputs.kernel_version }}" == "5.10" && $ACTUAL_SUBLEVEL -le 209 ]] ||
@@ -678,7 +713,7 @@ jobs:
       working-directory: ${{ env.KERNEL_ROOT }}
       run: |
         set -ex
-        export KBUILD_BUILD_TIMESTAMP="$(date -u)"
+        #export KBUILD_BUILD_TIMESTAMP="$(date -u)"
         if [ -f "build/build.sh" ]; then
           LTO=thin BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh || exit 1
         else
