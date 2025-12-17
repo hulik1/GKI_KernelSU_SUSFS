@@ -214,7 +214,7 @@ jobs:
             if [ -n "${{ inputs.ksu_commit }}" ]; then
               curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s "${{ inputs.ksu_commit }}"
             else
-              curl -LSs "https://raw.githubusercontent.com/WildKernels/KernelSU-Next/dev/kernel/setup.sh" | bash -
+              curl -LSs "https://raw.githubusercontent.com/WildKernels/KernelSU-Next/wild/kernel/setup.sh" | bash -s dev
             fi
             ;;
           KSU)
@@ -276,79 +276,28 @@ jobs:
         cd "$KERNEL_ROOT/common"
         cp "$SUSFS4KSU/kernel_patches/50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch" ./
         patch -p1 < 50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch || true
-        cd "$KERNEL_ROOT"
-
-        if [ "${{ inputs.ksu_variant }}" == "WKSU" ]; then
-          cd "$KERNEL_ROOT/Wild_KSU"
-        elif [ "${{ inputs.ksu_variant }}" == "Next" ]; then
-          cd "$KERNEL_ROOT/KernelSU-Next"
-        elif [ "${{ inputs.ksu_variant }}" == "KSU" ]; then
-          cd "$KERNEL_ROOT/KernelSU"
-        fi
-        cp "$SUSFS4KSU/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" .
-        echo "================================================="
-        echo "Applying 10_enable_susfs_for_ksu.patch"
-        echo "================================================="
-        patch -p1 < 10_enable_susfs_for_ksu.patch || true
 
         case "${{ inputs.ksu_variant }}" in
           WKSU)
+            cd "$KERNEL_ROOT/Wild_KSU"
+            cp "$SUSFS4KSU/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" .
+            patch -p1 < 10_enable_susfs_for_ksu.patch || true
             cp "$KERNEL_PATCHES/wild/susfs_fix_patches/v${SUSFS_VERSION}/fix_core_hook.c.patch" ./
-            echo "================================================="
-            echo "Applying fix_core_hook.c.patch"
-            echo "================================================="
             patch -p1 < fix_core_hook.c.patch
-            
             cp "$KERNEL_PATCHES/wild/susfs_fix_patches/v${SUSFS_VERSION}/fix_sucompat.c.patch" ./
-            echo "================================================="
-            echo "Applying fix_sucompat.c.patch"
-            echo "================================================="
             patch -p1 < fix_sucompat.c.patch
-            
             cp "$KERNEL_PATCHES/wild/susfs_fix_patches/v${SUSFS_VERSION}/fix_kernel_compat.c.patch" ./
-            echo "================================================="
-            echo "Applying fix_kernel_compat.c.patch"
-            echo "================================================="
             patch -p1 < fix_kernel_compat.c.patch
             ;;
           Next)
-            echo "Applying Next-specific SUSFS patches"
+            cd "$KERNEL_ROOT/KernelSU-Next"
             cp "$KERNEL_PATCHES/wild/susfs_fix_patches/v${SUSFS_VERSION}/"*.patch ./
-            echo "================================================="
-            echo "Applying allowlist.c.patch"
-            echo "================================================="
-            patch -p1 < allowlist.c.patch
-            echo "================================================="
-            echo "Applying kernel_umount.c.patch"
-            echo "================================================="
-            patch -p1 < kernel_umount.c.patch
-            echo "================================================="
-            echo "Applying ksu.c.patch"
-            echo "================================================="
-            patch -p1 < ksu.c.patch
-            echo "================================================="
-            echo "Applying ksud.c.patch"
-            echo "================================================="
-            patch -p1 < ksud.c.patch
-            echo "================================================="
-            echo "Applying Kbuild.patch"
-            echo "================================================="
-            patch -p1 < Kbuild.patch
-            echo "================================================="
-            echo "Applying selinux.c.patch"
-            echo "================================================="
-            patch -p1 < selinux.c.patch
-            echo "================================================="
-            echo "Applying sucompat.c.patch"
-            echo "================================================="
-            patch -p1 < sucompat.c.patch
-            echo "================================================="
-            echo "Applying supercalls.c.patch"
-            echo "================================================="
-            patch -p1 < supercalls.c.patch
+            patch -p1 < Next-3.0.0-susfs-2.0.0-AIO.patch
             ;;
           KSU)
-            # Your KSU-specific code goes here
+            cd "$KERNEL_ROOT/KernelSU"
+            cp "$SUSFS4KSU/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" .
+            patch -p1 < 10_enable_susfs_for_ksu.patch || true
             ;;
         esac
 
@@ -871,7 +820,6 @@ jobs:
         fi
 
     - name: Upload Artifacts
-      if: ${{ always() }}
       uses: actions/upload-artifact@v4
       with:
         name: ${{ env.FILE_NAME }}-AnyKernel3
