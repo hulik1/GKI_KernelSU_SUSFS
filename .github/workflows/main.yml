@@ -121,6 +121,132 @@ jobs:
       ksu_variant: ${{ inputs.ksu_variant }}
       ksu_commit: ${{ inputs.ksu_commit }}
 
+  combined-reject-summary:
+    name: Combined Reject Summary
+    runs-on: ubuntu-latest
+    needs:
+    - build-a12-5-10
+    - build-a13-5-10
+    - build-a13-5-15
+    - build-a14-5-15
+    - build-a14-6-1
+    - build-a15-6-6
+    - build-a16-6-12
+    - build-custom
+    if: ${{ always() }}
+    steps:
+    - name: Download all Rejects artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ./downloaded-rejects
+        pattern: '*-Rejects'
+
+    - name: Generate combined reject summary
+      run: |
+        set -e
+
+        ROOT="./downloaded-rejects"
+        OUT="combined_reject_summary.md"
+
+        echo "# Combined Patch Reject Summary" > "$OUT"
+
+        shopt -s nullglob
+        misc_dirs=("$ROOT"/*)
+
+        if [ ${#misc_dirs[@]} -eq 0 ]; then
+          echo "" >> "$OUT"
+          echo "No artifacts matched '*-Rejects'." >> "$OUT"
+          cat "$OUT" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+
+        # 1. Calculate Statistics
+        total_dirs=0
+        clean_dirs=0
+        reject_dirs=0
+        
+        for d in "${misc_dirs[@]}"; do
+          [ -d "$d" ] || continue
+          ((total_dirs++))
+          # Check for .rej files recursively in this artifact
+          if [ -n "$(find "$d" -name '*.rej' -print -quit)" ]; then
+            ((reject_dirs++))
+          else
+            ((clean_dirs++))
+          fi
+        done
+
+        echo "## Build Statistics" >> "$OUT"
+        echo "- **Total Kernels Built**: $total_dirs" >> "$OUT"
+        echo "- **Clean Builds**: $clean_dirs" >> "$OUT"
+        echo "- **Builds with Rejects**: $reject_dirs" >> "$OUT"
+        echo "" >> "$OUT"
+
+        if [ "$reject_dirs" -eq 0 ]; then
+          echo "✅ All builds are clean! No patch rejects found." >> "$OUT"
+          cat "$OUT" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+
+        # 2. Group Rejects by Content
+        echo "## Global Rejects (Grouped by Content)" >> "$OUT"
+        echo "" >> "$OUT"
+
+        TMP="$(mktemp)"
+        # Format: SHA256 \t FILE_PATH \t ARTIFACT_NAME
+        find "$ROOT" -type f -name '*.rej' | while read -r f; do
+          sha=$(sha256sum "$f" | awk '{print $1}')
+          rel_full=${f#"$ROOT"/}          # e.g., ArtifactName/patch-rejects/fs/inode.c.rej
+          artifact="${rel_full%%/*}"      # e.g., ArtifactName
+          rest="${rel_full#*/}"           # e.g., patch-rejects/fs/inode.c.rej
+          file_path="${rest#patch-rejects/}" # e.g., fs/inode.c.rej
+          
+          printf '%s\t%s\t%s\n' "$sha" "$file_path" "$artifact" >> "$TMP"
+        done
+
+        sort "$TMP" | awk -F'\t' '
+          {
+            sha=$1; file=$2; artifact=$3
+            
+            # Collect unique files for this SHA
+            if (!seen_file[sha, file]++) {
+               files[sha] = (files[sha] ? files[sha] ", " : "") "`" file "`"
+            }
+            
+            # Collect artifacts for this SHA
+            if (!seen_artifact[sha, artifact]++) {
+               artifacts[sha] = (artifacts[sha] ? artifacts[sha] "\n" : "") "- " artifact
+               count[sha]++
+            }
+          }
+          END {
+            for (s in count) {
+              print "### Reject Content Hash: `" s "`"
+              print "**File(s)**: " files[s]
+              print ""
+              print "<details>"
+              print "<summary><strong>Found in " count[s] " kernel(s)</strong> (click to expand)</summary>"
+              print ""
+              print artifacts[s]
+              print ""
+              print "</details>"
+              print ""
+            }
+          }
+        ' >> "$OUT"
+
+        rm -f "$TMP"
+
+        cat "$OUT" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Upload combined reject summary
+      uses: actions/upload-artifact@v4
+      with:
+        name: Combined-Reject-Summary
+        path: combined_reject_summary.md
+        if-no-files-found: error
+        compression-level: 9
+
   release:
     runs-on: ubuntu-latest
     if: inputs.release_type != 'Actions'
