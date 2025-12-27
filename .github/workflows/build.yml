@@ -76,6 +76,7 @@ jobs:
       run: |
         CONFIG="${{ inputs.android_version }}-${{ inputs.kernel_version }}-${{ inputs.sub_level }}"
         KERNEL_ROOT="$GITHUB_WORKSPACE/$CONFIG"
+        mkdir -p "$KERNEL_ROOT"
 
         cat >> $GITHUB_ENV << EOF
         DEFCONFIG=$KERNEL_ROOT/common/arch/arm64/configs/gki_defconfig
@@ -86,13 +87,11 @@ jobs:
         ANYKERNEL3=$GITHUB_WORKSPACE/AnyKernel3
         REPO=$GITHUB_WORKSPACE/git-repo/repo
         EOF
-
-        mkdir -p "$KERNEL_ROOT"
-        mkdir -p ./git-repo
-        curl https://storage.googleapis.com/git-repo-downloads/repo > ./git-repo/repo
-        chmod a+rx ./git-repo/repo
-        echo "REPO=$GITHUB_WORKSPACE/./git-repo/repo" >> $GITHUB_ENV
-        echo "repo=$GITHUB_WORKSPACE/./git-repo/repo" >> $GITHUB_ENV
+        
+        mkdir -p "$GITHUB_WORKSPACE/git-repo"
+        curl -L https://storage.googleapis.com/git-repo-downloads/repo -o "$GITHUB_WORKSPACE/git-repo/repo"
+        chmod 0755 "$GITHUB_WORKSPACE/git-repo/repo"
+        echo "$GITHUB_WORKSPACE/git-repo" >> "$GITHUB_PATH"
 
     - name: Clone AnyKernel3 and Other Dependencies
       run: |
@@ -112,7 +111,7 @@ jobs:
       run: |
         FORMATTED_BRANCH="${{ inputs.android_version }}-${{ inputs.kernel_version }}-${{ inputs.os_patch_level }}"
 
-        $REPO init -u https://android.googlesource.com/kernel/manifest -b common-${FORMATTED_BRANCH} --repo-rev=v2.16
+        repo init -u https://android.googlesource.com/kernel/manifest -b common-${FORMATTED_BRANCH} --repo-rev=v2.16
 
         REMOTE_BRANCH=$(git ls-remote https://android.googlesource.com/kernel/common ${FORMATTED_BRANCH})
         DEFAULT_MANIFEST_PATH=.repo/manifests/default.xml
@@ -120,7 +119,7 @@ jobs:
           sed -i "s/\"${FORMATTED_BRANCH}\"/\"deprecated\/${FORMATTED_BRANCH}\"/g" $DEFAULT_MANIFEST_PATH
         fi
 
-        $REPO --trace sync -j$(nproc --all) --fail-fast
+        repo --trace sync -j$(nproc --all) --fail-fast
 
     - name: Extract Sublevel and Set File Name
       run: |
@@ -187,35 +186,12 @@ jobs:
               curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/stable/kernel/setup.sh" | bash -s "${{ inputs.ksu_commit }}"
             else
               if [ "${{ inputs.susfs_enabled }}" == "true" ]; then
-                curl -LSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/dev-susfs/kernel/setup.sh" | bash -
+                curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/stable/kernel/setup.sh" | bash -
               else
                 curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/stable/kernel/setup.sh" | bash -s dev
                 cd KernelSU-Next
-                git config --global user.name "TheWildJames"
-                git config --global user.email "bins4us@hotmail.com"
-                git fetch https://github.com/pershoot/KernelSU-Next 1613aec41bd4385358284f546ba12bbcd00b3b03
-                git cherry-pick 1613aec41bd4385358284f546ba12bbcd00b3b03
-                
-                # Remove CONFIG_TRACEPOINTS guards
-                sed -i '/#ifdef CONFIG_TRACEPOINTS/d' kernel/ksud.c
-                sed -i '/#endif \/\/ CONFIG_TRACEPOINTS/d' kernel/ksud.c
-                
-                # Verify removal
-                if grep "#ifdef CONFIG_TRACEPOINTS" kernel/ksud.c; then
-                    echo "Error: CONFIG_TRACEPOINTS guards still found in kernel/ksud.c!"
-                    exit 1
-                fi
-                
                 # Replace pr_debug with pr_info
                 find . -type f -exec sed -i 's/pr_debug/pr_info/g' {} +
-                
-                # Verify replacement
-                if grep -r "pr_debug" . ; then
-                    echo "Error: pr_debug still found!"
-                    exit 1
-                fi
-                
-                cd ..
               fi
             fi
             ;;
@@ -225,6 +201,9 @@ jobs:
             else
               curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
             fi
+            ;;
+          RKSU)
+            curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s main
             ;;
         esac
 
