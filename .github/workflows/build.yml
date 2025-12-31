@@ -69,10 +69,55 @@ jobs:
         echo "Variant         : ${{ inputs.variant || 'Standard' }}"
         echo "========================================"
 
+    - name: Build Space Before
+      run: |
+        echo "Disk space before:"
+        df -h
+
     - name: Maximize Build Space
       if: false
       run: |
         curl -Ls https://raw.githubusercontent.com/apache/arrow/main/ci/scripts/util_free_space.sh | bash
+
+    - name: Aggressive cleanup
+      if: false
+      run: |
+        # Remove Java (JDKs)
+        sudo rm -rf /usr/lib/jvm
+
+        # Remove .NET SDKs
+        sudo rm -rf /usr/share/dotnet
+
+        # Remove Swift toolchain
+        sudo rm -rf /usr/share/swift
+
+        # Remove Haskell (GHC)
+        sudo rm -rf /usr/local/.ghcup
+
+        # Remove Julia
+        sudo rm -rf /usr/local/julia*
+
+        # Remove Android SDKs
+        sudo rm -rf /usr/local/lib/android
+
+        # Remove Chromium (optional if not using for browser tests)
+        sudo rm -rf /usr/local/share/chromium
+
+        # Remove Microsoft/Edge and Google Chrome builds
+        sudo rm -rf /opt/microsoft /opt/google
+
+        # Remove Azure CLI
+        sudo rm -rf /opt/az
+
+        # Remove PowerShell
+        sudo rm -rf /usr/local/share/powershell
+
+        # Remove CodeQL and other toolcaches
+        sudo rm -rf /opt/hostedtoolcache
+
+        docker system prune -af || true
+        docker builder prune -af || true
+        df -h
 
     - name: Maximize build space
       if: false
@@ -89,7 +134,7 @@ jobs:
         verbose: 'true'
 
     - name: Free Disk Space
-      if: true
+      if: false
       uses: endersonmenezes/free-disk-space@v3  # Use @main for latest, @v3 for stable
       with:
         remove_android: true
@@ -104,6 +149,10 @@ jobs:
         rmz_version: "3.1.1"  # Required when rm_cmd is 'rmz'
         testing: false
 
+    - name: Build Space After
+      run: |
+        echo "Disk space after:"
+        df -h
 
     - name: Setup Build Environment
       run: |
@@ -144,7 +193,7 @@ jobs:
       run: |
         FORMATTED_BRANCH="${{ inputs.android_version }}-${{ inputs.kernel_version }}-${{ inputs.os_patch_level }}"
 
-        repo init -u https://android.googlesource.com/kernel/manifest -b common-${FORMATTED_BRANCH} --repo-rev=v2.16
+        repo init -u https://android.googlesource.com/kernel/manifest -b common-${FORMATTED_BRANCH} --repo-rev=v2.16 --depth=1
 
         REMOTE_BRANCH=$(git ls-remote https://android.googlesource.com/kernel/common ${FORMATTED_BRANCH})
         DEFAULT_MANIFEST_PATH=.repo/manifests/default.xml
@@ -152,7 +201,23 @@ jobs:
           sed -i "s/\"${FORMATTED_BRANCH}\"/\"deprecated\/${FORMATTED_BRANCH}\"/g" $DEFAULT_MANIFEST_PATH
         fi
 
-        repo --trace sync -j$(nproc --all) --fail-fast
+        # Start monitoring in background
+        start_time=$(date +%s)
+        (
+            while true; do
+                current_time=$(date +%s)
+                elapsed=$((current_time - start_time))
+                # Print elapsed time and disk usage on a single line
+                echo "[Monitor] Time: ${elapsed}s | Disk: $(df -h . | awk 'NR==2 {print $3 "/" $2 " (" $5 ")"}')"
+                sleep 10
+            done
+        ) &
+        MONITOR_PID=$!
+
+        repo --trace sync -c -j$(nproc --all) --fail-fast --no-tags
+
+        # Stop monitoring
+        kill $MONITOR_PID
 
     - name: Extract Sublevel and Set File Name
       run: |
