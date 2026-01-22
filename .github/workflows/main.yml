@@ -442,7 +442,7 @@ jobs:
         wait
 
     - name: Send Telegram Notification
-      if: inputs.release_type == 'Actions'
+      if: inputs.release_type == 'Actions' && false
       run: |
         curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
           -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
@@ -455,7 +455,7 @@ jobs:
           -F parse_mode="Markdown"
 
     - name: Send Telegram Notification
-      if: inputs.release_type != 'Actions' && needs.release.result == 'success'
+      if: inputs.release_type != 'Actions' && needs.release.result == 'success' && false
       run: |
         RELEASE_TYPE_TEXT=""
         if [ "${{ inputs.release_type }}" == "Pre-Release" ]; then
