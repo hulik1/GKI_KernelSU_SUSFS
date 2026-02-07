@@ -196,12 +196,6 @@ jobs:
             sed -i '/#include <trace\/hooks\/blk.h>/a #include <trace\/hooks\/fs.h>' ./fs/namespace.c
         fi
 
-    - name: Apply ptrace patch for older kernels
-      if: false && fromJSON(inputs.kernel_version) < 5.16
-      working-directory: ${{ env.KERNEL_ROOT }}/common
-      run: |
-        patch -p1 -F 3 < "$KERNEL_PATCHES/gki_ptrace.patch"
-
     - name: Add WKSU
       working-directory: ${{ env.KERNEL_ROOT }}
       run: |
@@ -305,7 +299,7 @@ jobs:
         fi
 
     - name: Add BBG
-      if: true
+      if: false
       working-directory: ${{ env.KERNEL_ROOT }}
       run: |
         curl -LSs https://github.com/vc-teahouse/Baseband-guard/raw/main/setup.sh | bash
@@ -596,7 +590,7 @@ jobs:
       working-directory: ${{ env.KERNEL_ROOT }}
       run: |
         set -ex
-        make -C common mrproper
+        #make -C common mrproper
         if [ -f "build/build.sh" ]; then
           GKI_DEFCONFIG_FRAGMENT="${{ env.DEFCONFIG_FRAGMENT }}" LTO=thin BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh || exit 1
         else
