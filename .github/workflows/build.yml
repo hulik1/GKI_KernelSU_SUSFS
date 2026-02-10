@@ -62,7 +62,6 @@ jobs:
         echo "Patch Level     : ${{ inputs.os_patch_level }}"
         echo "Build Type      : ${{ matrix.build_type }}"
         echo "KSU Commit      : ${{ inputs.ksu_commit || 'Default' }}"
-        echo "SUSFS Enabled   : ${{ inputs.susfs_enabled }}"
         echo "Variant         : ${{ inputs.variant || 'Standard' }}"
         echo "========================================"
 
@@ -145,13 +144,6 @@ jobs:
         fi
 
         repo --trace sync -c -j$(nproc --all) --fail-fast --no-tags --force-sync --no-clone-bundle
-
-    - name: Configure Kernel Options
-      if: inputs.variant == 'Duchamp'
-      working-directory: ${{ env.KERNEL_ROOT }}
-      run: |
-        rm -rf common
-        git clone --depth=1 --single-branch --branch lineage-23.0 https://github.com/mt6897-devs/android_kernel_6.1.git ./common
 
     - name: Extract Sublevel and Set File Name
       run: |
@@ -314,7 +306,7 @@ jobs:
         fi
 
     - name: Apply Module Check Bypass
-      if: ${{ matrix.build_type == 'Bypass' || matrix.build_type == 'Hakan' || matrix.build_type == 'Duchamp' }}
+      if: ${{ matrix.build_type == 'Bypass' || matrix.build_type == 'Hakan' }}
       run: |
         if [[ "${{ inputs.kernel_version }}" == "6.1" || "${{ inputs.kernel_version }}" == "6.6" || "${{ inputs.kernel_version }}" == "6.12" ]]; then
           TARGET_FILE="$KERNEL_ROOT/common/kernel/module/version.c"
@@ -335,7 +327,7 @@ jobs:
         fi
 
     - name: Fix WiFi and Bluetooth on Samsung 6.6 GKI devices
-      if: ${{ ( inputs.kernel_version == '6.6' ) }}
+      if: ${{ inputs.kernel_version == '6.6' }}
       working-directory: ${{ env.KERNEL_ROOT }}/common
       run: |
         SYMBOL_LIST=android/abi_gki_aarch64_galaxy

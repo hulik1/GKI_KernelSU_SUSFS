@@ -314,11 +314,11 @@ jobs:
         -> Wild KSU Manager Support
         -> SUSFS ඞ v2.0.0
         -> SUSFS Inline Hooks
-        -> Ptrace Patch Support for Older Kernels (<5.16)
-        -> IPSet Support for Advanced Network Filtering
-        -> Wireguard Support
-        -> BBR v1 Support
-        -> BBG: https://github.com/vc-teahouse/Baseband-guard
+        -> Ptrace Patch Support for Older Kernels (<5.16) (Disabled for testing)
+        -> IPSet Support for Advanced Network Filtering (Disabled for testing, please msg me if you need it)
+        -> Wireguard Support 
+        -> BBR v1 Support (Disabled for testing, please msg me if you need it)
+        -> BBG: https://github.com/vc-teahouse/Baseband-guard (Disabled for testing, will be enabled in the future)
 
         🔹 BBG (Baseband-guard)
         - A lightweight LSM (Linux Security Module) for Android kernel
