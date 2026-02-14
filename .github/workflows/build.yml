@@ -125,6 +125,7 @@ jobs:
         if grep -q deprecated <<< $REMOTE_BRANCH; then
           sed -i "s/\"${FORMATTED_BRANCH}\"/\"deprecated\/${FORMATTED_BRANCH}\"/g" $DEFAULT_MANIFEST_PATH
           echo "Note: Branch ${FORMATTED_BRANCH} is considered deprecated."
+          echo "$DEPRECATED_BRANCH=true" >> $GITHUB_ENV
         fi
 
         repo --trace sync -c -j$(nproc --all) --fail-fast --no-tags --force-sync --no-clone-bundle
@@ -186,10 +187,8 @@ jobs:
         KSU_GIT_VERSION=$(git rev-list --count HEAD 2>/dev/null)
         KSU_GIT_TAG=$(git describe --tags --abbrev=0 2>/dev/null)
         KSU_VERSION=$((30000 + KSU_GIT_VERSION))
-        echo "KSU_GIT_VERSION=$KSU_GIT_VERSION" >> $GITHUB_ENV
+        echo "KSU_GIT_TAG=$KSU_GIT_TAG" >> $GITHUB_ENV
         echo "KSU_VERSION=$KSU_VERSION" >> $GITHUB_ENV
-        echo "Tag: $KSU_GIT_TAG"
-        echo "Version: $KSU_VERSION"
 
     - name: Clone & Apply SUSFS Patches
       if: contains(inputs.feature_set, 'SUSFS')
@@ -284,7 +283,7 @@ jobs:
         fi
 
     - name: Add BBG
-      if: false
+      if: contains(inputs.feature_set, 'BBG')
       working-directory: ${{ env.KERNEL_ROOT }}
       run: |
         curl -LSs https://github.com/vc-teahouse/Baseband-guard/raw/main/setup.sh | bash
@@ -297,6 +296,9 @@ jobs:
           echo "FAILED: baseband_guard not found in common/security/Kconfig"
           exit 1
         fi
+        cd Baseband_guard
+        BBG_COMMIT=$(git rev-parse --short HEAD 2>/dev/null)
+        echo "BBG_COMMIT=$BBG_COMMIT" >> $GITHUB_ENV
 
     - name: Apply Module Check Bypass
       if: ${{ matrix.build_type == 'Bypass' || matrix.build_type == 'Hakan' }}
@@ -666,15 +668,28 @@ jobs:
         echo "========================================"
         echo "       Kernel Build Summary End         "
         echo "========================================"
+        echo "Kernel Info:"
         echo "Android Version     : ${{ inputs.android_version }}"
         echo "Kernel Version      : ${{ inputs.kernel_version }}"
         echo "Sub Level           : ${{ inputs.sub_level }}"
         echo "Sub level (Makefile): $SUBLEVEL"
         echo "Patch Level         : ${{ inputs.os_patch_level }}"
+        echo "========================================"
+        echo "Branch Info:"
+        echo "Repo Branch         : common-${{ inputs.kernel_version }}-${{ inputs.android_version }}-${{ inputs.os_patch_level }}"
+        echo "Deprecated          : $DEPRECATED_BRANCH"
+        echo "========================================"
+        echo "Build Info:"
         echo "Build Type          : ${{ matrix.build_type }}"
-        echo "KSU Commit          : ${{ inputs.ksu_commit || 'Default' }}"
-        echo "Tag                 : $KSU_GIT_TAG"
-        echo "Version             : $KSU_VERSION"
+        echo "========================================"
+        echo "Features Info:"
+        echo "Features            : ${{ inputs.feature_set || 'None' }}"
+        echo "WKSU Commit         : ${{ inputs.ksu_commit || 'canary' }}"
+        echo "WKSU Tag            : $KSU_GIT_TAG"
+        echo "WKSU Version        : $KSU_VERSION"
+        echo "BBG Commit          : $BBG_COMMIT"
+        echo "BBG Version         : $BBG_VERSION"
+        echo "========================================"
         echo "Variant             : ${{ inputs.variant || 'Standard' }}"
         echo "Features            : ${{ inputs.feature_set || 'None' }}"
         echo "========================================"
