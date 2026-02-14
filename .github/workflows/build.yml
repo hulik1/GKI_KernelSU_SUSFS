@@ -32,8 +32,15 @@ on:
         type: boolean
 
 jobs:
+  download-dependencies:
+    uses: ./.github/workflows/cache-dependencies.yml
+    permissions:
+      contents: read
+      actions: write
+
   build-gki:
     name: "${{ inputs.kernel_version }}.${{ inputs.sub_level }}-${{ inputs.android_version }}-${{ inputs.os_patch_level }}-${{ matrix.build_type }}"
+    needs: download-dependencies
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
@@ -83,6 +90,24 @@ jobs:
         rmz_version: "3.1.1"  # Required when rm_cmd is 'rmz'
         testing: false
 
+    - name: Download AnyKernel3 Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: anykernel3
+        path: AnyKernel3
+
+    - name: Download Kernel Patches Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: kernel-patches
+        path: kernel_patches
+
+    - name: Download Git Repo Tool Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: git-repo-tool
+        path: git-repo
+
     - name: Setup Build Environment
       run: |
         CONFIG="${{ inputs.android_version }}-${{ inputs.kernel_version }}-${{ inputs.sub_level }}"
@@ -100,16 +125,19 @@ jobs:
         REPO=$GITHUB_WORKSPACE/git-repo/repo
         EOF
         
-        mkdir -p "$GITHUB_WORKSPACE/git-repo"
-        curl -L https://storage.googleapis.com/git-repo-downloads/repo -o "$GITHUB_WORKSPACE/git-repo/repo"
-        chmod 0755 "$GITHUB_WORKSPACE/git-repo/repo"
+        # Ensure repo tool is executable
+        chmod +x "$GITHUB_WORKSPACE/git-repo/repo"
         echo "$GITHUB_WORKSPACE/git-repo" >> "$GITHUB_PATH"
 
-    - name: Clone AnyKernel3 and Other Dependencies
+    - name: Dependency Summary
       run: |
-        ANYKERNEL_BRANCH="gki-2.0"
-        git clone https://github.com/WildKernels/AnyKernel3.git -b "$ANYKERNEL_BRANCH"
-        git clone https://github.com/WildKernels/kernel_patches.git
+        echo "========================================"
+        echo "     Downloaded Dependencies Ready      "
+        echo "========================================"
+        echo "AnyKernel3      : ✓ $(ls -d AnyKernel3 2>/dev/null && echo 'Ready' || echo 'Missing')"
+        echo "Kernel Patches  : ✓ $(ls -d kernel_patches 2>/dev/null && echo 'Ready' || echo 'Missing')"
+        echo "Git Repo Tool   : ✓ $(ls git-repo/repo 2>/dev/null && echo 'Ready' || echo 'Missing')"
+        echo "========================================"
 
     - name: Initialize and Sync Kernel Source
       working-directory: ${{ env.KERNEL_ROOT }}
@@ -174,131 +202,38 @@ jobs:
             sed -i '/#include <trace\/hooks\/blk.h>/a #include <trace\/hooks\/fs.h>' ./fs/namespace.c
         fi
 
-    - name: Add WKSU
+    - name: Setup Wild KSU
       if: contains(inputs.feature_set, 'WKSU')
-      working-directory: ${{ env.KERNEL_ROOT }}
-      run: |
-        if [[ -n "${{ inputs.ksu_commit }}" ]]; then
-          curl -LSs "https://raw.githubusercontent.com/WildKernels/Wild_KSU/stable/kernel/setup.sh" | bash -s "${{ inputs.ksu_commit }}"
-        else
-          curl -LSs "https://raw.githubusercontent.com/WildKernels/Wild_KSU/stable/kernel/setup.sh" | bash -s canary
-        fi
-        cd Wild_KSU
-        KSU_GIT_VERSION=$(git rev-list --count HEAD 2>/dev/null)
-        KSU_GIT_TAG=$(git describe --tags --abbrev=0 2>/dev/null)
-        KSU_VERSION=$((30000 + KSU_GIT_VERSION))
-        echo "KSU_GIT_TAG=$KSU_GIT_TAG" >> $GITHUB_ENV
-        echo "KSU_VERSION=$KSU_VERSION" >> $GITHUB_ENV
+      uses: ./.github/actions/setup-wksu
+      with:
+        ksu_commit: ${{ inputs.ksu_commit }}
+        kernel_root: ${{ env.KERNEL_ROOT }}
 
-    - name: Clone & Apply SUSFS Patches
+    - name: Download SUSFS Cache Artifact
       if: contains(inputs.feature_set, 'SUSFS')
-      run: |
-        SUSFS_BRANCH="gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}"
-        git clone https://gitlab.com/simonpunk/susfs4ksu.git -b "$SUSFS_BRANCH"
+      uses: actions/download-artifact@v4
+      with:
+        name: susfs-cache
+        path: susfs_cache
 
-        SUSFS_VERSION="2.0.0"
+    - name: Setup SUSFS
+      if: contains(inputs.feature_set, 'SUSFS')
+      uses: ./.github/actions/setup-susfs
+      with:
+        android_version: ${{ inputs.android_version }}
+        kernel_version: ${{ inputs.kernel_version }}
+        os_patch_level: ${{ inputs.os_patch_level }}
+        sublevel: ${{ env.SUBLEVEL }}
+        kernel_root: ${{ env.KERNEL_ROOT }}
+        kernel_patches: ${{ env.KERNEL_PATCHES }}
+        susfs4ksu: ${{ env.SUSFS4KSU }}
 
-        cd "$KERNEL_ROOT/common"
-        cp "$SUSFS4KSU/kernel_patches/fs/"* "$KERNEL_ROOT/common/fs/"
-        cp "$SUSFS4KSU/kernel_patches/include/linux/"* "$KERNEL_ROOT/common/include/linux/"
-        cp $SUSFS4KSU/kernel_patches/50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch ./
-        patch -p1 < 50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch || true
-
-        if [[ "${{ inputs.android_version }}" == "android12" && "${{ inputs.kernel_version }}" == "5.10" ]]; then
-          if [[ "$SUBLEVEL" -le 209 ]]; then
-            sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
-          fi 
-          if [[ "$SUBLEVEL" -le 117 ]]; then
-            cp $KERNEL_PATCHES/wild/susfs_fix_patches/v${SUSFS_VERSION}/a12-5.10/fdinfo.c.patch ./
-            patch -p1 < fdinfo.c.patch
-          fi
-          if [[ "$SUBLEVEL" -le 43 ]]; then
-            cp $KERNEL_PATCHES/wild/susfs_fix_patches/v${SUSFS_VERSION}/a12-5.10/base.c.patch ./
-            patch -p1 < base.c.patch
-          fi
-        fi
-
-        if [[ "${{ inputs.android_version }}" == "android13" && "${{ inputs.kernel_version }}" == "5.10" ]]; then
-          if [[ "$SUBLEVEL" -le 107 ]]; then
-            cp $KERNEL_PATCHES/wild/susfs_fix_patches/v${SUSFS_VERSION}/a13-5.10/fdinfo.c.patch ./
-            patch -p1 < fdinfo.c.patch
-          fi
-          if [[ "$SUBLEVEL" -le 209 && "${{ inputs.os_patch_level }}" != "2024-05" ]]; then
-            sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
-          fi
-        fi
-
-        if [[ "${{ inputs.android_version }}" == "android13" && "${{ inputs.kernel_version }}" == "5.15" ]]; then
-          if [ "$SUBLEVEL" -le 41 ]; then
-            cp $KERNEL_PATCHES/wild/susfs_fix_patches/v${SUSFS_VERSION}/a13-5.15/namespace.c.patch ./
-            patch -p1 < namespace.c.patch
-          fi
-          if [ "$SUBLEVEL" -le 41 ]; then
-            cp $KERNEL_PATCHES/wild/susfs_fix_patches/v${SUSFS_VERSION}/a13-5.15/fdinfo.c.patch ./
-            patch -p1 < fdinfo.c.patch
-          fi
-          if [ "$SUBLEVEL" -le 41 ]; then
-            cp $KERNEL_PATCHES/wild/susfs_fix_patches/v${SUSFS_VERSION}/a13-5.15/open.c.patch ./
-            patch -p1 < open.c.patch
-          fi
-          if [ "$SUBLEVEL" -le 41 ]; then
-            sed -i 's|is_i_uid_not_allowed(i_uid_into_mnt(i_user_ns(inode), inode).val)))|is_i_uid_not_allowed(inode->i_uid.val)))|g' fs/susfs.c
-          fi
-          if [[ "$SUBLEVEL" -le 148 && "${{ inputs.os_patch_level }}" != "2024-05" ]]; then
-            sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
-          fi
-        fi
-
-        if [[ "${{ inputs.android_version }}" == "android14" && "${{ inputs.kernel_version }}" == "5.15" ]]; then
-          if [[ "$SUBLEVEL" -le 148 && "${{ inputs.os_patch_level }}" != "2024-05" ]]; then
-            sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
-          fi
-        fi
-
-        if [[ "${{ inputs.android_version }}" == "android14" && "${{ inputs.kernel_version }}" == "6.1" ]]; then
-          #if [[ "$SUBLEVEL" -ge 145 ]]; then
-          #  cp $KERNEL_PATCHES/wild/susfs_fix_patches/v${SUSFS_VERSION}/a14-6.1/base.c.patch ./
-          #  patch -p1 < base.c.patch
-          #fi
-          if [[ "$SUBLEVEL" -le 75 && "${{ inputs.os_patch_level }}" != "2024-05" ]]; then
-            sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
-          fi
-        fi
-
-        if [[ "${{ inputs.android_version }}" == "android15" && "${{ inputs.kernel_version }}" == "6.6" ]]; then
-          if [[ "$SUBLEVEL" -ge 98 ]]; then
-            cp $KERNEL_PATCHES/wild/susfs_fix_patches/v${SUSFS_VERSION}/a15-6.6/base.c.patch ./
-            patch -p1 < base.c.patch
-          fi
-          if [[ "$SUBLEVEL" -le 58 ]]; then
-            cp $KERNEL_PATCHES/wild/susfs_fix_patches/v${SUSFS_VERSION}/a15-6.6/task_mmu.c.patch ./
-            patch -p1 < task_mmu.c.patch
-          fi
-        fi
-
-        if [[ "${{ inputs.android_version }}" == "android16" && "${{ inputs.kernel_version }}" == "6.12" ]]; then
-          if [[ "$SUBLEVEL" -le 9999 ]]; then
-            echo "Nothing to fix!"
-          fi
-        fi
-
-    - name: Add BBG
+    - name: Setup Baseband Guard
       if: contains(inputs.feature_set, 'BBG')
-      working-directory: ${{ env.KERNEL_ROOT }}
-      run: |
-        curl -LSs https://github.com/vc-teahouse/Baseband-guard/raw/main/setup.sh | bash
-        echo "CONFIG_BBG=y" >> "${{ env.DEFCONFIG_FRAGMENT }}"
-        sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/selinux/selinux,baseband_guard/ } }' common/security/Kconfig
-        if grep -q "baseband_guard" common/security/Kconfig; then
-          echo "SUCCESS: baseband_guard found in common/security/Kconfig"
-          grep -n "baseband_guard" common/security/Kconfig || true
-        else
-          echo "FAILED: baseband_guard not found in common/security/Kconfig"
-          exit 1
-        fi
-        cd Baseband_guard
-        BBG_COMMIT=$(git rev-parse --short HEAD 2>/dev/null)
-        echo "BBG_COMMIT=$BBG_COMMIT" >> $GITHUB_ENV
+      uses: ./.github/actions/setup-bbg
+      with:
+        kernel_root: ${{ env.KERNEL_ROOT }}
+        defconfig_fragment: ${{ env.DEFCONFIG_FRAGMENT }}
 
     - name: Apply Module Check Bypass
       if: ${{ matrix.build_type == 'Bypass' || matrix.build_type == 'Hakan' }}
