@@ -1,24 +1,12 @@
-name: Kernel Testing
+name: Kernel Config - Testing
+
+permissions:
+  contents: write
+  actions: write
 
 on:
-  workflow_dispatch:
-  push:
+  workflow_call:
     inputs:
-      android_version:
-        required: true
-        type: string
-      kernel_version:
-        required: true
-        type: string
-      sub_level:
-        required: true
-        type: string
-      os_patch_level:
-        required: true
-        type: string
-      variant:
-        required: false
-        type: string
       ksu_commit:
         required: false
         type: string
@@ -28,28 +16,29 @@ on:
       build_bypass:
         required: true
         type: boolean
+  push:
 
 jobs:
-  build-gki:
-    name: "${{ inputs.kernel_version }}.${{ inputs.sub_level }}-${{ inputs.android_version }}-${{ inputs.os_patch_level }}-${{ matrix.build_type }}"
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
+  build-kernels-testing:
+    name: "Testing-${{ matrix.android_version }}-${{ matrix.kernel_version }}"
     strategy:
       fail-fast: false
       matrix:
-        build_type: [TheWildJames]
-    steps:
-      - name: Build Summary
-        run: |
-          echo "========================================"
-          echo "       Kernel Build Summary"
-          echo "========================================"
-          echo "Android Version : ${{ inputs.android_version }}"
-          echo "Kernel Version  : ${{ inputs.kernel_version }}"
-          echo "Sub Level       : ${{ inputs.sub_level }}"
-          echo "Patch Level     : ${{ inputs.os_patch_level }}"
-          echo "Build Type      : ${{ matrix.build_type }}"
-          echo "KSU Commit      : ${{ inputs.ksu_commit || 'Default' }}"
-          echo "Variant         : ${{ inputs.variant || 'Standard' }}"
-          echo "========================================"
-      # ...existing steps from build.yml as needed for TheWildJames...
+        include:
+          - android_version: "android14"
+            kernel_version: "6.1"
+            sub_level: "145"
+            os_patch_level: "2025-09"
+            variant: "TheWildJames"
+
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      android_version: ${{ matrix.android_version }}
+      kernel_version: ${{ matrix.kernel_version }}
+      sub_level: ${{ matrix.sub_level }}
+      os_patch_level: ${{ matrix.os_patch_level }}
+      variant: ${{ matrix.variant }}
+      ksu_commit: ${{ inputs.ksu_commit }}
+      feature_set: ${{ inputs.feature_set }}
+      build_bypass: ${{ inputs.build_bypass }}

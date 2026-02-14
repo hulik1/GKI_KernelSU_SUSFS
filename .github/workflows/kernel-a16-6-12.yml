@@ -18,7 +18,7 @@ on:
         type: boolean
 
 jobs:
-  build-kernels-a16-612:
+  build-kernels-a16-6-12:
     name: "6.12.${{ matrix.sub_level }}-${{ matrix.os_patch_level }}"
     strategy:
       fail-fast: false

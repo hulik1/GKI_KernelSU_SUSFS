@@ -25,7 +25,7 @@ on:
         description: "Kernel Type to Build"
         type: choice
         options:
-          - All
+          - all
           - a12-5-10
           - a13-5-10
           - a13-5-15
@@ -35,6 +35,7 @@ on:
           - a16-6-12
           - lts
           - custom
+          - testing
         default: custom
       feature_set:
         description: "Feature Set"
@@ -48,8 +49,16 @@ on:
         default: WKSU+SUSFS+BBG
 
 jobs:
+  build-testing:
+    if: ${{ inputs.kernel_type == 'all' || inputs.kernel_type == 'testing' }}
+    uses: ./.github/workflows/kernel-testing.yml
+    secrets: inherit
+    with:
+      ksu_commit: ${{ inputs.ksu_commit }}
+      build_bypass: ${{ inputs.build_bypass }}
+      feature_set: ${{ inputs.feature_set }}
   build-a12-5-10:
-    if: ${{ inputs.kernel_type == 'All' || inputs.kernel_type == 'a12-5-10' }}
+    if: ${{ inputs.kernel_type == 'all' || inputs.kernel_type == 'a12-5-10' }}
     uses: ./.github/workflows/kernel-a12-5-10.yml
     secrets: inherit
     with:
@@ -58,7 +67,7 @@ jobs:
       feature_set: ${{ inputs.feature_set }}
 
   build-a13-5-10:
-    if: ${{ inputs.kernel_type == 'All' || inputs.kernel_type == 'a13-5-10' }}
+    if: ${{ inputs.kernel_type == 'all' || inputs.kernel_type == 'a13-5-10' }}
     uses: ./.github/workflows/kernel-a13-5-10.yml
     secrets: inherit
     with:
@@ -67,7 +76,7 @@ jobs:
       feature_set: ${{ inputs.feature_set }}
 
   build-a13-5-15:
-    if: ${{ inputs.kernel_type == 'All' || inputs.kernel_type == 'a13-5-15' }}
+    if: ${{ inputs.kernel_type == 'all' || inputs.kernel_type == 'a13-5-15' }}
     uses: ./.github/workflows/kernel-a13-5-15.yml
     secrets: inherit
     with:
@@ -76,7 +85,7 @@ jobs:
       feature_set: ${{ inputs.feature_set }}
 
   build-a14-5-15:
-    if: ${{ inputs.kernel_type == 'All' || inputs.kernel_type == 'a14-5-15' }}
+    if: ${{ inputs.kernel_type == 'all' || inputs.kernel_type == 'a14-5-15' }}
     uses: ./.github/workflows/kernel-a14-5-15.yml
     secrets: inherit
     with:
@@ -85,7 +94,7 @@ jobs:
       feature_set: ${{ inputs.feature_set }}
 
   build-a14-6-1:
-    if: ${{ inputs.kernel_type == 'All' || inputs.kernel_type == 'a14-6-1' }}
+    if: ${{ inputs.kernel_type == 'all' || inputs.kernel_type == 'a14-6-1' }}
     uses: ./.github/workflows/kernel-a14-6-1.yml
     secrets: inherit
     with:
@@ -94,7 +103,7 @@ jobs:
       feature_set: ${{ inputs.feature_set }}
 
   build-a15-6-6:
-    if: ${{ inputs.kernel_type == 'All' || inputs.kernel_type == 'a15-6-6' }}
+    if: ${{ inputs.kernel_type == 'all' || inputs.kernel_type == 'a15-6-6' }}
     uses: ./.github/workflows/kernel-a15-6-6.yml
     secrets: inherit
     with:
@@ -103,8 +112,8 @@ jobs:
       feature_set: ${{ inputs.feature_set }}
 
   build-a16-6-12:
-    if: ${{ inputs.kernel_type == 'All' || inputs.kernel_type == 'a16-6-12' }}
-    uses: ./.github/workflows/kernel-a16-612.yml
+    if: ${{ inputs.kernel_type == 'all' || inputs.kernel_type == 'a16-6-12' }}
+    uses: ./.github/workflows/kernel-a16-6-12.yml
     secrets: inherit
     with:
       ksu_commit: ${{ inputs.ksu_commit }}
@@ -112,7 +121,7 @@ jobs:
       feature_set: ${{ inputs.feature_set }}
 
   build-custom:
-    if: ${{ inputs.kernel_type == 'All' || inputs.kernel_type == 'custom' }}
+    if: ${{ inputs.kernel_type == 'all' || inputs.kernel_type == 'custom' }}
     uses: ./.github/workflows/kernel-custom.yml
     secrets: inherit
     with:
@@ -121,7 +130,7 @@ jobs:
       feature_set: ${{ inputs.feature_set }}
 
   build-lts:
-    if: ${{ inputs.kernel_type == 'All' || inputs.kernel_type == 'lts' }}
+    if: ${{ inputs.kernel_type == 'all' || inputs.kernel_type == 'lts' }}
     uses: ./.github/workflows/kernel-lts.yml
     secrets: inherit
     with:
