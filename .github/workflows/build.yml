@@ -43,7 +43,6 @@ jobs:
           ${{
             fromJSON(
               inputs.variant == 'vTomsonek' && '["vTomsonek"]' ||
-              inputs.variant == 'TheWildJames' && '["TheWildJames"]' ||
               inputs.variant == 'TheWildJamesTest' && '["TheWildJamesTest"]' ||
               inputs.variant == 'MarionKernel' && '["MarionKernel"]' ||
               inputs.variant == 'Hakan' && '["Hakan"]' ||
@@ -548,9 +547,6 @@ jobs:
         #Wild to Kernel Version (replace last instance only)
         if [[ "${{ inputs.kernel_version }}" == "5."* ]] || [[ "${{ inputs.kernel_version }}" == "6.1" ]]; then
           case ${{ matrix.build_type }} in
-            TheWildJames)
-              perl -i -0777 -pe 's/(.*)echo "\$res"/$1echo "\$res-🟢-Wild-Exclusive"/s' ./common/scripts/setlocalversion
-              ;;
             MarionKernel)
               perl -i -0777 -pe 's/(.*)echo "\$res"/$1echo "\$res-Wild-MarionKernel"/s' ./common/scripts/setlocalversion
               ;;

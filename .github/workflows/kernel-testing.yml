@@ -1,0 +1,55 @@
+name: Kernel Testing
+
+on:
+  workflow_dispatch:
+  push:
+    inputs:
+      android_version:
+        required: true
+        type: string
+      kernel_version:
+        required: true
+        type: string
+      sub_level:
+        required: true
+        type: string
+      os_patch_level:
+        required: true
+        type: string
+      variant:
+        required: false
+        type: string
+      ksu_commit:
+        required: false
+        type: string
+      feature_set:
+        required: true
+        type: string
+      build_bypass:
+        required: true
+        type: boolean
+
+jobs:
+  build-gki:
+    name: "${{ inputs.kernel_version }}.${{ inputs.sub_level }}-${{ inputs.android_version }}-${{ inputs.os_patch_level }}-${{ matrix.build_type }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [TheWildJames]
+    steps:
+      - name: Build Summary
+        run: |
+          echo "========================================"
+          echo "       Kernel Build Summary"
+          echo "========================================"
+          echo "Android Version : ${{ inputs.android_version }}"
+          echo "Kernel Version  : ${{ inputs.kernel_version }}"
+          echo "Sub Level       : ${{ inputs.sub_level }}"
+          echo "Patch Level     : ${{ inputs.os_patch_level }}"
+          echo "Build Type      : ${{ matrix.build_type }}"
+          echo "KSU Commit      : ${{ inputs.ksu_commit || 'Default' }}"
+          echo "Variant         : ${{ inputs.variant || 'Standard' }}"
+          echo "========================================"
+      # ...existing steps from build.yml as needed for TheWildJames...

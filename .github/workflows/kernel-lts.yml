@@ -6,6 +6,7 @@ permissions:
 
 on:
   workflow_call:
+  push:
     inputs:
       ksu_commit:
         required: false
