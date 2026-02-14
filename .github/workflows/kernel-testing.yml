@@ -16,7 +16,6 @@ on:
       build_bypass:
         required: true
         type: boolean
-  push:
 
 jobs:
   build-kernels-testing:
