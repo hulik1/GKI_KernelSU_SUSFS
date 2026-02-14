@@ -120,24 +120,14 @@ jobs:
         echo "Git Repo Tool   : ✓ $(ls git-repo/repo 2>/dev/null && echo 'Ready' || echo 'Missing')"
         echo "========================================"
 
-    - name: Initialize and Sync Kernel Source
-      working-directory: ${{ env.KERNEL_ROOT }}
-      run: |
-        FORMATTED_BRANCH="${{ inputs.android_version }}-${{ inputs.kernel_version }}-${{ inputs.os_patch_level }}"
-
-        repo init -u https://android.googlesource.com/kernel/manifest -b common-${FORMATTED_BRANCH} --depth=1
-
-        #--repo-rev=v2.16
-
-        REMOTE_BRANCH=$(git ls-remote https://android.googlesource.com/kernel/common ${FORMATTED_BRANCH})
-        DEFAULT_MANIFEST_PATH=.repo/manifests/default.xml
-        if grep -q deprecated <<< $REMOTE_BRANCH; then
-          sed -i "s/\"${FORMATTED_BRANCH}\"/\"deprecated\/${FORMATTED_BRANCH}\"/g" $DEFAULT_MANIFEST_PATH
-          echo "Note: Branch ${FORMATTED_BRANCH} is considered deprecated."
-          echo "$DEPRECATED_BRANCH=true" >> $GITHUB_ENV
-        fi
-
-        repo --trace sync -c -j$(nproc --all) --fail-fast --no-tags --force-sync --no-clone-bundle
+    - name: Download Kernel Repository
+      uses: ./.github/actions/download-kernel
+      with:
+        android_version: ${{ inputs.android_version }}
+        kernel_version: ${{ inputs.kernel_version }}
+        sub_level: ${{ inputs.sub_level }}
+        os_patch_level: ${{ inputs.os_patch_level }}
+        kernel_root: ${{ env.KERNEL_ROOT }}
 
     - name: Extract Sublevel and Set File Name
       run: |
