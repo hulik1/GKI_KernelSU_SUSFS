@@ -47,16 +47,9 @@ on:
           - BBG
           - None
         default: WKSU+SUSFS+BBG
+  push:
 
 jobs:
-  build-testing:
-    if: ${{ inputs.kernel_type == 'all' || inputs.kernel_type == 'testing' }}
-    uses: ./.github/workflows/kernel-testing.yml
-    secrets: inherit
-    with:
-      ksu_commit: ${{ inputs.ksu_commit }}
-      build_bypass: ${{ inputs.build_bypass }}
-      feature_set: ${{ inputs.feature_set }}
   build-a12-5-10:
     if: ${{ inputs.kernel_type == 'all' || inputs.kernel_type == 'a12-5-10' }}
     uses: ./.github/workflows/kernel-a12-5-10.yml
@@ -119,6 +112,15 @@ jobs:
       ksu_commit: ${{ inputs.ksu_commit }}
       build_bypass: ${{ inputs.build_bypass }}
       feature_set: ${{ inputs.feature_set }}
+  
+  build-lts:
+    if: ${{ inputs.kernel_type == 'all' || inputs.kernel_type == 'lts' || github.event_name == 'push' }}
+    uses: ./.github/workflows/kernel-lts.yml
+    secrets: inherit
+    with:
+      ksu_commit: ${{ inputs.ksu_commit }}
+      build_bypass: ${{ inputs.build_bypass }}
+      feature_set: ${{ inputs.feature_set }}
 
   build-custom:
     if: ${{ inputs.kernel_type == 'all' || inputs.kernel_type == 'custom' }}
@@ -129,15 +131,14 @@ jobs:
       build_bypass: ${{ inputs.build_bypass }}
       feature_set: ${{ inputs.feature_set }}
 
-  build-lts:
-    if: ${{ inputs.kernel_type == 'all' || inputs.kernel_type == 'lts' }}
-    uses: ./.github/workflows/kernel-lts.yml
+  build-testing:
+    if: ${{ inputs.kernel_type == 'all' || inputs.kernel_type == 'testing' || github.event_name == 'push' }}
+    uses: ./.github/workflows/kernel-testing.yml
     secrets: inherit
     with:
       ksu_commit: ${{ inputs.ksu_commit }}
       build_bypass: ${{ inputs.build_bypass }}
       feature_set: ${{ inputs.feature_set }}
-
   rej:
     if: always()
     runs-on: ubuntu-latest
@@ -151,6 +152,7 @@ jobs:
     - build-a16-6-12
     - build-custom
     - build-lts
+    - build-testing
     steps:
     - name: Download Misc Artifacts
       uses: actions/download-artifact@v5
@@ -215,12 +217,13 @@ jobs:
     - build-a14-6-1
     - build-a15-6-6
     - build-a16-6-12
-    - build-custom
     - build-lts
+    - build-custom
+    - build-testing
 
     env:
       GH_TOKEN: ${{ github.token }}
-      RELEASE_NAME: "!!TESTING!! GKI Kernels With WKSU & SUSFS v2.0.0 !!TESTING!!"
+      RELEASE_NAME: "GKI Kernels With WKSU & SUSFS v2.0.0"
       RELEASE_BODY: ""
     outputs:
       new_tag: ${{ steps.tag.outputs.new_tag }}
@@ -254,6 +257,7 @@ jobs:
         check_selected "a16-6-12" "build-a16-6-12" "${{ needs.build-a16-6-12.result }}"
         check_selected "custom" "build-custom" "${{ needs.build-custom.result }}"
         check_selected "lts" "build-lts" "${{ needs.build-lts.result }}"
+        check_selected "testing" "build-testing" "${{ needs.build-testing.result }}"
 
         if [[ "$failed" -ne 0 ]]; then
           exit 1
