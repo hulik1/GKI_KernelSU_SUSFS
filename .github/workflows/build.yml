@@ -43,10 +43,9 @@ jobs:
           ${{
             fromJSON(
               inputs.variant == 'vTomsonek' && '["vTomsonek"]' ||
-              inputs.variant == 'TheWildJamesTest' && '["TheWildJamesTest"]' ||
+              inputs.variant == 'TheWildJames' && '["TheWildJames"]' ||
               inputs.variant == 'MarionKernel' && '["MarionKernel"]' ||
               inputs.variant == 'Hakan' && '["Hakan"]' ||
-              inputs.variant == 'Duchamp' && '["Duchamp"]' ||
               inputs.variant == 'Neyugn' && '["Neyugn"]' ||
               (inputs.build_bypass && '["Normal","Bypass"]' || '["Normal"]')
             )
@@ -84,26 +83,6 @@ jobs:
         rmz_version: "3.1.1"  # Required when rm_cmd is 'rmz'
         testing: false
 
-    - name: Install System Dependencies
-      if: false
-      run: |
-        set -e
-        sudo apt-get update
-        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-          binutils \
-          binutils-x86-64-linux-gnu \
-          lld
-
-        if ! command -v ld >/dev/null 2>&1 && command -v x86_64-linux-gnu-ld >/dev/null 2>&1; then
-          sudo ln -sf "$(command -v x86_64-linux-gnu-ld)" /usr/bin/ld
-        fi
-
-        command -v ld
-        ld --version | head -n 1
-        echo "PATH=/usr/bin:/bin:$PATH" >> "$GITHUB_ENV"
-        echo "HOSTLDFLAGS=-B/usr/bin ${HOSTLDFLAGS:-}" >> "$GITHUB_ENV"
-        echo "LDFLAGS=-B/usr/bin ${LDFLAGS:-}" >> "$GITHUB_ENV"
-
     - name: Setup Build Environment
       run: |
         CONFIG="${{ inputs.android_version }}-${{ inputs.kernel_version }}-${{ inputs.sub_level }}"
@@ -130,7 +109,6 @@ jobs:
       run: |
         ANYKERNEL_BRANCH="gki-2.0"
         git clone https://github.com/WildKernels/AnyKernel3.git -b "$ANYKERNEL_BRANCH"
-        rm -rf AnyKernel3/.git
         git clone https://github.com/WildKernels/kernel_patches.git
 
     - name: Initialize and Sync Kernel Source
@@ -138,7 +116,9 @@ jobs:
       run: |
         FORMATTED_BRANCH="${{ inputs.android_version }}-${{ inputs.kernel_version }}-${{ inputs.os_patch_level }}"
 
-        repo init -u https://android.googlesource.com/kernel/manifest -b common-${FORMATTED_BRANCH} --repo-rev=v2.16 --depth=1
+        repo init -u https://android.googlesource.com/kernel/manifest -b common-${FORMATTED_BRANCH} --depth=1
+
+        #--repo-rev=v2.16
 
         REMOTE_BRANCH=$(git ls-remote https://android.googlesource.com/kernel/common ${FORMATTED_BRANCH})
         DEFAULT_MANIFEST_PATH=.repo/manifests/default.xml
@@ -216,8 +196,6 @@ jobs:
         git clone https://gitlab.com/simonpunk/susfs4ksu.git -b "$SUSFS_BRANCH"
 
         SUSFS_VERSION="2.0.0"
-        cd "$KERNEL_ROOT/Wild_KSU"
-        echo "Nothing to fix for WKSU"
 
         cd "$KERNEL_ROOT/common"
         cp "$SUSFS4KSU/kernel_patches/fs/"* "$KERNEL_ROOT/common/fs/"

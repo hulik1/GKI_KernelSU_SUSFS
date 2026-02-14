@@ -47,39 +47,12 @@ jobs:
         rmz_version: "3.1.1"
         testing: false
 
-      # Download all artifacts that match the pattern *-AnyKernel3
-      # This replaces the hardcoded steps in the original file with a more generic one
-    - name: Download All Artifacts
+      # Download only TheWildJames artifacts for Telegram notification
+    - name: Download TheWildJames Artifacts
       uses: actions/download-artifact@v4
       with:
         path: ./downloaded-artifacts
-        pattern: "*-AnyKernel3"
-        merge-multiple: true
-
-    - name: Zip Artifacts
-      run: |
-        shopt -s nullglob
-        # The download-artifact v4 with merge-multiple puts everything in the path.
-        # However, the structure from the build job might be: artifact_name/files
-        # Let's adjust based on how build.yml uploads them.
-        # build.yml uses upload-artifact@v4 with name: "..." and path: "..."
-        
-        # If we downloaded multiple artifacts, they might be mixed if we use merge-multiple.
-        # Let's check the structure.
-        # Actually, let's stick to the previous logic but make it dynamic.
-        # Since we don't know exact names, we download all individually?
-        # actions/download-artifact@v5 (v4 actually) supports patterns.
-        
-        mkdir -p zip_staging
-        
-        # We need to zip each artifact folder back into a zip file
-        # But download-artifact v4 merges if we use pattern * without separate folders unless we specify.
-        
-    - name: Download Artifacts (Separate Folders)
-      uses: actions/download-artifact@v4
-      with:
-        path: ./downloaded-artifacts
-        pattern: "*-AnyKernel3"
+        pattern: "*-TheWildJames-AnyKernel3"
         
     - name: Prepare Zips
       run: |
