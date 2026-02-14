@@ -47,7 +47,7 @@ runs:
     
     - name: Extract BBG Version
       shell: bash
-      working-directory: ${{ inputs.kernel_root }}/Baseband_guard
+      working-directory: ${{ inputs.kernel_root }}/Baseband-guard
       run: |
         BBG_COMMIT=$(git rev-parse --short HEAD 2>/dev/null)
         BBG_VERSION=$(git rev-list --count HEAD 2>/dev/null)
