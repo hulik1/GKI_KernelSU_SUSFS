@@ -255,10 +255,10 @@ jobs:
         fi
 
         if [[ "${{ inputs.android_version }}" == "android14" && "${{ inputs.kernel_version }}" == "6.1" ]]; then
-          if [[ "$SUBLEVEL" -ge 145 ]]; then
-            cp $KERNEL_PATCHES/wild/susfs_fix_patches/v${SUSFS_VERSION}/a14-6.1/base.c.patch ./
-            patch -p1 < base.c.patch
-          fi
+          #if [[ "$SUBLEVEL" -ge 145 ]]; then
+          #  cp $KERNEL_PATCHES/wild/susfs_fix_patches/v${SUSFS_VERSION}/a14-6.1/base.c.patch ./
+          #  patch -p1 < base.c.patch
+          #fi
           if [[ "$SUBLEVEL" -le 75 && "${{ inputs.os_patch_level }}" != "2024-05" ]]; then
             sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
           fi
