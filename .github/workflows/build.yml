@@ -52,20 +52,8 @@ jobs:
           }}
 
     steps:
-    - name: Build Summary Start
-      run: |
-        echo "========================================"
-        echo "       Kernel Build Summary Start       "
-        echo "========================================"
-        echo "Android Version : ${{ inputs.android_version }}"
-        echo "Kernel Version  : ${{ inputs.kernel_version }}"
-        echo "Sub Level       : ${{ inputs.sub_level }}"
-        echo "Patch Level     : ${{ inputs.os_patch_level }}"
-        echo "Build Type      : ${{ matrix.build_type }}"
-        echo "KSU Commit      : ${{ inputs.ksu_commit || 'Default' }}"
-        echo "Variant         : ${{ inputs.variant || 'Standard' }}"
-        echo "Feature Set     : ${{ inputs.feature_set }}"
-        echo "========================================"
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
     - name: Free Disk Space
       if: true
@@ -590,11 +578,11 @@ jobs:
         if-no-files-found: ignore
         compression-level: 9
 
-    - name: Build Summary End
+    - name: Build Summary
       if: ${{ always() }}
       run: |
         echo "========================================"
-        echo "       Kernel Build Summary End         "
+        echo "       Kernel Build Summary             "
         echo "========================================"
         echo "Kernel Info:"
         echo "Android Version     : ${{ inputs.android_version }}"
