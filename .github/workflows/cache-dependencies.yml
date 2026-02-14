@@ -1,0 +1,118 @@
+name: Download Build Dependencies
+permissions:
+  contents: read
+  actions: write
+
+on:
+  workflow_call:
+    outputs:
+      dependencies-ready:
+        description: "Dependencies are downloaded and uploaded"
+        value: ${{ jobs.download-dependencies.outputs.status }}
+
+jobs:
+  download-dependencies:
+    name: Download Dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      status: ${{ steps.summary.outputs.status }}
+    
+    steps:
+    - name: Download Summary Start
+      run: |
+        echo "========================================"
+        echo "    Downloading Build Dependencies      "
+        echo "========================================"
+        echo "Started at: $(date)"
+    
+    - name: Clone AnyKernel3
+      run: |
+        git clone https://github.com/WildKernels/AnyKernel3.git -b gki-2.0 --depth=1
+        echo "AnyKernel3 commit: $(cd AnyKernel3 && git rev-parse --short HEAD)"
+    
+    - name: Clone Kernel Patches
+      run: |
+        git clone https://github.com/WildKernels/kernel_patches.git --depth=1
+        echo "Kernel Patches commit: $(cd kernel_patches && git rev-parse --short HEAD)"
+    
+    - name: Clone All SUSFS Branches
+      run: |
+        mkdir -p susfs_cache
+        
+        # List of all SUSFS branches we support
+        BRANCHES=(
+          "gki-android12-5.10"
+          "gki-android13-5.10"
+          "gki-android13-5.15"
+          "gki-android14-5.15"
+          "gki-android14-6.1"
+          "gki-android15-6.6"
+          "gki-android16-6.12"
+        )
+        
+        for BRANCH in "${BRANCHES[@]}"; do
+          echo "Cloning SUSFS branch: $BRANCH"
+          git clone https://gitlab.com/simonpunk/susfs4ksu.git -b "$BRANCH" --depth=1 "susfs_cache/$BRANCH" || {
+            echo "Warning: Failed to clone branch $BRANCH (may not exist yet)"
+            continue
+          }
+          COMMIT=$(cd "susfs_cache/$BRANCH" && git rev-parse --short HEAD 2>/dev/null || echo "N/A")
+          echo "  └─ Commit: $COMMIT"
+        done
+        
+        BRANCH_COUNT=$(ls -d susfs_cache/* 2>/dev/null | wc -l)
+        echo "SUSFS branches downloaded: $BRANCH_COUNT"
+    
+    - name: Download Git Repo Tool
+      run: |
+        mkdir -p git-repo
+        curl -L https://storage.googleapis.com/git-repo-downloads/repo -o git-repo/repo
+        chmod 0755 git-repo/repo
+        echo "Git repo tool downloaded"
+    
+    - name: Upload AnyKernel3 Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: anykernel3
+        path: AnyKernel3/
+        retention-days: 1
+        compression-level: 6
+    
+    - name: Upload Kernel Patches Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: kernel-patches
+        path: kernel_patches/
+        retention-days: 1
+        compression-level: 6
+    
+    - name: Upload SUSFS Cache Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: susfs-cache
+        path: susfs_cache/
+        retention-days: 1
+        compression-level: 6
+    
+    - name: Upload Git Repo Tool Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: git-repo-tool
+        path: git-repo/
+        retention-days: 1
+        compression-level: 0
+    
+    - name: Download Summary End
+      id: summary
+      run: |
+        echo "========================================"
+        echo "    Dependencies Download Complete      "
+        echo "========================================"
+        echo "AnyKernel3      : ✓ Uploaded as artifact"
+        echo "Kernel Patches  : ✓ Uploaded as artifact"
+        echo "SUSFS Branches  : ✓ Uploaded as artifact"
+        echo "Git Repo Tool   : ✓ Uploaded as artifact"
+        echo "========================================"
+        echo "Completed at: $(date)"
+        echo "status=success" >> $GITHUB_OUTPUT
