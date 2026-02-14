@@ -24,6 +24,9 @@ on:
       ksu_commit:
         required: false
         type: string
+      feature_set:
+        required: true
+        type: string
       build_bypass:
         required: true
         type: boolean
@@ -189,6 +192,7 @@ jobs:
         fi
 
     - name: Add WKSU
+      if: contains(inputs.feature_set, 'WKSU')
       working-directory: ${{ env.KERNEL_ROOT }}
       run: |
         if [[ -n "${{ inputs.ksu_commit }}" ]]; then
@@ -198,6 +202,7 @@ jobs:
         fi
 
     - name: Clone & Apply SUSFS Patches
+      if: contains(inputs.feature_set, 'SUSFS')
       run: |
         SUSFS_BRANCH="gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}"
         git clone https://gitlab.com/simonpunk/susfs4ksu.git -b "$SUSFS_BRANCH"

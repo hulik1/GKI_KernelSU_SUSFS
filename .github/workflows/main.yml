@@ -21,115 +21,113 @@ on:
         description: "Build Bypass"
         type: boolean
         default: false
-      build_a12_5_10:
-        description: "Android 12 - 5.10"
-        type: boolean
-        default: false
-      build_a13_5_10:
-        description: "Android 13 - 5.10"
-        type: boolean
-        default: false
-      build_a13_5_15:
-        description: "Android 13 - 5.15"
-        type: boolean
-        default: false
-      build_a14_5_15:
-        description: "Android 14 - 5.15"
-        type: boolean
-        default: false
-      build_a14_6_1:
-        description: "Android 14 - 6.1"
-        type: boolean
-        default: false
-      build_a15_6_6:
-        description: "Android 15 - 6.6"
-        type: boolean
-        default: false
-      build_a16_6_12:
-        description: "Android 16 - 6.12"
-        type: boolean
-        default: false
-      build_lts:
-        description: "Build All LTS Kernels"
-        type: boolean
-        default: false
-      build_custom:
-        description: "Custom Builds"
-        type: boolean
-        default: true
+      kernel_type:
+        description: "Kernel Type to Build"
+        type: choice
+        options:
+          - All
+          - a12-5-10
+          - a13-5-10
+          - a13-5-15
+          - a14-5-15
+          - a14-6-1
+          - a15-6-6
+          - a16-6-12
+          - lts
+          - custom
+        default: custom
+      feature_set:
+        description: "Feature Set"
+        type: choice
+        options:
+          - WKSU+SUSFS+BBG
+          - WKSU+BBG
+          - WKSU
+          - BBG
+          - None
+        default: WKSU+SUSFS+BBG
 
 jobs:
   build-a12-5-10:
-    if: inputs.build_a12_5_10
+    if: ${{ inputs.kernel_type == 'All' || inputs.kernel_type == 'a12-5-10' }}
     uses: ./.github/workflows/kernel-a12-5-10.yml
     secrets: inherit
     with:
       ksu_commit: ${{ inputs.ksu_commit }}
       build_bypass: ${{ inputs.build_bypass }}
+      feature_set: ${{ inputs.feature_set }}
 
   build-a13-5-10:
-    if: inputs.build_a13_5_10
+    if: ${{ inputs.kernel_type == 'All' || inputs.kernel_type == 'a13-5-10' }}
     uses: ./.github/workflows/kernel-a13-5-10.yml
     secrets: inherit
     with:
       ksu_commit: ${{ inputs.ksu_commit }}
       build_bypass: ${{ inputs.build_bypass }}
+      feature_set: ${{ inputs.feature_set }}
 
   build-a13-5-15:
-    if: inputs.build_a13_5_15
+    if: ${{ inputs.kernel_type == 'All' || inputs.kernel_type == 'a13-5-15' }}
     uses: ./.github/workflows/kernel-a13-5-15.yml
     secrets: inherit
     with:
       ksu_commit: ${{ inputs.ksu_commit }}
       build_bypass: ${{ inputs.build_bypass }}
+      feature_set: ${{ inputs.feature_set }}
 
   build-a14-5-15:
-    if: inputs.build_a14_5_15
+    if: ${{ inputs.kernel_type == 'All' || inputs.kernel_type == 'a14-5-15' }}
     uses: ./.github/workflows/kernel-a14-5-15.yml
     secrets: inherit
     with:
       ksu_commit: ${{ inputs.ksu_commit }}
       build_bypass: ${{ inputs.build_bypass }}
+      feature_set: ${{ inputs.feature_set }}
 
   build-a14-6-1:
-    if: inputs.build_a14_6_1
+    if: ${{ inputs.kernel_type == 'All' || inputs.kernel_type == 'a14-6-1' }}
     uses: ./.github/workflows/kernel-a14-6-1.yml
     secrets: inherit
     with:
       ksu_commit: ${{ inputs.ksu_commit }}
       build_bypass: ${{ inputs.build_bypass }}
+      feature_set: ${{ inputs.feature_set }}
 
   build-a15-6-6:
-    if: inputs.build_a15_6_6
+    if: ${{ inputs.kernel_type == 'All' || inputs.kernel_type == 'a15-6-6' }}
     uses: ./.github/workflows/kernel-a15-6-6.yml
     secrets: inherit
     with:
       ksu_commit: ${{ inputs.ksu_commit }}
       build_bypass: ${{ inputs.build_bypass }}
+      feature_set: ${{ inputs.feature_set }}
 
   build-a16-6-12:
-    if: inputs.build_a16_6_12
+    if: ${{ inputs.kernel_type == 'All' || inputs.kernel_type == 'a16-6-12' }}
     uses: ./.github/workflows/kernel-a16-612.yml
     secrets: inherit
     with:
       ksu_commit: ${{ inputs.ksu_commit }}
       build_bypass: ${{ inputs.build_bypass }}
+      feature_set: ${{ inputs.feature_set }}
 
   build-custom:
-    if: inputs.build_custom
+    if: ${{ inputs.kernel_type == 'All' || inputs.kernel_type == 'custom' }}
     uses: ./.github/workflows/kernel-custom.yml
     secrets: inherit
     with:
       ksu_commit: ${{ inputs.ksu_commit }}
       build_bypass: ${{ inputs.build_bypass }}
+      feature_set: ${{ inputs.feature_set }}
 
   build-lts:
-    if: inputs.build_lts
+    if: ${{ inputs.kernel_type == 'All' || inputs.kernel_type == 'lts' }}
     uses: ./.github/workflows/kernel-lts.yml
     secrets: inherit
     with:
       ksu_commit: ${{ inputs.ksu_commit }}
       build_bypass: ${{ inputs.build_bypass }}
+      feature_set: ${{ inputs.feature_set }}
 
   rej:
     if: always()
@@ -225,26 +223,28 @@ jobs:
         failed=0
 
         check_selected() {
-          local selected="$1"
+          local target="$1"
           local job_name="$2"
           local result="$3"
-          if [[ "$selected" == "true" ]]; then
+          local current_type="${{ inputs.kernel_type }}"
+          
+          if [[ "$current_type" == "All" || "$current_type" == "$target" ]]; then
             if [[ "$result" != "success" ]]; then
-              echo "Selected job $job_name did not succeed (result: $result)"
+              echo "Required job $job_name did not succeed (result: $result)"
               failed=1
             fi
           fi
         }
 
-        check_selected "${{ inputs.build_a12_5_10 }}" "build-a12-5-10" "${{ needs.build-a12-5-10.result }}"
-        check_selected "${{ inputs.build_a13_5_10 }}" "build-a13-5-10" "${{ needs.build-a13-5-10.result }}"
-        check_selected "${{ inputs.build_a13_5_15 }}" "build-a13-5-15" "${{ needs.build-a13-5-15.result }}"
-        check_selected "${{ inputs.build_a14_5_15 }}" "build-a14-5-15" "${{ needs.build-a14-5-15.result }}"
-        check_selected "${{ inputs.build_a14_6_1 }}" "build-a14-6-1" "${{ needs.build-a14-6-1.result }}"
-        check_selected "${{ inputs.build_a15_6_6 }}" "build-a15-6-6" "${{ needs.build-a15-6-6.result }}"
-        check_selected "${{ inputs.build_a16_6_12 }}" "build-a16-6-12" "${{ needs.build-a16-6-12.result }}"
-        check_selected "${{ inputs.build_custom }}" "build-custom" "${{ needs.build-custom.result }}"
-        check_selected "${{ inputs.build_lts }}" "build-lts" "${{ needs.build-lts.result }}"
+        check_selected "a12-5-10" "build-a12-5-10" "${{ needs.build-a12-5-10.result }}"
+        check_selected "a13-5-10" "build-a13-5-10" "${{ needs.build-a13-5-10.result }}"
+        check_selected "a13-5-15" "build-a13-5-15" "${{ needs.build-a13-5-15.result }}"
+        check_selected "a14-5-15" "build-a14-5-15" "${{ needs.build-a14-5-15.result }}"
+        check_selected "a14-6-1" "build-a14-6-1" "${{ needs.build-a14-6-1.result }}"
+        check_selected "a15-6-6" "build-a15-6-6" "${{ needs.build-a15-6-6.result }}"
+        check_selected "a16-6-12" "build-a16-6-12" "${{ needs.build-a16-6-12.result }}"
+        check_selected "custom" "build-custom" "${{ needs.build-custom.result }}"
+        check_selected "lts" "build-lts" "${{ needs.build-lts.result }}"
 
         if [[ "$failed" -ne 0 ]]; then
           exit 1
@@ -376,108 +376,13 @@ jobs:
           gh release upload "${{ env.NEW_TAG }}" "$GITHUB_WORKSPACE/${artifact_name}.zip" --clobber
         done
 
-  notify-actions:
-    runs-on: ubuntu-latest
-    needs: [release]
+  notify:
+    needs: release
     if: ${{ always() && (inputs.release_type == 'Actions' || needs.release.result == 'success') }}
-    env:
-      NEW_TAG: ${{ needs.release.outputs.new_tag }}
-    steps:
-    - name: Free Disk Space
-      if: true
-      uses: endersonmenezes/free-disk-space@v3  # Use @main for latest, @v3 for stable
-      with:
-        remove_android: true
-        remove_dotnet: true
-        remove_haskell: true
-        remove_tool_cache: true
-        remove_swap: true
-        remove_packages: "azure-cli google-cloud-cli microsoft-edge-stable google-chrome-stable firefox postgresql* temurin-* *llvm* mysql* dotnet-sdk-*"
-        remove_packages_one_command: true
-        remove_folders: "/usr/share/swift /usr/share/miniconda /usr/share/az* /usr/local/lib/node_modules /usr/local/share/chromium /usr/local/share/powershell /usr/local/julia /usr/local/aws-cli /usr/local/aws-sam-cli /usr/share/gradle"
-        rm_cmd: "rmz"  # Use 'rmz' for faster deletion (default: 'rm')
-        rmz_version: "3.1.1"  # Required when rm_cmd is 'rmz'
-        testing: false
-        
-    - name: Download Artifacts
-      uses: actions/download-artifact@v5
-      with:
-        path: ./downloaded-artifacts/6.1.145-android14-2025-09-TheWildJames-AnyKernel3
-        pattern: 6.1.145-android14-2025-09-TheWildJames-AnyKernel3
-      continue-on-error: true
-
-    - name: Download Artifacts
-      uses: actions/download-artifact@v5
-      with:
-        path: ./downloaded-artifacts/6.1.145-android14-2025-09-Normal-AnyKernel3
-        pattern: 6.1.145-android14-2025-09-Normal-AnyKernel3
-      continue-on-error: true
-
-    - name: Upload Release Assets
-      run: |+
-        shopt -s nullglob
-        mapfile -t anykernel_dirs < <(find ./downloaded-artifacts -maxdepth 2 -type d -name '*-AnyKernel3' -print)
-
-        for dir in "${anykernel_dirs[@]}"; do
-          artifact_name=$(basename "$dir")
-          echo "Creating ZIP for $artifact_name..."
-          (cd "$dir" && zip -r -q -9 "$GITHUB_WORKSPACE/${artifact_name}.zip" ./*) &
-        done
-        wait
-
-    - name: Send Telegram Notification
-      if: inputs.release_type == 'Actions' && false
-      run: |
-        curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-          -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-          -F message_thread_id="${{ secrets.TELEGRAM_TOPIC_ID_GKI }}" \
-          -F text="
-          🌽 *New Kernel Actions Build Finished*
-          📦 *Repository:* [${{ github.repository }}](https://github.com/${{ github.repository }})
-          ✏️ *Commit:* [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
-          [🔗 View Action Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" \
-          -F parse_mode="Markdown"
-
-    - name: Send Telegram Notification
-      if: inputs.release_type != 'Actions' && needs.release.result == 'success' && false
-      run: |
-        RELEASE_TYPE_TEXT=""
-        if [ "${{ inputs.release_type }}" == "Pre-Release" ]; then
-          RELEASE_TYPE_TEXT="🧪 *Pre-Release*"
-        else
-          RELEASE_TYPE_TEXT="🚀 *Release*"
-        fi
-
-        curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-          -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-          -F message_thread_id="${{ secrets.TELEGRAM_TOPIC_ID_GKI }}" \
-          -F text="
-          🌽 *New Kernel $RELEASE_TYPE_TEXT Uploaded*  
-          📦 *Repository:* [${{ github.repository }}](https://github.com/${{ github.repository }})  
-          ✏️ *Commit:* [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})  
-          [🔗 View GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${{ env.NEW_TAG }})" \
-          -F parse_mode="Markdown"
-
-    - name: DM Artifacts
-      if: always()
-      run: |
-        shopt -s nullglob
-        files=("$GITHUB_WORKSPACE"/*.zip)
-
-        if [ ${#files[@]} -eq 0 ]; then
-            echo "No ZIP files found for DM."
-            exit 0
-        fi
-
-        if [ -z "${{ secrets.TELEGRAM_USER_ID }}" ]; then
-            echo "Error: TELEGRAM_USER_ID secret is not set."
-            exit 1
-        fi
-
-        for file in "${files[@]}"; do
-            echo "Sending $(basename "$file") to Telegram DM..."
-            curl -v -F chat_id="${{ secrets.TELEGRAM_USER_ID }}" \
-                -F document=@"$file" \
-                -F caption="📦 Build: $(basename "$file")" \
-                https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument
+    uses: ./.github/workflows/notify.yml
+    secrets: inherit
+    with:
+      release_type: ${{ inputs.release_type }}
+      new_tag: ${{ needs.release.outputs.new_tag }}
+      release_result: ${{ needs.release.result }}
         done

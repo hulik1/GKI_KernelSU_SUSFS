@@ -10,6 +10,9 @@ on:
       ksu_commit:
         required: false
         type: string
+      feature_set:
+        required: true
+        type: string
       build_bypass:
         required: true
         type: boolean
@@ -59,4 +62,5 @@ jobs:
       os_patch_level: ${{ matrix.os_patch_level }}
       variant: ${{ matrix.variant }}
       ksu_commit: ${{ inputs.ksu_commit }}
+      feature_set: ${{ inputs.feature_set }}
       build_bypass: ${{ inputs.build_bypass }}

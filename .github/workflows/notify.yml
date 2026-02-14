@@ -1,0 +1,152 @@
+name: Notify Actions
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  workflow_call:
+    inputs:
+      release_type:
+        required: true
+        type: string
+      new_tag:
+        required: false
+        type: string
+      release_result:
+        required: false
+        type: string
+        default: 'success'
+    secrets:
+      TELEGRAM_BOT_TOKEN:
+        required: true
+      TELEGRAM_CHAT_ID:
+        required: true
+      TELEGRAM_TOPIC_ID_GKI:
+        required: true
+      TELEGRAM_USER_ID:
+        required: true
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Free Disk Space
+      if: true
+      uses: endersonmenezes/free-disk-space@v3
+      with:
+        remove_android: true
+        remove_dotnet: true
+        remove_haskell: true
+        remove_tool_cache: true
+        remove_swap: true
+        remove_packages: "azure-cli google-cloud-cli microsoft-edge-stable google-chrome-stable firefox postgresql* temurin-* *llvm* mysql* dotnet-sdk-*"
+        remove_packages_one_command: true
+        remove_folders: "/usr/share/swift /usr/share/miniconda /usr/share/az* /usr/local/lib/node_modules /usr/local/share/chromium /usr/local/share/powershell /usr/local/julia /usr/local/aws-cli /usr/local/aws-sam-cli /usr/share/gradle"
+        rm_cmd: "rmz"
+        rmz_version: "3.1.1"
+        testing: false
+
+      # Download all artifacts that match the pattern *-AnyKernel3
+      # This replaces the hardcoded steps in the original file with a more generic one
+    - name: Download All Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ./downloaded-artifacts
+        pattern: "*-AnyKernel3"
+        merge-multiple: true
+
+    - name: Zip Artifacts
+      run: |
+        shopt -s nullglob
+        # The download-artifact v4 with merge-multiple puts everything in the path.
+        # However, the structure from the build job might be: artifact_name/files
+        # Let's adjust based on how build.yml uploads them.
+        # build.yml uses upload-artifact@v4 with name: "..." and path: "..."
+        
+        # If we downloaded multiple artifacts, they might be mixed if we use merge-multiple.
+        # Let's check the structure.
+        # Actually, let's stick to the previous logic but make it dynamic.
+        # Since we don't know exact names, we download all individually?
+        # actions/download-artifact@v5 (v4 actually) supports patterns.
+        
+        mkdir -p zip_staging
+        
+        # We need to zip each artifact folder back into a zip file
+        # But download-artifact v4 merges if we use pattern * without separate folders unless we specify.
+        
+    - name: Download Artifacts (Separate Folders)
+      uses: actions/download-artifact@v4
+      with:
+        path: ./downloaded-artifacts
+        pattern: "*-AnyKernel3"
+        
+    - name: Prepare Zips
+      run: |
+        shopt -s nullglob
+        # Iterate over directories in downloaded-artifacts
+        for dir in ./downloaded-artifacts/*-AnyKernel3; do
+          [ -d "$dir" ] || continue
+          artifact_name=$(basename "$dir")
+          echo "Creating ZIP for $artifact_name..."
+          (cd "$dir" && zip -r -q -9 "$GITHUB_WORKSPACE/${artifact_name}.zip" ./*)
+        done
+
+    - name: Send Telegram Notification (Actions)
+      if: inputs.release_type == 'Actions' && false
+      run: |
+        curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+          -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+          -F message_thread_id="${{ secrets.TELEGRAM_TOPIC_ID_GKI }}" \
+          -F text="
+          🌽 *New Kernel Actions Build Finished*
+          📦 *Repository:* [${{ github.repository }}](https://github.com/${{ github.repository }})
+          ✏️ *Commit:* [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+          [🔗 View Action Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" \
+          -F parse_mode="Markdown"
+
+    - name: Send Telegram Notification (Release)
+      if: inputs.release_type != 'Actions' && inputs.release_result == 'success' && false
+      run: |
+        RELEASE_TYPE_TEXT=""
+        if [ "${{ inputs.release_type }}" == "Pre-Release" ]; then
+          RELEASE_TYPE_TEXT="🧪 *Pre-Release*"
+        else
+          RELEASE_TYPE_TEXT="🚀 *Release*"
+        fi
+
+        curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+          -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+          -F message_thread_id="${{ secrets.TELEGRAM_TOPIC_ID_GKI }}" \
+          -F text="
+          🌽 *New Kernel $RELEASE_TYPE_TEXT Uploaded*  
+          📦 *Repository:* [${{ github.repository }}](https://github.com/${{ github.repository }})  
+          ✏️ *Commit:* [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})  
+          [🔗 View GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${{ inputs.new_tag }})" \
+          -F parse_mode="Markdown"
+
+    - name: DM Artifacts
+      # Always run if the job wasn't cancelled (or follow caller's needs)
+      if: always()
+      run: |
+        shopt -s nullglob
+        files=("$GITHUB_WORKSPACE"/*.zip)
+
+        if [ ${#files[@]} -eq 0 ]; then
+            echo "No ZIP files found for DM."
+            exit 0
+        fi
+
+        if [ -z "${{ secrets.TELEGRAM_USER_ID }}" ]; then
+            echo "Error: TELEGRAM_USER_ID secret is not set."
+            exit 1
+        fi
+
+        for file in "${files[@]}"; do
+            echo "Sending $(basename "$file") to Telegram DM..."
+            # Using || true to prevent failure of one send from failing the whole job
+            curl -v -F chat_id="${{ secrets.TELEGRAM_USER_ID }}" \
+                -F document=@"$file" \
+                -F caption="📦 Build: $(basename "$file")" \
+                https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument || true
+        done
