@@ -223,7 +223,7 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    if: ${{ always() && inputs.release_type != 'Actions' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_type != 'Actions' }}
     permissions:
       contents: write
     needs:
