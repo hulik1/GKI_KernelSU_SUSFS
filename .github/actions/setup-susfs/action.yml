@@ -56,7 +56,8 @@ runs:
         cp "${{ inputs.susfs4ksu }}/kernel_patches/fs/"* "${{ inputs.kernel_root }}/common/fs/"
         cp "${{ inputs.susfs4ksu }}/kernel_patches/include/linux/"* "${{ inputs.kernel_root }}/common/include/linux/"
         cp ${{ inputs.susfs4ksu }}/kernel_patches/50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch ./
-        patch -p1 < 50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch || true
+        patch -p1 < 50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch 
+        #|| true
         echo "✓ Base SUSFS patches applied"
     
     - name: Apply Android 12 5.10 Fixes
