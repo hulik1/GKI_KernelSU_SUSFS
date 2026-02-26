@@ -1,0 +1,62 @@
+name: Setup Baseband Guard (BBG)
+description: Download and configure Baseband Guard security module
+inputs:
+  kernel_root:
+    description: 'Path to kernel root directory'
+    required: true
+  defconfig_fragment:
+    description: 'Path to defconfig fragment file'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Download Baseband Guard
+      shell: bash
+      working-directory: ${{ inputs.kernel_root }}
+      run: |
+        echo "========================================"
+        echo "      Setting up Baseband Guard         "
+        echo "========================================"
+        #curl -LSs https://github.com/vc-teahouse/Baseband-guard/raw/main/setup.sh | bash
+        wget -O- https://github.com/vc-teahouse/Baseband-guard/raw/main/setup.sh | bash
+        echo "✓ Baseband Guard downloaded"
+    
+    - name: Configure Baseband Guard
+      shell: bash
+      working-directory: ${{ inputs.kernel_root }}
+      run: |
+        # Add BBG to defconfig
+        echo "CONFIG_BBG=y" >> "${{ inputs.defconfig_fragment }}"
+        
+        # Modify security Kconfig to include baseband_guard in LSM
+        #sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/selinux/selinux,baseband_guard/ } }' common/security/Kconfig
+        sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/bpf/bpf,baseband_guard/ } }' common/security/Kconfig
+        
+        echo "✓ Baseband Guard configured in kernel"
+    
+    - name: Verify BBG Installation
+      shell: bash
+      working-directory: ${{ inputs.kernel_root }}
+      run: |
+        if grep -q "baseband_guard" common/security/Kconfig; then
+          echo "✓ SUCCESS: baseband_guard found in common/security/Kconfig"
+          grep -n "baseband_guard" common/security/Kconfig || true
+        else
+          echo "✗ FAILED: baseband_guard not found in common/security/Kconfig"
+          exit 1
+        fi
+    
+    - name: Extract BBG Version
+      shell: bash
+      working-directory: ${{ inputs.kernel_root }}/Baseband-guard
+      run: |
+        BBG_COMMIT=$(git rev-parse --short HEAD 2>/dev/null)
+        BBG_VERSION=$(git rev-list --count HEAD 2>/dev/null)
+        echo "BBG_COMMIT=$BBG_COMMIT" >> $GITHUB_ENV
+        echo "BBG_VERSION=$BBG_VERSION" >> $GITHUB_ENV
+        
+        echo "✓ Baseband Guard Setup Complete"
+        echo "  Version : $BBG_VERSION"
+        echo "  Commit  : $BBG_COMMIT"
+        echo "========================================"
