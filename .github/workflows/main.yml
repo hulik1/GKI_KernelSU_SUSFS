@@ -57,13 +57,13 @@ jobs:
     permissions:
       contents: read
     outputs:
-      a12-5-10: ${{ steps.load.outputs.a12-5-10 }}
-      a13-5-10: ${{ steps.load.outputs.a13-5-10 }}
-      a13-5-15: ${{ steps.load.outputs.a13-5-15 }}
-      a14-5-15: ${{ steps.load.outputs.a14-5-15 }}
-      a14-6-1: ${{ steps.load.outputs.a14-6-1 }}
-      a15-6-6: ${{ steps.load.outputs.a15-6-6 }}
-      a16-6-12: ${{ steps.load.outputs.a16-6-12 }}
+      a12-5-10: ${{ steps.load.outputs.a12_5_10 }}
+      a13-5-10: ${{ steps.load.outputs.a13_5_10 }}
+      a13-5-15: ${{ steps.load.outputs.a13_5_15 }}
+      a14-5-15: ${{ steps.load.outputs.a14_5_15 }}
+      a14-6-1: ${{ steps.load.outputs.a14_6_1 }}
+      a15-6-6: ${{ steps.load.outputs.a15_6_6 }}
+      a16-6-12: ${{ steps.load.outputs.a16_6_12 }}
       lts: ${{ steps.load.outputs.lts }}
       custom: ${{ steps.load.outputs.custom }}
       testing: ${{ steps.load.outputs.testing }}
@@ -73,13 +73,13 @@ jobs:
     - name: Load all matrix configs
       id: load
       run: |
-        echo "a12-5-10=$(jq -c . .github/kernel-config/a12-5.10.json)" >> $GITHUB_OUTPUT
-        echo "a13-5-10=$(jq -c . .github/kernel-config/a13-5.10.json)" >> $GITHUB_OUTPUT
-        echo "a13-5-15=$(jq -c . .github/kernel-config/a13-5.15.json)" >> $GITHUB_OUTPUT
-        echo "a14-5-15=$(jq -c . .github/kernel-config/a14-5.15.json)" >> $GITHUB_OUTPUT
-        echo "a14-6-1=$(jq -c . .github/kernel-config/a14-6.1.json)" >> $GITHUB_OUTPUT
-        echo "a15-6-6=$(jq -c . .github/kernel-config/a15-6.6.json)" >> $GITHUB_OUTPUT
-        echo "a16-6-12=$(jq -c . .github/kernel-config/a16-6.12.json)" >> $GITHUB_OUTPUT
+        echo "a12_5_10=$(jq -c . .github/kernel-config/a12-5.10.json)" >> $GITHUB_OUTPUT
+        echo "a13_5_10=$(jq -c . .github/kernel-config/a13-5.10.json)" >> $GITHUB_OUTPUT
+        echo "a13_5_15=$(jq -c . .github/kernel-config/a13-5.15.json)" >> $GITHUB_OUTPUT
+        echo "a14_5_15=$(jq -c . .github/kernel-config/a14-5.15.json)" >> $GITHUB_OUTPUT
+        echo "a14_6_1=$(jq -c . .github/kernel-config/a14-6.1.json)" >> $GITHUB_OUTPUT
+        echo "a15_6_6=$(jq -c . .github/kernel-config/a15-6.6.json)" >> $GITHUB_OUTPUT
+        echo "a16_6_12=$(jq -c . .github/kernel-config/a16-6.12.json)" >> $GITHUB_OUTPUT
         echo "lts=$(jq -c . .github/kernel-config/lts.json)" >> $GITHUB_OUTPUT
         echo "custom=$(jq -c . .github/kernel-config/custom.json)" >> $GITHUB_OUTPUT
         echo "testing=$(jq -c . .github/kernel-config/testing.json)" >> $GITHUB_OUTPUT
@@ -91,7 +91,7 @@ jobs:
     name: "Android 12 - 5.10"
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.load-configs.outputs.a12-5-10) }}
+      matrix: ${{ fromJSON(needs.load-configs.outputs['a12-5-10']) }}
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
@@ -106,7 +106,7 @@ jobs:
     name: "Android 13 - 5.10"
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.load-configs.outputs.a13-5-10) }}
+      matrix: ${{ fromJSON(needs.load-configs.outputs['a13-5-10']) }}
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
@@ -121,7 +121,7 @@ jobs:
     name: "Android 13 - 5.15"
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.load-configs.outputs.a13-5-15) }}
+      matrix: ${{ fromJSON(needs.load-configs.outputs['a13-5-15']) }}
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
@@ -136,7 +136,7 @@ jobs:
     name: "Android 14 - 5.15"
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.load-configs.outputs.a14-5-15) }}
+      matrix: ${{ fromJSON(needs.load-configs.outputs['a14-5-15']) }}
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
@@ -151,7 +151,7 @@ jobs:
     name: "Android 14 - 6.1"
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.load-configs.outputs.a14-6-1) }}
+      matrix: ${{ fromJSON(needs.load-configs.outputs['a14-6-1']) }}
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
@@ -166,7 +166,7 @@ jobs:
     name: "Android 15 - 6.6"
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.load-configs.outputs.a15-6-6) }}
+      matrix: ${{ fromJSON(needs.load-configs.outputs['a15-6-6']) }}
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
@@ -181,7 +181,7 @@ jobs:
     name: "Android 16 - 6.12"
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.load-configs.outputs.a16-6-12) }}
+      matrix: ${{ fromJSON(needs.load-configs.outputs['a16-6-12']) }}
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
