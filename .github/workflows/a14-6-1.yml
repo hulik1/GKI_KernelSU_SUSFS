@@ -1,0 +1,57 @@
+name: Build Android 14 - 6.1
+
+on:
+  workflow_call:
+    inputs:
+      ksu_commit:
+        type: string
+        required: false
+        default: ''
+      feature_set:
+        type: string
+        required: false
+        default: 'WKSU+SUSFS+BBG'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: "Android 14 - 6.1"
+    strategy:
+      fail-fast: false
+      matrix:
+        kernel_version:
+          - "6.1.25-android14-2023-06"
+          - "6.1.25-android14-2023-07"
+          - "6.1.25-android14-2023-08"
+          - "6.1.25-android14-2023-09"
+          - "6.1.25-android14-2023-10"
+          - "6.1.43-android14-2023-11"
+          - "6.1.57-android14-2023-12"
+          - "6.1.57-android14-2024-01"
+          - "6.1.68-android14-2024-02"
+          - "6.1.68-android14-2024-03"
+          - "6.1.75-android14-2024-04"
+          - "6.1.75-android14-2024-05"
+          - "6.1.78-android14-2024-06"
+          - "6.1.84-android14-2024-07"
+          - "6.1.90-android14-2024-08"
+          - "6.1.93-android14-2024-09"
+          - "6.1.99-android14-2024-10"
+          - "6.1.112-android14-2024-11"
+          - "6.1.115-android14-2024-12"
+          - "6.1.118-android14-2025-01"
+          - "6.1.124-android14-2025-02"
+          - "6.1.128-android14-2025-03"
+          - "6.1.129-android14-2025-04"
+          - "6.1.134-android14-2025-05"
+          - "6.1.138-android14-2025-06"
+          - "6.1.141-android14-2025-07"
+          - "6.1.145-android14-2025-08"
+          - "6.1.145-android14-2025-09"
+          - "6.1.157-android14-2025-12"
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      kernel_version: ${{ matrix.kernel_version }}
+      ksu_commit: ${{ inputs.ksu_commit }}
+      feature_set: ${{ inputs.feature_set }}

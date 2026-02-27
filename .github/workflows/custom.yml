@@ -1,0 +1,32 @@
+name: Build Custom Kernels
+
+on:
+  workflow_call:
+    inputs:
+      ksu_commit:
+        type: string
+        required: false
+        default: ''
+      feature_set:
+        type: string
+        required: false
+        default: 'WKSU+SUSFS+BBG'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: "Custom Kernels"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kernel_version: "5.10.226-android12-2024-11"
+          - kernel_version: "6.1.145-android14-2025-09"
+          - kernel_version: "6.1.157-android14-2025-12"
+          - kernel_version: "6.1.128-android14-2025-03"
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      kernel_version: ${{ matrix.kernel_version }}
+      ksu_commit: ${{ inputs.ksu_commit }}
+      feature_set: ${{ inputs.feature_set }}

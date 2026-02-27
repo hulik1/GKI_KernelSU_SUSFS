@@ -1,0 +1,35 @@
+name: Build LTS Kernels
+
+on:
+  workflow_call:
+    inputs:
+      ksu_commit:
+        type: string
+        required: false
+        default: ''
+      feature_set:
+        type: string
+        required: false
+        default: 'WKSU+SUSFS+BBG'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: "LTS Kernels"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kernel_version: "5.10.X-android12-lts"
+          - kernel_version: "5.10.X-android13-lts"
+          - kernel_version: "5.15.X-android13-lts"
+          - kernel_version: "5.15.X-android14-lts"
+          - kernel_version: "6.1.X-android14-lts"
+          - kernel_version: "6.6.X-android15-lts"
+          - kernel_version: "6.12.X-android16-lts"
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      kernel_version: ${{ matrix.kernel_version }}
+      ksu_commit: ${{ inputs.ksu_commit }}
+      feature_set: ${{ inputs.feature_set }}

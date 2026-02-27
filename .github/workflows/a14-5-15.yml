@@ -1,0 +1,48 @@
+name: Build Android 14 - 5.15
+
+on:
+  workflow_call:
+    inputs:
+      ksu_commit:
+        type: string
+        required: false
+        default: ''
+      feature_set:
+        type: string
+        required: false
+        default: 'WKSU+SUSFS+BBG'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: "Android 14 - 5.15"
+    strategy:
+      fail-fast: false
+      matrix:
+        kernel_version:
+          - "5.15.110-android14-2023-06"
+          - "5.15.110-android14-2023-08"
+          - "5.15.110-android14-2023-09"
+          - "5.15.131-android14-2023-11"
+          - "5.15.137-android14-2024-01"
+          - "5.15.144-android14-2024-02"
+          - "5.15.144-android14-2024-03"
+          - "5.15.148-android14-2024-04"
+          - "5.15.148-android14-2024-05"
+          - "5.15.149-android14-2024-06"
+          - "5.15.153-android14-2024-07"
+          - "5.15.158-android14-2024-08"
+          - "5.15.164-android14-2024-09"
+          - "5.15.167-android14-2024-11"
+          - "5.15.170-android14-2025-01"
+          - "5.15.178-android14-2025-03"
+          - "5.15.180-android14-2025-05"
+          - "5.15.185-android14-2025-07"
+          - "5.15.192-android14-2025-10"
+          - "5.15.196-android14-2026-01"
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      kernel_version: ${{ matrix.kernel_version }}
+      ksu_commit: ${{ inputs.ksu_commit }}
+      feature_set: ${{ inputs.feature_set }}

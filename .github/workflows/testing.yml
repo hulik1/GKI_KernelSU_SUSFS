@@ -1,0 +1,29 @@
+name: Build Testing Kernels
+
+on:
+  workflow_call:
+    inputs:
+      ksu_commit:
+        type: string
+        required: false
+        default: ''
+      feature_set:
+        type: string
+        required: false
+        default: 'WKSU+SUSFS+BBG'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: "Testing Kernels"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kernel_version: "6.1.145-android14-2025-08"
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      kernel_version: ${{ matrix.kernel_version }}
+      ksu_commit: ${{ inputs.ksu_commit }}
+      feature_set: ${{ inputs.feature_set }}

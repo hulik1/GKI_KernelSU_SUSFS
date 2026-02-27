@@ -1,0 +1,34 @@
+name: Build Android 16 - 6.12
+
+on:
+  workflow_call:
+    inputs:
+      ksu_commit:
+        type: string
+        required: false
+        default: ''
+      feature_set:
+        type: string
+        required: false
+        default: 'WKSU+SUSFS+BBG'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: "Android 16 - 6.12"
+    strategy:
+      fail-fast: false
+      matrix:
+        kernel_version:
+          - "6.12.23-android16-2025-05-exp"
+          - "6.12.23-android16-2025-06"
+          - "6.12.30-android16-2025-07"
+          - "6.12.38-android16-2025-08"
+          - "6.12.38-android16-2025-09"
+          - "6.12.58-android16-2025-12"
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      kernel_version: ${{ matrix.kernel_version }}
+      ksu_commit: ${{ inputs.ksu_commit }}
+      feature_set: ${{ inputs.feature_set }}

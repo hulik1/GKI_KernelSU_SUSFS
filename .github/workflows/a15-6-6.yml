@@ -1,0 +1,45 @@
+name: Build Android 15 - 6.6
+
+on:
+  workflow_call:
+    inputs:
+      ksu_commit:
+        type: string
+        required: false
+        default: ''
+      feature_set:
+        type: string
+        required: false
+        default: 'WKSU+SUSFS+BBG'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: "Android 15 - 6.6"
+    strategy:
+      fail-fast: false
+      matrix:
+        kernel_version:
+          - "6.6.30-android15-2024-07"
+          - "6.6.30-android15-2024-08"
+          - "6.6.46-android15-2024-09"
+          - "6.6.50-android15-2024-10"
+          - "6.6.56-android15-2024-11"
+          - "6.6.57-android15-2024-12"
+          - "6.6.58-android15-2025-01"
+          - "6.6.66-android15-2025-02"
+          - "6.6.77-android15-2025-03"
+          - "6.6.82-android15-2025-04"
+          - "6.6.87-android15-2025-05"
+          - "6.6.89-android15-2025-06"
+          - "6.6.92-android15-2025-07"
+          - "6.6.98-android15-2025-08"
+          - "6.6.98-android15-2025-09"
+          - "6.6.102-android15-2025-10"
+          - "6.6.118-android15-2026-01"
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      kernel_version: ${{ matrix.kernel_version }}
+      ksu_commit: ${{ inputs.ksu_commit }}
+      feature_set: ${{ inputs.feature_set }}

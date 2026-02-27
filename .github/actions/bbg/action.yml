@@ -9,7 +9,7 @@ runs:
       working-directory: ${{ github.workspace }}/kernel
       run: |
         cp -R "$GITHUB_WORKSPACE/Baseband-guard" ./
-        ./setup.sh
+        ./Baseband-guard/setup.sh
     
     - name: Configure Baseband Guard
       shell: bash
