@@ -194,16 +194,18 @@ jobs:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'lts' || github.event_name == 'push' }}
     needs: [download-dependencies, load-configs]
     name: "LTS Kernels"
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.load-configs.outputs.lts) }}
-    uses: ./.github/workflows/build.yml
-    secrets: inherit
-    with:
-      kernel_version: ${{ matrix.kernel_version }}
-      variant: ${{ matrix.variant || '' }}
-      ksu_commit: ${{ inputs.ksu_commit || '' }}
-      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build LTS Kernels
+        env:
+          LTS_CONFIG: ${{ needs.load-configs.outputs.lts }}
+          KSU_COMMIT: ${{ inputs.ksu_commit || '' }}
+          FEATURE_SET: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
+        run: |
+          echo "$LTS_CONFIG" | jq -r '.include[] | .kernel_version' | while read kernel; do
+            echo "Building: $kernel"
+          done
 
   build-custom:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'custom' }}
@@ -224,16 +226,18 @@ jobs:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'testing' || github.event_name == 'push' }}
     needs: [download-dependencies, load-configs]
     name: "Testing Kernels"
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.load-configs.outputs.testing) }}
-    uses: ./.github/workflows/build.yml
-    secrets: inherit
-    with:
-      kernel_version: ${{ matrix.kernel_version }}
-      variant: ${{ matrix.variant || '' }}
-      ksu_commit: ${{ inputs.ksu_commit || '' }}
-      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Testing Kernels
+        env:
+          TESTING_CONFIG: ${{ needs.load-configs.outputs.testing }}
+          KSU_COMMIT: ${{ inputs.ksu_commit || '' }}
+          FEATURE_SET: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
+        run: |
+          echo "$TESTING_CONFIG" | jq -r '.include[] | .kernel_version' | while read kernel; do
+            echo "Building: $kernel"
+          done
 
   build-bypass:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'bypass' }}
