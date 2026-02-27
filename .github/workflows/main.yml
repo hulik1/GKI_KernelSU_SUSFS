@@ -190,18 +190,80 @@ jobs:
       ksu_commit: ${{ inputs.ksu_commit }}
       feature_set: ${{ inputs.feature_set }}
   
-  build-lts:
+  build-lts-1:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'lts' || github.event_name == 'push' }}
     needs: [download-dependencies, load-configs]
     name: "LTS Kernels"
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.load-configs.outputs.lts) }}
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
-      kernel_version: ${{ matrix.kernel_version }}
-      variant: ${{ matrix.variant || '' }}
+      kernel_version: "5.10.X-android12-lts"
+      ksu_commit: ${{ inputs.ksu_commit || '' }}
+      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
+
+  build-lts-2:
+    if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'lts' || github.event_name == 'push' }}
+    needs: [download-dependencies, load-configs]
+    name: "LTS Kernels"
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      kernel_version: "5.10.X-android13-lts"
+      ksu_commit: ${{ inputs.ksu_commit || '' }}
+      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
+
+  build-lts-3:
+    if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'lts' || github.event_name == 'push' }}
+    needs: [download-dependencies, load-configs]
+    name: "LTS Kernels"
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      kernel_version: "5.15.X-android13-lts"
+      ksu_commit: ${{ inputs.ksu_commit || '' }}
+      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
+
+  build-lts-4:
+    if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'lts' || github.event_name == 'push' }}
+    needs: [download-dependencies, load-configs]
+    name: "LTS Kernels"
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      kernel_version: "5.15.X-android14-lts"
+      ksu_commit: ${{ inputs.ksu_commit || '' }}
+      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
+
+  build-lts-5:
+    if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'lts' || github.event_name == 'push' }}
+    needs: [download-dependencies, load-configs]
+    name: "LTS Kernels"
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      kernel_version: "6.1.X-android14-lts"
+      ksu_commit: ${{ inputs.ksu_commit || '' }}
+      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
+
+  build-lts-6:
+    if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'lts' || github.event_name == 'push' }}
+    needs: [download-dependencies, load-configs]
+    name: "LTS Kernels"
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      kernel_version: "6.6.X-android15-lts"
+      ksu_commit: ${{ inputs.ksu_commit || '' }}
+      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
+
+  build-lts-7:
+    if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'lts' || github.event_name == 'push' }}
+    needs: [download-dependencies, load-configs]
+    name: "LTS Kernels"
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      kernel_version: "6.12.X-android16-lts"
       ksu_commit: ${{ inputs.ksu_commit || '' }}
       feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
 
@@ -224,14 +286,10 @@ jobs:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'testing' || github.event_name == 'push' }}
     needs: [download-dependencies, load-configs]
     name: "Testing Kernels"
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.load-configs.outputs.testing) }}
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
-      kernel_version: ${{ matrix.kernel_version }}
-      variant: ${{ matrix.variant || '' }}
+      kernel_version: "6.1.145-android14-2025-08"
       ksu_commit: ${{ inputs.ksu_commit || '' }}
       feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
 
@@ -265,7 +323,13 @@ jobs:
     - build-a15-6-6
     - build-a16-6-12
     - build-custom
-    - build-lts
+    - build-lts-1
+    - build-lts-2
+    - build-lts-3
+    - build-lts-4
+    - build-lts-5
+    - build-lts-6
+    - build-lts-7
     - build-testing
     - build-bypass
     steps:
@@ -332,8 +396,14 @@ jobs:
     - build-a14-6-1
     - build-a15-6-6
     - build-a16-6-12
-    - build-lts
     - build-custom
+    - build-lts-1
+    - build-lts-2
+    - build-lts-3
+    - build-lts-4
+    - build-lts-5
+    - build-lts-6
+    - build-lts-7
     - build-testing
     - build-bypass
 
