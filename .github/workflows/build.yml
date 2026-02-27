@@ -6,16 +6,7 @@ permissions:
 on:
   workflow_call:
     inputs:
-      android_version:
-        required: true
-        type: string
       kernel_version:
-        required: true
-        type: string
-      sub_level:
-        required: true
-        type: string
-      os_patch_level:
         required: true
         type: string
       variant:
@@ -27,33 +18,42 @@ on:
       feature_set:
         required: true
         type: string
-      build_bypass:
-        required: true
-        type: boolean
 
 jobs:
   build-gki:
-    name: "${{ inputs.kernel_version }}.${{ inputs.sub_level }}-${{ inputs.android_version }}-${{ inputs.os_patch_level }}-${{ matrix.build_type }}"
+    name: "${{ inputs.kernel_version }}${{ inputs.variant && format('-{0}', inputs.variant) || '' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        build_type: >-
-          ${{
-            fromJSON(
-              inputs.variant == 'vTomsonek' && '["vTomsonek"]' ||
-              inputs.variant == 'TheWildJames' && '["TheWildJames"]' ||
-              inputs.variant == 'MarionKernel' && '["MarionKernel"]' ||
-              inputs.variant == 'Hakan' && '["Hakan"]' ||
-              inputs.variant == 'Neyugn' && '["Neyugn"]' ||
-              (inputs.build_bypass && '["Normal","Bypass"]' || '["Normal"]')
-            )
-          }}
 
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
+
+    - name: Parse kernel version
+      id: parse
+      run: |
+        # Parse from format: 5.10.125-android14-stable
+        # Extract: KERNEL_VERSION=5.10, SUB_LEVEL=125, ANDROID_VERSION=android14, OS_PATCH_LEVEL=stable
+        INPUT_VERSION="${{ inputs.kernel_version }}"
+        KERNEL_BASE="${INPUT_VERSION%%-*}"
+        KERNEL_VERSION="${KERNEL_BASE%.*}"
+        SUB_LEVEL="${KERNEL_BASE##*.}"
+        ANDROID_VERSION="${INPUT_VERSION#*-}"
+        ANDROID_VERSION="${ANDROID_VERSION%%-*}"
+        OS_PATCH_LEVEL="${INPUT_VERSION#*-}"
+        OS_PATCH_LEVEL="${OS_PATCH_LEVEL#*-}"
+        
+        # Set environment variables for subsequent steps and shell scripts
+        echo "ANDROID_VERSION=$ANDROID_VERSION" >> "$GITHUB_ENV"
+        echo "KERNEL_VERSION=$KERNEL_VERSION" >> "$GITHUB_ENV"
+        echo "SUB_LEVEL=$SUB_LEVEL" >> "$GITHUB_ENV"
+        echo "OS_PATCH_LEVEL=$OS_PATCH_LEVEL" >> "$GITHUB_ENV"
+
+        # Set step outputs for immediate YAML context access (avoids validation warnings)
+        echo "android_version=$ANDROID_VERSION" >> $GITHUB_OUTPUT
+        echo "kernel_version=$KERNEL_VERSION" >> $GITHUB_OUTPUT
+        echo "sub_level=$SUB_LEVEL" >> $GITHUB_OUTPUT
+        echo "os_patch_level=$OS_PATCH_LEVEL" >> $GITHUB_OUTPUT
 
     - name: Free Disk Space
       if: true
@@ -71,92 +71,59 @@ jobs:
         rmz_version: "3.1.1"  # Required when rm_cmd is 'rmz'
         testing: false
 
-    - name: Download AnyKernel3 Artifact
+    - name: Download Build Dependencies
       uses: actions/download-artifact@v4
       with:
-        name: anykernel3
-        path: AnyKernel3
-
-    - name: Download Kernel Patches Artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: kernel-patches
-        path: kernel_patches
-
-    - name: Download Git Repo Tool Artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: git-repo-tool
-        path: git-repo
+        name: build-dependencies
+        path: .
 
     - name: Setup Build Environment
       run: |
-        CONFIG="${{ inputs.android_version }}-${{ inputs.kernel_version }}-${{ inputs.sub_level }}"
-        KERNEL_ROOT="$GITHUB_WORKSPACE/$CONFIG"
-        mkdir -p "$KERNEL_ROOT"
-
-        cat >> $GITHUB_ENV << EOF
-        DEFCONFIG=$KERNEL_ROOT/common/arch/arm64/configs/gki_defconfig
-        DEFCONFIG_FRAGMENT=$KERNEL_ROOT/common/arch/arm64/configs/wild_gki.fragment
-        CONFIG=$CONFIG
-        KERNEL_ROOT=$KERNEL_ROOT
-        SUSFS4KSU=$GITHUB_WORKSPACE/susfs4ksu
-        KERNEL_PATCHES=$GITHUB_WORKSPACE/kernel_patches
-        ANYKERNEL3=$GITHUB_WORKSPACE/AnyKernel3
-        REPO=$GITHUB_WORKSPACE/git-repo/repo
-        EOF
+        mkdir -p "$GITHUB_WORKSPACE/kernel"
         
         # Ensure repo tool is executable
         chmod +x "$GITHUB_WORKSPACE/git-repo/repo"
         echo "$GITHUB_WORKSPACE/git-repo" >> "$GITHUB_PATH"
 
-    - name: Dependency Summary
-      run: |
-        echo "========================================"
-        echo "     Downloaded Dependencies Ready      "
-        echo "========================================"
-        echo "AnyKernel3      : ✓ $(ls -d AnyKernel3 2>/dev/null && echo 'Ready' || echo 'Missing')"
-        echo "Kernel Patches  : ✓ $(ls -d kernel_patches 2>/dev/null && echo 'Ready' || echo 'Missing')"
-        echo "Git Repo Tool   : ✓ $(ls git-repo/repo 2>/dev/null && echo 'Ready' || echo 'Missing')"
-        echo "========================================"
-
     - name: Download Kernel Repository
       uses: ./.github/actions/download-kernel
       with:
-        android_version: ${{ inputs.android_version }}
-        kernel_version: ${{ inputs.kernel_version }}
-        sub_level: ${{ inputs.sub_level }}
-        os_patch_level: ${{ inputs.os_patch_level }}
-        kernel_root: ${{ env.KERNEL_ROOT }}
+        android_version: ${{ steps.parse.outputs.android_version }}
+        kernel_version: ${{ steps.parse.outputs.kernel_version }}
+        os_patch_level: ${{ steps.parse.outputs.os_patch_level }}
 
     - name: Extract Sublevel and Set File Name
+      id: extract
       run: |
-        SUBLEVEL="${{ inputs.sub_level }}"
-        if [[ -f "$KERNEL_ROOT/common/Makefile" ]]; then
-          EXTRACTED=$(grep '^SUBLEVEL = ' "$KERNEL_ROOT/common/Makefile" | awk '{print $3}')
+        SUBLEVEL="$SUB_LEVEL"
+        if [[ -f "$GITHUB_WORKSPACE/kernel/common/Makefile" ]]; then
+          EXTRACTED=$(grep '^SUBLEVEL = ' "$GITHUB_WORKSPACE/kernel/common/Makefile" | awk '{print $3}')
           [[ -n "$EXTRACTED" ]] && SUBLEVEL="$EXTRACTED"
         fi
 
-        ARTIFACT_BASE="${{ inputs.kernel_version }}.$SUBLEVEL-${{ inputs.android_version }}-${{ inputs.os_patch_level }}-${{ matrix.build_type }}"
+        FILE_NAME="$KERNEL_VERSION.$SUBLEVEL-$ANDROID_VERSION-$OS_PATCH_LEVEL${{ inputs.variant && format('-{0}', inputs.variant) || '' }}"
         echo "SUBLEVEL=$SUBLEVEL" >> $GITHUB_ENV
-        echo "ARTIFACT_BASE=$ARTIFACT_BASE" >> $GITHUB_ENV
-        echo "FILE_NAME=$ARTIFACT_BASE" >> $GITHUB_ENV
+        echo "FILE_NAME=$FILE_NAME" >> $GITHUB_ENV
+        
+        # Set step outputs for parse-time YAML context access
+        echo "file_name=$FILE_NAME" >> $GITHUB_OUTPUT
+        echo "sublevel=$SUBLEVEL" >> $GITHUB_OUTPUT
 
     - name: Apply glibc 2.38 Compatibility Fix
       if: false
       run: |
         # Use SUBLEVEL for LTS builds, otherwise use the input sub_level
-        if [[ "${{ inputs.android_version }}" == "android13" && "${{ inputs.kernel_version }}" == "5.10" && $SUBLEVEL -le 186 ]] || 
-           [[ "${{ inputs.android_version }}" == "android13" && "${{ inputs.kernel_version }}" == "5.15" && $SUBLEVEL -le 119 ]] || 
-           [[ "${{ inputs.android_version }}" == "android14" && "${{ inputs.kernel_version }}" == "5.15" && $SUBLEVEL -le 110 ]] || 
-           [[ "${{ inputs.android_version }}" == "android14" && "${{ inputs.kernel_version }}" == "6.1" && $SUBLEVEL -le 43 ]]; then
+        if [[ "$ANDROID_VERSION" == "android13" && "$KERNEL_VERSION" == "5.10" && $SUBLEVEL -le 186 ]] || 
+           [[ "$ANDROID_VERSION" == "android13" && "$KERNEL_VERSION" == "5.15" && $SUBLEVEL -le 119 ]] || 
+           [[ "$ANDROID_VERSION" == "android14" && "$KERNEL_VERSION" == "5.15" && $SUBLEVEL -le 110 ]] || 
+           [[ "$ANDROID_VERSION" == "android14" && "$KERNEL_VERSION" == "6.1" && $SUBLEVEL -le 43 ]]; then
           GLIBC_VERSION=$(ldd --version 2>/dev/null | head -n 1 | awk '{print $NF}') 
           if [ "$(printf '%s\n' "2.38" "$GLIBC_VERSION" | sort -V | head -n1)" = "2.38" ]; then 
-            cd "$KERNEL_ROOT/common"
+            cd "$GITHUB_WORKSPACE/kernel/common"
             sed -i '/\$(Q)\$(MAKE) -C \$(SUBCMD_SRC) OUTPUT=\$(abspath \$(dir \$@))\/ \$(abspath \$@)/s//$(Q)$(MAKE) -C $(SUBCMD_SRC) EXTRA_CFLAGS="$(CFLAGS)" OUTPUT=$(abspath $(dir $@))\/ $(abspath $@)/' tools/bpf/resolve_btfids/Makefile 2>/dev/null || true
-            if [[ "${{ inputs.android_version }}" == "android13" && "${{ inputs.kernel_version }}" == "5.10" && $SUBLEVEL -le 186 ]] || 
-               [[ "${{ inputs.android_version }}" == "android13" && "${{ inputs.kernel_version }}" == "5.15" && $SUBLEVEL -le 119 ]] || 
-               [[ "${{ inputs.android_version }}" == "android14" && "${{ inputs.kernel_version }}" == "5.15" && $SUBLEVEL -le 110 ]]; then
+            if [[ "$ANDROID_VERSION" == "android13" && "$KERNEL_VERSION" == "5.10" && $SUBLEVEL -le 186 ]] || 
+               [[ "$ANDROID_VERSION" == "android13" && "$KERNEL_VERSION" == "5.15" && $SUBLEVEL -le 119 ]] || 
+               [[ "$ANDROID_VERSION" == "android14" && "$KERNEL_VERSION" == "5.15" && $SUBLEVEL -le 110 ]]; then
               sed -i '/char \*buf = NULL;/a int i;' tools/lib/subcmd/parse-options.c 2>/dev/null || true
               sed -i 's/for (int i = 0; subcommands\[i\]; i++) {/for (i = 0; subcommands[i]; i++) {/' tools/lib/subcmd/parse-options.c 2>/dev/null || true
               sed -i '/if (subcommands) {/a int i;' tools/lib/subcmd/parse-options.c 2>/dev/null || true
@@ -166,8 +133,8 @@ jobs:
         fi 
 
     - name: Fix Less Than 6.6.50 Builds
-      if: inputs.android_version == 'android15' && inputs.kernel_version == '6.6'
-      working-directory: ${{ env.KERNEL_ROOT }}/common
+      if: ${{ steps.parse.outputs.android_version == 'android15' && steps.parse.outputs.kernel_version == '6.6' }}
+      working-directory: ${{ github.workspace }}/kernel/common
       run: |
         if ! grep -qxF '#include <trace/hooks/fs.h>' ./fs/namespace.c; then
             sed -i '/#include <trace\/hooks\/blk.h>/a #include <trace\/hooks\/fs.h>' ./fs/namespace.c
@@ -175,47 +142,30 @@ jobs:
 
     - name: Setup Wild KSU
       if: contains(inputs.feature_set, 'WKSU')
-      uses: ./.github/actions/setup-wksu
-      with:
-        ksu_commit: ${{ inputs.ksu_commit }}
-        kernel_root: ${{ env.KERNEL_ROOT }}
-
-    - name: Download SUSFS Cache Artifact
-      if: contains(inputs.feature_set, 'SUSFS')
-      uses: actions/download-artifact@v4
-      with:
-        name: susfs-cache
-        path: susfs_cache
+      uses: ./.github/actions/wksu
 
     - name: Setup SUSFS
       if: contains(inputs.feature_set, 'SUSFS')
-      uses: ./.github/actions/setup-susfs
+      uses: ./.github/actions/susfs
       with:
-        android_version: ${{ inputs.android_version }}
-        kernel_version: ${{ inputs.kernel_version }}
-        os_patch_level: ${{ inputs.os_patch_level }}
-        sublevel: ${{ env.SUBLEVEL }}
-        kernel_root: ${{ env.KERNEL_ROOT }}
-        kernel_patches: ${{ env.KERNEL_PATCHES }}
-        susfs4ksu: ${{ env.SUSFS4KSU }}
+        android_version: ${{ steps.parse.outputs.android_version }}
+        kernel_version: ${{ steps.parse.outputs.kernel_version }}
+        os_patch_level: ${{ steps.parse.outputs.os_patch_level }}
+        sublevel: ${{ steps.parse.outputs.sub_level }}
 
     - name: Setup Baseband Guard
       if: contains(inputs.feature_set, 'BBG')
-      uses: ./.github/actions/setup-bbg
-      with:
-        kernel_root: ${{ env.KERNEL_ROOT }}
-        defconfig_fragment: ${{ env.DEFCONFIG_FRAGMENT }}
+      uses: ./.github/actions/bbg
 
     - name: Apply Module Check Bypass
-      if: ${{ matrix.build_type == 'Bypass' || matrix.build_type == 'Hakan' }}
+      if: ${{ inputs.variant == 'Bypass' || inputs.variant == 'Hakan' }}
       run: |
-        if [[ "${{ inputs.kernel_version }}" == "6.1" || "${{ inputs.kernel_version }}" == "6.6" || "${{ inputs.kernel_version }}" == "6.12" ]]; then
-          TARGET_FILE="$KERNEL_ROOT/common/kernel/module/version.c"
+        if [[ "$KERNEL_VERSION" == "6.1" || "$KERNEL_VERSION" == "6.6" || "$KERNEL_VERSION" == "6.12" ]]; then
+          TARGET_FILE="$GITHUB_WORKSPACE/kernel/common/kernel/module/version.c"
         else
-          TARGET_FILE="$KERNEL_ROOT/common/kernel/module.c"
+          TARGET_FILE="$GITHUB_WORKSPACE/kernel/common/kernel/module.c"
         fi
-
-        echo "Applying bypass to $TARGET_FILE"
+        # Apply bypass patch to the target file
         sed -i '/bad_version:/{:a;n;/return 0;/{s/return 0;/return 1;/;b};ba}' "$TARGET_FILE"
 
         # Verify the bypass
@@ -227,185 +177,49 @@ jobs:
           exit 1
         fi
 
-    - name: Fix WiFi and Bluetooth on Samsung 6.6 GKI devices
-      if: ${{ inputs.kernel_version == '6.6' }}
-      working-directory: ${{ env.KERNEL_ROOT }}/common
-      run: |
-        SYMBOL_LIST=android/abi_gki_aarch64_galaxy
-        echo "kdp_set_cred_non_rcu" >> $SYMBOL_LIST
-        echo "kdp_usecount_dec_and_test" >> $SYMBOL_LIST
-        echo "kdp_usecount_inc" >> $SYMBOL_LIST
-
-        PATCH="$KERNEL_PATCHES/samsung/min_kdp/add-min_kdp-symbols.patch"
-        if patch -p1 --dry-run < "$PATCH"; then
-          patch -p1 --no-backup-if-mismatch < $PATCH
-        fi
-
-        cp "$KERNEL_PATCHES/samsung/min_kdp/min_kdp.c" drivers/min_kdp.c
-        echo "obj-y += min_kdp.o" >> drivers/Makefile
-
-    - name: Fix WiFi and Bluetooth on Xiaomi 6.6 GKI devices
-      if: ${{ ( inputs.kernel_version == '6.6' ) }}
-      working-directory: ${{ env.KERNEL_ROOT }}/common
-      run: |
-        SYMBOL_LIST=android/abi_gki_aarch64_xiaomi
-        echo "device_find_any_child" >> $SYMBOL_LIST
+    - name: Apply Device-Specific Patches
+      uses: ./.github/actions/apply-device-patches
+      with:
+        kernel_version: ${{ steps.parse.outputs.kernel_version }}
 
     - name: Configure Kernel Options
-      working-directory: ${{ env.KERNEL_ROOT }}
+      uses: ./.github/actions/configure-kernel
+
+    - name: Setup Hakan
+      if: ${{ inputs.variant == 'Hakan' }}
+      uses: ./.github/actions/hakan
+
+    - name: Setup vTomsonek
+      if: ${{ inputs.variant == 'vTomsonek' }}
+      uses: ./.github/actions/vtomsonek
+      with:
+        android_version: ${{ steps.parse.outputs.android_version }}
+        kernel_version: ${{ steps.parse.outputs.kernel_version }}
+        sublevel: ${{ steps.parse.outputs.sub_level }}
+        os_patch_level: ${{ steps.parse.outputs.os_patch_level }}
+
+    - name: Apply ABI Compare Bypass
+      working-directory: ${{ github.workspace }}/kernel
       run: |
-        cat >> "${{ env.DEFCONFIG_FRAGMENT }}" << 'EOF'
-        # KernelSU Configuration
-        CONFIG_KSU=y
-        CONFIG_KSU_SUSFS=y
-
-        # KPatch Next Support
-        CONFIG_KALLSYMS=y
-        CONFIG_KALLSYMS_ALL=y
-
-        # Mountify Support
-        CONFIG_TMPFS_XATTR=y
-        CONFIG_TMPFS_POSIX_ACL=y
-        
-        EOF
-
-        # Networking Configuration
-        #CONFIG_IP_NF_TARGET_TTL=y
-        #CONFIG_IP6_NF_TARGET_HL=y
-        #CONFIG_IP6_NF_MATCH_HL=y
-        
-        # BBR TCP Congestion Control
-        #CONFIG_TCP_CONG_ADVANCED=y
-        #CONFIG_TCP_CONG_BBR=y
-        #CONFIG_NET_SCH_FQ=y
-        ## CONFIG_TCP_CONG_BIC is not set
-        ## CONFIG_TCP_CONG_WESTWOOD is not set
-        ## CONFIG_TCP_CONG_HTCP is not set
-        
-        # IPSet Support
-        #CONFIG_IP_SET=y
-        #CONFIG_IP_SET_MAX=65534
-        #CONFIG_IP_SET_BITMAP_IP=y
-        #CONFIG_IP_SET_BITMAP_IPMAC=y
-        #CONFIG_IP_SET_BITMAP_PORT=y
-        #CONFIG_IP_SET_HASH_IP=y
-        #CONFIG_IP_SET_HASH_IPMARK=y
-        #CONFIG_IP_SET_HASH_IPPORT=y
-        #CONFIG_IP_SET_HASH_IPPORTIP=y
-        #CONFIG_IP_SET_HASH_IPPORTNET=y
-        #CONFIG_IP_SET_HASH_IPMAC=y
-        #CONFIG_IP_SET_HASH_MAC=y
-        #CONFIG_IP_SET_HASH_NETPORTNET=y
-        #CONFIG_IP_SET_HASH_NET=y
-        #CONFIG_IP_SET_HASH_NETNET=y
-        #CONFIG_IP_SET_HASH_NETPORT=y
-        #CONFIG_IP_SET_HASH_NETIFACE=y
-        #CONFIG_IP_SET_LIST_SET=y
-        
-        echo "Contents of ${{ env.DEFCONFIG_FRAGMENT }}:"
-        cat "${{ env.DEFCONFIG_FRAGMENT }}"
-
-    - name: Configure Audio Modules
-      if: inputs.variant == 'Hakan'
-      working-directory: ${{ env.KERNEL_ROOT }}
-      run: |
-        cat >> "${{ env.DEFCONFIG_FRAGMENT }}" << 'EOF'
-        CONFIG_RFKILL=y
-        CONFIG_CFG80211=y
-        CONFIG_MAC80211=y
-        EOF
-
-        sed -i \
-          -e '/_COMMON_GKI_MODULES_LIST = \[/,/^[[:space:]]*\]/{/^[[:space:]]*"lib\/crypto\/libarc4\.ko",[[:space:]]*$/d}' \
-          -e '/_COMMON_GKI_MODULES_LIST = \[/,/^[[:space:]]*\]/{/^[[:space:]]*"net\/rfkill\/rfkill\.ko",[[:space:]]*$/d}' \
-          common/modules.bzl
-
-    - name: Configure SND
-      if: inputs.variant == 'vTomsonek'
-      working-directory: ${{ env.KERNEL_ROOT }}
-      run: |
-        cat >> "${{ env.DEFCONFIG_FRAGMENT }}" << 'EOF'
-        # Sound Configuration
-        CONFIG_SND=y
-        CONFIG_SND_DRIVERS=y
-        CONFIG_SND_PCM=y
-        CONFIG_SND_TIMER=y
-        CONFIG_SND_DYNAMIC_MINORS=y
-        CONFIG_SND_PROC_FS=y
-        CONFIG_SND_ALOOP=m
-        CONFIG_USB_GADGET=y
-        CONFIG_CONFIGFS_FS=y
-        CONFIG_USB_CONFIGFS=y
-        CONFIG_USB_LIBCOMPOSITE=m
-        CONFIG_USB_AUDIO=m
-        CONFIG_USB_CONFIGFS_F_UAC1=y
-        CONFIG_USB_CONFIGFS_F_UAC2=y
-        EOF
-
-        # Add snd-aloop.ko to modules list
-        echo "drivers/usb/gadget/legacy/g_audio.ko" >> common/android/gki_aarch64_modules
-        echo "sound/drivers/snd-aloop.ko" >> common/android/gki_aarch64_modules
-        #echo "drivers/usb/gadget/libcomposite.ko" >> common/android/gki_aarch64_modules
-
-        if [[ -f common/modules.bzl ]]; then
-          # Insert before the closing bracket of COMMON_GKI_MODULES_LIST or _COMMON_GKI_MODULES_LIST
-          echo "Audio modules injection: adding to module list"
-          if [[ "${{ inputs.android_version }}" == "android14" && "${{ inputs.kernel_version }}" == "5.15" && $SUBLEVEL -le 110 && "${{ inputs.os_patch_level }}" != "2023-09" ]] \
-          || [[ "${{ inputs.android_version }}" == "android14" && "${{ inputs.kernel_version }}" == "6.1" && $SUBLEVEL -le 25 && "${{ inputs.os_patch_level }}" != "2023-09" ]]; then
-            # snd-aloop
-            sed -i '/COMMON_GKI_MODULES_LIST = \[/,/^[[:space:]]*\]/{/^[[:space:]]*\]$/i\    "sound/drivers/snd-aloop.ko",
-            }' common/modules.bzl
-            # USB Gadget Audio modules
-            sed -i '/COMMON_GKI_MODULES_LIST = \[/,/^[[:space:]]*\]/{/^[[:space:]]*\]$/i\    "drivers/usb/gadget/libcomposite.ko",
-            }' common/modules.bzl
-            sed -i '/COMMON_GKI_MODULES_LIST = \[/,/^[[:space:]]*\]/{/^[[:space:]]*\]$/i\    "drivers/usb/gadget/legacy/g_audio.ko",
-            }' common/modules.bzl
-          else
-            # snd-aloop
-            sed -i '/_COMMON_GKI_MODULES_LIST = \[/,/^[[:space:]]*\]/{/^[[:space:]]*\]$/i\    "sound/drivers/snd-aloop.ko",
-            }' common/modules.bzl
-            # USB Gadget Audio modules
-            sed -i '/_COMMON_GKI_MODULES_LIST = \[/,/^[[:space:]]*\]/{/^[[:space:]]*\]$/i\    "drivers/usb/gadget/libcomposite.ko",
-            }' common/modules.bzl
-            sed -i '/_COMMON_GKI_MODULES_LIST = \[/,/^[[:space:]]*\]/{/^[[:space:]]*\]$/i\    "drivers/usb/gadget/legacy/g_audio.ko",
-            }' common/modules.bzl
-          fi
-          
-          # Verify the injection was successful
-          if grep -q '"sound/drivers/snd-aloop.ko"' common/modules.bzl && \
-            grep -q '"drivers/usb/gadget/libcomposite.ko"' common/modules.bzl && \
-            grep -q '"drivers/usb/gadget/legacy/g_audio.ko"' common/modules.bzl && \
-            grep -q '"drivers/usb/gadget/configfs.ko"' common/modules.bzl; then
-            echo "✓ Audio modules injection: successfully added all modules to list"
-          else
-            echo "✗ Audio modules injection: failed to add one or more modules"
-            exit 1
-          fi
-        fi
-
-        # Add symbols to abi_gki_aarch64
-        #SYMBOL_LIST=common/android/abi_gki_aarch64
-        #cat Wild_KSU/kernel/export_symbol.txt | awk '{sub("[ \t]+","");print "  "$0}' >> $SYMBOL_LIST
-
         # ABI compare bypass per kernel/android version
         # Edit each block as needed per version
-        if [[ "${{ inputs.android_version }}" == "android12" && "${{ inputs.kernel_version }}" == "5.10" ]]; then
+        if [[ "$ANDROID_VERSION" == "android12" && "$KERNEL_VERSION" == "5.10" ]]; then
           sed -i 's/^\s*exit 1$/    echo "Who Cares? Bypassing Now!"/' build/abi/compare_to_symbol_list
-        elif [[ "${{ inputs.android_version }}" == "android13" && "${{ inputs.kernel_version }}" == "5.10" ]]; then
+        elif [[ "$ANDROID_VERSION" == "android13" && "$KERNEL_VERSION" == "5.10" ]]; then
           sed -i 's/^\s*exit 1$/    echo "Who Cares? Bypassing Now!"/' build/kernel/abi/compare_to_symbol_list
-        elif [[ "${{ inputs.android_version }}" == "android13" && "${{ inputs.kernel_version }}" == "5.15" ]]; then
+        elif [[ "$ANDROID_VERSION" == "android13" && "$KERNEL_VERSION" == "5.15" ]]; then
           sed -i 's/^\s*exit 1$/    echo "Who Cares? Bypassing Now!"/' build/kernel/abi/compare_to_symbol_list
-        elif [[ "${{ inputs.android_version }}" == "android14" && "${{ inputs.kernel_version }}" == "5.15" ]]; then
+        elif [[ "$ANDROID_VERSION" == "android14" && "$KERNEL_VERSION" == "5.15" ]]; then
           perl -i -pe 's/^(\s*)return 1$/$1print("Who Cares? Bypassing Now!")\n$1return 0/g if /if missing_symbols:/../return 1/' build/kernel/abi/check_buildtime_symbol_protection.py
-        elif [[ "${{ inputs.android_version }}" == "android14" && "${{ inputs.kernel_version }}" == "6.1" ]]; then
+        elif [[ "$ANDROID_VERSION" == "android14" && "$KERNEL_VERSION" == "6.1" ]]; then
           perl -i -pe 's/^(\s*)return 1$/$1print("Who Cares? Bypassing Now!")\n$1return 0/g if /if missing_symbols:/../return 1/' build/kernel/abi/check_buildtime_symbol_protection.py
-        elif [[ "${{ inputs.android_version }}" == "android15" && "${{ inputs.kernel_version }}" == "6.6" ]]; then
+        elif [[ "$ANDROID_VERSION" == "android15" && "$KERNEL_VERSION" == "6.6" ]]; then
           perl -i -pe 's/^(\s*)return 1$/$1print("Who Cares? Bypassing Now!")\n$1return 0/g if /if missing_symbols:/../return 1/' build/kernel/abi/check_buildtime_symbol_protection.py
         fi
 
     - name: Append ashmem exports if missing
-      if: ${{ inputs.android_version == 'android16' && inputs.kernel_version == '6.12' && false }}
-      working-directory: ${{ env.KERNEL_ROOT }}
+      if: ${{ steps.parse.outputs.android_version == 'android16' && steps.parse.outputs.kernel_version == '6.12' && false }}
+      working-directory: ${{ github.workspace }}/kernel
       run: |
         FILE=common/drivers/staging/android/ashmem.c
         if [[ -f "$FILE" ]] && ! grep -q 'is_ashmem_file' "$FILE"; then
@@ -438,53 +252,26 @@ jobs:
           cat common/drivers/android/Makefile
         fi
 
-    - name: Change Kernel Name
-      working-directory: ${{ env.KERNEL_ROOT }}
-      run: |
-        #Wild to Kernel Version (replace last instance only)
-        if [[ "${{ inputs.kernel_version }}" == "5."* ]] || [[ "${{ inputs.kernel_version }}" == "6.1" ]]; then
-          case ${{ matrix.build_type }} in
-            MarionKernel)
-              perl -i -0777 -pe 's/(.*)echo "\$res"/$1echo "\$res-Wild-MarionKernel"/s' ./common/scripts/setlocalversion
-              ;;
-            Hakan)
-              perl -i -0777 -pe 's/(.*)echo "\$res"/$1echo "\$res-Wild-Hakan"/s' ./common/scripts/setlocalversion
-              ;;
-            *)
-              perl -i -0777 -pe 's/(.*)echo "\$res"/$1echo "\$res-Wild"/s' ./common/scripts/setlocalversion
-              ;;
-          esac
-        else
-          perl -i -0777 -pe 's/(.*)echo "\$\{KERNELVERSION\}\$\{file_localversion\}\$\{config_localversion\}\$\{LOCALVERSION\}\$\{scm_version\}"/$1echo "\${KERNELVERSION}\${file_localversion}\${config_localversion}\${LOCALVERSION}-Wild\${scm_version}"/s' ./common/scripts/setlocalversion
-        fi
-        export KBUILD_BUILD_TIMESTAMP="$(date -u '+%a %b %e %H:%M:%S UTC %Y')"
-        if [ -f "build/build.sh" ]; then
-          #Remove Dirty Flag
-          sed -i 's/-dirty//' ./common/scripts/setlocalversion
-        else
-          #Remove Dirty Flag
-          sed -i "/stable_scmversion_cmd/s/-maybe-dirty//g" ./build/kernel/kleaf/impl/stamp.bzl
-          sed -i 's/-dirty//' ./common/scripts/setlocalversion
-          #Remove Abi Exports and Error
-          rm -rf ./common/android/abi_gki_protected_exports_*
-          perl -pi -e 's/^\s*"protected_exports_list"\s*:\s*"android\/abi_gki_protected_exports_aarch64",\s*$//;' ./common/BUILD.bazel
-        fi
+    - name: Apply Kernel Branding
+      uses: ./.github/actions/apply-kernel-branding
+      with:
+        build_type: ${{ inputs.variant || 'Normal' }}
+        kernel_version: ${{ steps.parse.outputs.kernel_version }}
 
-        cd $KERNEL_ROOT/common
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git add .
-        git commit -m "Wild: Clean Dirty Flag"
+    - name: Clean Kernel Flags
+      uses: ./.github/actions/clean-kernel-flags
 
     - name: Build Kernel
-      working-directory: ${{ env.KERNEL_ROOT }}
+      working-directory: ${{ github.workspace }}/kernel
       run: |
         set -ex
         #make -C common mrproper
         if [ -f "build/build.sh" ]; then
-          GKI_DEFCONFIG_FRAGMENT="${{ env.DEFCONFIG_FRAGMENT }}" LTO=thin BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh || exit 1
+          GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" LTO=thin BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh || exit 1
         else
-          if [[ "${{ inputs.android_version }}" == "android14" ]]; then
+          # Copy fragment to kernel tree for bazel
+          cp "$GITHUB_WORKSPACE/wild_gki.fragment" common/arch/arm64/configs/wild_gki.fragment
+          if [[ "$ANDROID_VERSION" == "android14" ]]; then
             tools/bazel build --config=fast --lto=thin --defconfig_fragment=//common:arch/arm64/configs/wild_gki.fragment //common:kernel_aarch64_dist || exit 1
           else
             tools/bazel build --config=fast --lto=none --defconfig_fragment=//common:arch/arm64/configs/wild_gki.fragment //common:kernel_aarch64_dist || exit 1
@@ -494,10 +281,10 @@ jobs:
     - name: Prepare AnyKernel3 Zip
       run: |
         # Copy Image from normal build locations
-        if [ -f "$KERNEL_ROOT/out/${{ inputs.android_version }}-${{ inputs.kernel_version }}/dist/Image" ]; then
-          cp "$KERNEL_ROOT/out/${{ inputs.android_version }}-${{ inputs.kernel_version }}/dist/Image" "$ANYKERNEL3/Image"
-        elif [ -f "$KERNEL_ROOT/bazel-bin/common/kernel_aarch64/Image" ]; then
-          cp "$KERNEL_ROOT/bazel-bin/common/kernel_aarch64/Image" "$ANYKERNEL3/Image"
+        if [ -f "$GITHUB_WORKSPACE/kernel/out/$ANDROID_VERSION-$KERNEL_VERSION/dist/Image" ]; then
+          cp "$GITHUB_WORKSPACE/kernel/out/$ANDROID_VERSION-$KERNEL_VERSION/dist/Image" "$GITHUB_WORKSPACE/AnyKernel3/Image"
+        elif [ -f "$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_aarch64/Image" ]; then
+          cp "$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_aarch64/Image" "$GITHUB_WORKSPACE/AnyKernel3/Image"
         else
           echo "Error: Image file not found in any expected location"
           exit 1
@@ -507,25 +294,26 @@ jobs:
       if: ${{ inputs.variant == 'vTomsonek' }}
       run: |
         if [ "${{ inputs.variant }}" = "vTomsonek" ]; then
-          sed -i 's|^do\.modules=.*|do.modules=1|' ./AnyKernel3/anykernel.sh
+          sed -i 's|^do\.modules=.*|do.modules=1|' "$GITHUB_WORKSPACE/AnyKernel3/anykernel.sh"
         fi
 
-        mkdir -p AnyKernel3/modules/data/adb/lkm
+        mkdir -p "$GITHUB_WORKSPACE/AnyKernel3/modules/data/adb/lkm"
 
-        if [[ "${{ inputs.android_version }}" == "android12" || "${{ inputs.android_version }}" == "android13" ]]; then
-          SRC_DIR="$KERNEL_ROOT/out/${{ inputs.android_version }}-${{ inputs.kernel_version }}/dist"
+        if [[ "$ANDROID_VERSION" == "android12" || "$ANDROID_VERSION" == "android13" ]]; then
+          SRC_DIR="$GITHUB_WORKSPACE/kernel/out/$ANDROID_VERSION-$KERNEL_VERSION/dist"
         else
-          SRC_DIR="$KERNEL_ROOT/bazel-bin/common/kernel_aarch64"
+          SRC_DIR="$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_aarch64"
         fi
 
-        cp "$SRC_DIR/snd-aloop.ko" "$ANYKERNEL3/modules/data/adb/lkm/"
-        cp "$SRC_DIR/g_audio.ko" "$ANYKERNEL3/modules/data/adb/lkm/"
+        cp "$SRC_DIR/snd-aloop.ko" "$GITHUB_WORKSPACE/AnyKernel3/modules/data/adb/lkm/"
+        cp "$SRC_DIR/g_audio.ko" "$GITHUB_WORKSPACE/AnyKernel3/modules/data/adb/lkm/"
 
     - name: Scan and collect patch rejects
+      id: scan
       if: ${{ always() }}
       run: |
         set -e
-        CONFIG_DIR="$KERNEL_ROOT"
+        CONFIG_DIR="$GITHUB_WORKSPACE/kernel"
         REJECTS_DIR="$GITHUB_WORKSPACE/patch-rejects"
         mkdir -p "$REJECTS_DIR"
         # Find all .rej files under the configuration directory
@@ -533,6 +321,7 @@ jobs:
         REJ_COUNT=${#REJS[@]}
         echo "Found $REJ_COUNT .rej files under $CONFIG_DIR"
         echo "REJ_COUNT=$REJ_COUNT" >> $GITHUB_ENV
+        echo "rej_count=$REJ_COUNT" >> $GITHUB_OUTPUT
         if [ "$REJ_COUNT" -gt 0 ]; then
           for REJ in "${REJS[@]}"; do
             # Relative path from $CONFIG
@@ -554,16 +343,16 @@ jobs:
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ env.FILE_NAME }}-AnyKernel3
-        path: ./AnyKernel3/**
+        name: ${{ steps.extract.outputs.file_name }}-AnyKernel3
+        path: ${{ github.workspace }}/AnyKernel3/**
         if-no-files-found: ignore
         compression-level: 9
 
     - name: Upload Rejects
-      if: ${{ always() && matrix.build_type != 'Bypass' && env.REJ_COUNT > 0 }}
+      if: ${{ always() && inputs.variant != 'Bypass' && steps.scan.outputs.rej_count > 0 }}
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ env.FILE_NAME }}-Rejects
+        name: ${{ steps.extract.outputs.file_name }}-Rejects
         path: patch-rejects/
         if-no-files-found: ignore
         compression-level: 9
@@ -571,32 +360,25 @@ jobs:
     - name: Build Summary
       if: ${{ always() }}
       run: |
-        echo "========================================"
-        echo "       Kernel Build Summary             "
-        echo "========================================"
-        echo "Kernel Info:"
-        echo "Android Version     : ${{ inputs.android_version }}"
-        echo "Kernel Version      : ${{ inputs.kernel_version }}"
-        echo "Sub Level           : ${{ inputs.sub_level }}"
+        # Kernel info
+        echo "Android Version     : $ANDROID_VERSION"
+        echo "Kernel Version      : $KERNEL_VERSION"
+        echo "Sub Level           : $SUB_LEVEL"
         echo "Sub level (Makefile): $SUBLEVEL"
-        echo "Patch Level         : ${{ inputs.os_patch_level }}"
-        echo "========================================"
-        echo "Branch Info:"
-        echo "Repo Branch         : common-${{ inputs.kernel_version }}-${{ inputs.android_version }}-${{ inputs.os_patch_level }}"
+        echo "Patch Level         : $OS_PATCH_LEVEL"
+        # Branch info
+        echo "Repo Branch         : common-$KERNEL_VERSION-$ANDROID_VERSION-$OS_PATCH_LEVEL || 'normal'"
         echo "Deprecated          : $DEPRECATED_BRANCH"
-        echo "========================================"
-        echo "Build Info:"
-        echo "Build Type          : ${{ matrix.build_type }}"
-        echo "========================================"
-        echo "Features Info:"
+        # Build info
+        echo "Build Type          : ${{ inputs.variant || 'Normal' }}"
+        # Features info
         echo "Features            : ${{ inputs.feature_set || 'None' }}"
         echo "WKSU Commit         : ${{ inputs.ksu_commit || 'canary' }}"
         echo "WKSU Tag            : $KSU_GIT_TAG"
         echo "WKSU Version        : $KSU_VERSION"
         echo "BBG Commit          : $BBG_COMMIT"
         echo "BBG Version         : $BBG_VERSION"
-        echo "========================================"
+        # Variant info
         echo "Variant             : ${{ inputs.variant || 'Standard' }}"
         echo "Features            : ${{ inputs.feature_set || 'None' }}"
-        echo "========================================"
 # End of workflow

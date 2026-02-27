@@ -17,10 +17,6 @@ on:
         type: string
         default: ""
         required: false
-      build_bypass:
-        description: "Build Bypass"
-        type: boolean
-        default: false
       kernel_build_version:
         description: "Kernel Version to Build"
         type: choice
@@ -36,6 +32,7 @@ on:
           - lts
           - custom
           - testing
+          - bypass
         default: custom
       feature_set:
         description: "Feature Set"
@@ -48,117 +45,223 @@ on:
           - None
         default: WKSU+SUSFS+BBG
   push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/*.md'
+      - '.github/*.txt'
 
 jobs:
   download-dependencies:
-    uses: ./.github/workflows/cache-dependencies.yml
+    uses: ./.github/workflows/dependencies.yml
+
+  load-configs:
+    runs-on: ubuntu-latest
     permissions:
       contents: read
-      actions: write
+    outputs:
+      a12-5-10: ${{ steps.load.outputs.a12-5-10 }}
+      a13-5-10: ${{ steps.load.outputs.a13-5-10 }}
+      a13-5-15: ${{ steps.load.outputs.a13-5-15 }}
+      a14-5-15: ${{ steps.load.outputs.a14-5-15 }}
+      a14-6-1: ${{ steps.load.outputs.a14-6-1 }}
+      a15-6-6: ${{ steps.load.outputs.a15-6-6 }}
+      a16-6-12: ${{ steps.load.outputs.a16-6-12 }}
+      lts: ${{ steps.load.outputs.lts }}
+      custom: ${{ steps.load.outputs.custom }}
+      testing: ${{ steps.load.outputs.testing }}
+      bypass: ${{ steps.load.outputs.bypass }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Load all matrix configs
+      id: load
+      run: |
+        echo "a12-5-10=$(jq -c . .github/kernel-config/a12-5.10.json)" >> $GITHUB_OUTPUT
+        echo "a13-5-10=$(jq -c . .github/kernel-config/a13-5.10.json)" >> $GITHUB_OUTPUT
+        echo "a13-5-15=$(jq -c . .github/kernel-config/a13-5.15.json)" >> $GITHUB_OUTPUT
+        echo "a14-5-15=$(jq -c . .github/kernel-config/a14-5.15.json)" >> $GITHUB_OUTPUT
+        echo "a14-6-1=$(jq -c . .github/kernel-config/a14-6.1.json)" >> $GITHUB_OUTPUT
+        echo "a15-6-6=$(jq -c . .github/kernel-config/a15-6.6.json)" >> $GITHUB_OUTPUT
+        echo "a16-6-12=$(jq -c . .github/kernel-config/a16-6.12.json)" >> $GITHUB_OUTPUT
+        echo "lts=$(jq -c . .github/kernel-config/lts.json)" >> $GITHUB_OUTPUT
+        echo "custom=$(jq -c . .github/kernel-config/custom.json)" >> $GITHUB_OUTPUT
+        echo "testing=$(jq -c . .github/kernel-config/testing.json)" >> $GITHUB_OUTPUT
+        echo "bypass=$(jq -c . .github/kernel-config/bypass.json)" >> $GITHUB_OUTPUT
 
   build-a12-5-10:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'a12-5-10' }}
-    needs: [download-dependencies]
-    uses: ./.github/workflows/kernel-a12-5-10.yml
+    needs: [download-dependencies, load-configs]
+    name: "${{ matrix.kernel_version }}${{ matrix.variant && format('-{0}', matrix.variant) || '' }}"
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.load-configs.outputs.a12-5-10) }}
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
-      ksu_commit: ${{ inputs.ksu_commit || '' }}
-      build_bypass: ${{ inputs.build_bypass || false }}
-      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
+      kernel_version: ${{ matrix.kernel_version }}
+      variant: ${{ matrix.variant }}
+      ksu_commit: ${{ inputs.ksu_commit }}
+      feature_set: ${{ inputs.feature_set }}
 
   build-a13-5-10:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'a13-5-10' }}
-    needs: [download-dependencies]
-    uses: ./.github/workflows/kernel-a13-5-10.yml
+    needs: [download-dependencies, load-configs]
+    name: "${{ matrix.kernel_version }}${{ matrix.variant && format('-{0}', matrix.variant) || '' }}"
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.load-configs.outputs.a13-5-10) }}
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
-      ksu_commit: ${{ inputs.ksu_commit || '' }}
-      build_bypass: ${{ inputs.build_bypass || false }}
-      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
+      kernel_version: ${{ matrix.kernel_version }}
+      variant: ${{ matrix.variant }}
+      ksu_commit: ${{ inputs.ksu_commit }}
+      feature_set: ${{ inputs.feature_set }}
 
   build-a13-5-15:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'a13-5-15' }}
-    needs: [download-dependencies]
-    uses: ./.github/workflows/kernel-a13-5-15.yml
+    needs: [download-dependencies, load-configs]
+    name: "${{ matrix.kernel_version }}${{ matrix.variant && format('-{0}', matrix.variant) || '' }}"
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.load-configs.outputs.a13-5-15) }}
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
-      ksu_commit: ${{ inputs.ksu_commit || '' }}
-      build_bypass: ${{ inputs.build_bypass || false }}
-      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
+      kernel_version: ${{ matrix.kernel_version }}
+      variant: ${{ matrix.variant }}
+      ksu_commit: ${{ inputs.ksu_commit }}
+      feature_set: ${{ inputs.feature_set }}
 
   build-a14-5-15:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'a14-5-15' }}
-    needs: [download-dependencies]
-    uses: ./.github/workflows/kernel-a14-5-15.yml
+    needs: [download-dependencies, load-configs]
+    name: "${{ matrix.kernel_version }}${{ matrix.variant && format('-{0}', matrix.variant) || '' }}"
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.load-configs.outputs.a14-5-15) }}
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
-      ksu_commit: ${{ inputs.ksu_commit || '' }}
-      build_bypass: ${{ inputs.build_bypass || false }}
-      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
+      kernel_version: ${{ matrix.kernel_version }}
+      variant: ${{ matrix.variant }}
+      ksu_commit: ${{ inputs.ksu_commit }}
+      feature_set: ${{ inputs.feature_set }}
 
   build-a14-6-1:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'a14-6-1' }}
-    needs: [download-dependencies]
-    uses: ./.github/workflows/kernel-a14-6-1.yml
+    needs: [download-dependencies, load-configs]
+    name: "${{ matrix.kernel_version }}${{ matrix.variant && format('-{0}', matrix.variant) || '' }}"
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.load-configs.outputs.a14-6-1) }}
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
-      ksu_commit: ${{ inputs.ksu_commit || '' }}
-      build_bypass: ${{ inputs.build_bypass || false }}
-      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
+      kernel_version: ${{ matrix.kernel_version }}
+      variant: ${{ matrix.variant }}
+      ksu_commit: ${{ inputs.ksu_commit }}
+      feature_set: ${{ inputs.feature_set }}
 
   build-a15-6-6:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'a15-6-6' }}
-    needs: [download-dependencies]
-    uses: ./.github/workflows/kernel-a15-6-6.yml
+    needs: [download-dependencies, load-configs]
+    name: "${{ matrix.kernel_version }}${{ matrix.variant && format('-{0}', matrix.variant) || '' }}"
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.load-configs.outputs.a15-6-6) }}
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
-      ksu_commit: ${{ inputs.ksu_commit || '' }}
-      build_bypass: ${{ inputs.build_bypass || false }}
-      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
+      kernel_version: ${{ matrix.kernel_version }}
+      variant: ${{ matrix.variant }}
+      ksu_commit: ${{ inputs.ksu_commit }}
+      feature_set: ${{ inputs.feature_set }}
 
   build-a16-6-12:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'a16-6-12' }}
-    needs: [download-dependencies]
-    uses: ./.github/workflows/kernel-a16-6-12.yml
+    needs: [download-dependencies, load-configs]
+    name: "${{ matrix.kernel_version }}${{ matrix.variant && format('-{0}', matrix.variant) || '' }}"
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.load-configs.outputs.a16-6-12) }}
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
-      ksu_commit: ${{ inputs.ksu_commit || '' }}
-      build_bypass: ${{ inputs.build_bypass || false }}
-      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
+      kernel_version: ${{ matrix.kernel_version }}
+      variant: ${{ matrix.variant }}
+      ksu_commit: ${{ inputs.ksu_commit }}
+      feature_set: ${{ inputs.feature_set }}
   
   build-lts:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'lts' || github.event_name == 'push' }}
-    needs: [download-dependencies]
-    uses: ./.github/workflows/kernel-lts.yml
+    needs: [download-dependencies, load-configs]
+    name: "${{ matrix.kernel_version }}${{ matrix.variant && format('-{0}', matrix.variant) || '' }}"
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.load-configs.outputs.lts) }}
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
+      kernel_version: ${{ matrix.kernel_version }}
+      variant: ${{ matrix.variant || '' }}
       ksu_commit: ${{ inputs.ksu_commit || '' }}
-      build_bypass: ${{ inputs.build_bypass || false }}
       feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
 
   build-custom:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'custom' }}
-    needs: [download-dependencies]
-    uses: ./.github/workflows/kernel-custom.yml
+    needs: [download-dependencies, load-configs]
+    name: "${{ matrix.kernel_version }}${{ matrix.variant && format('-{0}', matrix.variant) || '' }}"
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.load-configs.outputs.custom) }}
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
-      ksu_commit: ${{ inputs.ksu_commit || '' }}
-      build_bypass: ${{ inputs.build_bypass || false }}
-      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
+      kernel_version: ${{ matrix.kernel_version }}
+      variant: ${{ matrix.variant }}
+      ksu_commit: ${{ inputs.ksu_commit }}
+      feature_set: ${{ inputs.feature_set }}
 
   build-testing:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'testing' || github.event_name == 'push' }}
-    needs: [download-dependencies]
-    uses: ./.github/workflows/kernel-testing.yml
+    needs: [download-dependencies, load-configs]
+    name: "${{ matrix.kernel_version }}${{ matrix.variant && format('-{0}', matrix.variant) || '' }}"
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.load-configs.outputs.testing) }}
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
+      kernel_version: ${{ matrix.kernel_version }}
+      variant: ${{ matrix.variant || '' }}
       ksu_commit: ${{ inputs.ksu_commit || '' }}
-      build_bypass: ${{ inputs.build_bypass || false }}
       feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
+
+  build-bypass:
+    if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'bypass' }}
+    needs: [download-dependencies, load-configs]
+    name: "${{ matrix.kernel_version }}${{ matrix.variant && format('-{0}', matrix.variant) || '' }}"
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.load-configs.outputs.bypass) }}
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      kernel_version: ${{ matrix.kernel_version }}
+      variant: ${{ matrix.variant || '' }}
+      ksu_commit: ${{ inputs.ksu_commit || '' }}
+      feature_set: ${{ inputs.feature_set }}
 
   rej:
     if: always()
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
     needs:
     - build-a12-5-10
     - build-a13-5-10
@@ -170,6 +273,7 @@ jobs:
     - build-custom
     - build-lts
     - build-testing
+    - build-bypass
     steps:
     - name: Download Misc Artifacts
       uses: actions/download-artifact@v5
@@ -187,7 +291,7 @@ jobs:
             [ -d "$dir" ] || continue
             
             dirname=$(basename "$dir")
-            echo "Processing $dirname..."
+          # Process each reject artifact
             
             # Get original name (remove -Rejects suffix)
             original_name=${dirname%-Rejects}
@@ -196,17 +300,17 @@ jobs:
             
             # Check for patch-rejects folder (legacy structure) or direct contents
             if [ -d "$dir/patch-rejects" ]; then
-                echo "Found patch-rejects subdir in $dirname"
+              # Legacy structure
                 cp -r "$dir/patch-rejects/." "aio-rejects/$original_name/"
             else
-                echo "Copying contents from $dirname"
+              # Current structure
                 cp -r "$dir/." "aio-rejects/$original_name/"
             fi
         done
         
         # Zip and upload if we found anything
         if [ "$(ls -A aio-rejects)" ]; then
-            echo "Creating AIO-REJ.zip..."
+            # Create a single zip of all rejects
             cd aio-rejects
             zip -r -q -9 ../AIO-REJ.zip .
             cd ..
@@ -237,6 +341,7 @@ jobs:
     - build-lts
     - build-custom
     - build-testing
+    - build-bypass
 
     env:
       GH_TOKEN: ${{ github.token }}
@@ -250,14 +355,14 @@ jobs:
         set -euo pipefail
 
         failed=0
+        current_type="${{ inputs.kernel_build_version }}"
 
         check_selected() {
           local target="$1"
           local job_name="$2"
           local result="$3"
-          local current_type="${{ inputs.kernel_type }}"
           
-          if [[ "$current_type" == "All" || "$current_type" == "$target" ]]; then
+          if [[ "$current_type" == "all" || "$current_type" == "$target" ]]; then
             if [[ "$result" != "success" ]]; then
               echo "Required job $job_name did not succeed (result: $result)"
               failed=1
@@ -303,7 +408,11 @@ jobs:
       id: tag
       if: inputs.release_type != 'Actions'
       run: |
-        LATEST_TAG=$(gh api repos/${{ github.repository }}/tags --jq '.[0].name' 2>/dev/null || echo "")
+        LATEST_TAG=$(gh api repos/${{ github.repository }}/tags --jq '.[0].name' 2>/dev/null || echo "v0.0.0")
+        if [[ -z "$LATEST_TAG" || "$LATEST_TAG" == "null" ]]; then
+          LATEST_TAG="v0.0.0"
+        fi
+        
         if [[ "$LATEST_TAG" =~ ^(.*)-r([0-9]+)$ ]]; then
           VERSION="${BASH_REMATCH[1]}"
           REV="${BASH_REMATCH[2]}"
@@ -313,6 +422,7 @@ jobs:
           NEW_TAG="${LATEST_TAG}-r1"
         fi
         
+        echo "Latest tag: $LATEST_TAG"
         echo "New tag: $NEW_TAG"
         echo "NEW_TAG=${NEW_TAG}" >> $GITHUB_ENV
         echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
@@ -338,6 +448,13 @@ jobs:
         - What are kernel modules? Kernel modules are pieces of code that can be loaded into the kernel at runtime to extend functionality (like device drivers, filesystem support, etc.). These are different from KernelSU/Magisk modules. 
         - The Problem: Sometimes when installing a custom kernel, the device tries to load a kernel module that fails due to version mismatches, missing dependencies, or signature verification issues. This can cause boot failures or device instability. 
         - The Solution: This version changes one line from false to true to force load the kernel module, bypassing the failure check that would normally prevent loading.
+
+        ⚠️ **IMPORTANT: If you are using a Bypass kernel, please create a GitHub issue!**
+        We are now building Bypass kernels on-demand to reduce build time and clutter. If you need a Bypass kernel for your device, please:
+        1. Create a GitHub issue using the "Bypass Kernel Report" template
+        2. Include: kernel version, device model, Android version, and any issues/observations
+        3. Message me on Telegram after creating the issue
+        I will prioritize and release a new Bypass build ASAP based on your feedback. This helps us understand which devices need Bypass kernels and build only what's needed!
 
         Features:
         -> Wild KSU Manager Support
@@ -375,9 +492,9 @@ jobs:
           PRERELEASE_FLAG="--prerelease"
         fi
 
-        echo "Creating release ${{ env.NEW_TAG }}..."
-        gh release create "${{ env.NEW_TAG }}" \
-          --title "${{ env.RELEASE_NAME }}" \
+        # Create GitHub release
+        gh release create "$NEW_TAG" \
+          --title "$RELEASE_NAME" \
           --notes-file release_body.md \
           --target "${{ github.sha }}" \
           $PRERELEASE_FLAG
@@ -395,24 +512,47 @@ jobs:
 
         for dir in "${anykernel_dirs[@]}"; do
           artifact_name=$(basename "$dir")
-          echo "Creating ZIP for $artifact_name..."
+          # Create zip for each artifact
           (cd "$dir" && zip -r -q -9 "$GITHUB_WORKSPACE/${artifact_name}.zip" ./*) &
         done
         wait
 
         for dir in "${anykernel_dirs[@]}"; do
           artifact_name=$(basename "$dir")
-          echo "Uploading 2 ${artifact_name}.zip..."
-          gh release upload "${{ env.NEW_TAG }}" "$GITHUB_WORKSPACE/${artifact_name}.zip" --clobber
+          # Upload release asset
+          gh release upload "$NEW_TAG" "$GITHUB_WORKSPACE/${artifact_name}.zip" --clobber
         done
 
   notify:
+    runs-on: ubuntu-latest
     needs: release
     if: ${{ always() && (inputs.release_type == 'Actions' || needs.release.result == 'success') }}
-    uses: ./.github/workflows/notify.yml
-    secrets: inherit
-    with:
-      release_type: ${{ inputs.release_type }}
-      new_tag: ${{ needs.release.outputs.new_tag }}
-      release_result: ${{ needs.release.result }}
-        done
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Free Disk Space
+        uses: endersonmenezes/free-disk-space@v3
+        with:
+          remove_android: true
+          remove_dotnet: true
+          remove_haskell: true
+          remove_tool_cache: true
+          remove_swap: true
+          remove_packages: "azure-cli google-cloud-cli microsoft-edge-stable google-chrome-stable firefox postgresql* temurin-* *llvm* mysql* dotnet-sdk-*"
+          remove_packages_one_command: true
+          remove_folders: "/usr/share/swift /usr/share/miniconda /usr/share/az* /usr/local/lib/node_modules /usr/local/share/chromium /usr/local/share/powershell /usr/local/julia /usr/local/aws-cli /usr/local/aws-sam-cli /usr/share/gradle"
+          rm_cmd: "rmz"
+          rmz_version: "3.1.1"
+          testing: false
+
+      - name: Send Telegram Notification
+        uses: ./.github/actions/telegram-notify
+        with:
+          release_type: ${{ inputs.release_type }}
+          new_tag: ${{ needs.release.outputs.new_tag }}
+          release_result: ${{ needs.release.result }}
+          telegram_bot_token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          telegram_chat_id: ${{ secrets.TELEGRAM_CHAT_ID }}
+          telegram_topic_id: ${{ secrets.TELEGRAM_TOPIC_ID_GKI }}
+          telegram_user_id: ${{ secrets.TELEGRAM_USER_ID }}
