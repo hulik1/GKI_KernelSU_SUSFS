@@ -197,7 +197,7 @@ jobs:
       feature_set: ${{ inputs.feature_set }}
   
   build-lts:
-    if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'lts' || github.event_name == 'push' }}
+    if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'lts' }}
     needs: [download-dependencies, load-configs]
     name: "LTS Kernels"
     strategy:
@@ -227,7 +227,7 @@ jobs:
       feature_set: ${{ inputs.feature_set }}
 
   build-testing:
-    if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'testing' || github.event_name == 'push' }}
+    if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'testing' }}
     needs: [download-dependencies, load-configs]
     name: "Testing Kernels"
     strategy:
