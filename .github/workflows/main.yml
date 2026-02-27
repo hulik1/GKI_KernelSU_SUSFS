@@ -55,99 +55,370 @@ jobs:
   build-a12-5-10:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'a12-5-10' }}
     needs: download-dependencies
-    uses: ./.github/workflows/a12-5-10.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        kernel_version:
+          - "5.10.43-android12-2021-08"
+          - "5.10.43-android12-2021-09"
+          - "5.10.43-android12-2021-10"
+          - "5.10.66-android12-2021-11"
+          - "5.10.66-android12-2021-12"
+          - "5.10.66-android12-2022-01"
+          - "5.10.81-android12-2022-02"
+          - "5.10.81-android12-2022-03"
+          - "5.10.101-android12-2022-04"
+          - "5.10.101-android12-2022-05"
+          - "5.10.110-android12-2022-06"
+          - "5.10.110-android12-2022-07"
+          - "5.10.117-android12-2022-08"
+          - "5.10.117-android12-2022-09"
+          - "5.10.136-android12-2022-10"
+          - "5.10.136-android12-2022-11"
+          - "5.10.149-android12-2022-12"
+          - "5.10.149-android12-2023-01"
+          - "5.10.160-android12-2023-02"
+          - "5.10.160-android12-2023-03"
+          - "5.10.168-android12-2023-04"
+          - "5.10.168-android12-2023-05"
+          - "5.10.177-android12-2023-06"
+          - "5.10.177-android12-2023-07"
+          - "5.10.185-android12-2023-09"
+          - "5.10.198-android12-2023-11"
+          - "5.10.198-android12-2024-01"
+          - "5.10.205-android12-2024-03"
+          - "5.10.209-android12-2024-05"
+          - "5.10.218-android12-2024-08"
+          - "5.10.226-android12-2024-11"
+          - "5.10.233-android12-2025-02"
+          - "5.10.236-android12-2025-05"
+          - "5.10.237-android12-2025-06"
+          - "5.10.240-android12-2025-09"
+          - "5.10.246-android12-2025-12"
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
+      kernel_version: ${{ matrix.kernel_version }}
       ksu_commit: ${{ inputs.ksu_commit || '' }}
       feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
 
   build-a13-5-10:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'a13-5-10' }}
     needs: download-dependencies
-    uses: ./.github/workflows/a13-5-10.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        kernel_version:
+          - "5.10.107-android13-2022-04"
+          - "5.10.107-android13-2022-05"
+          - "5.10.107-android13-2022-06"
+          - "5.10.107-android13-2022-07"
+          - "5.10.107-android13-2022-08"
+          - "5.10.107-android13-2022-09"
+          - "5.10.107-android13-2022-10"
+          - "5.10.107-android13-2022-11"
+          - "5.10.149-android13-2022-12"
+          - "5.10.149-android13-2023-01"
+          - "5.10.157-android13-2023-02"
+          - "5.10.157-android13-2023-03"
+          - "5.10.168-android13-2023-04"
+          - "5.10.168-android13-2023-05"
+          - "5.10.177-android13-2023-06"
+          - "5.10.177-android13-2023-07"
+          - "5.10.186-android13-2023-08"
+          - "5.10.186-android13-2023-09"
+          - "5.10.189-android13-2023-10"
+          - "5.10.189-android13-2023-11"
+          - "5.10.198-android13-2023-12"
+          - "5.10.198-android13-2024-01"
+          - "5.10.205-android13-2024-02"
+          - "5.10.205-android13-2024-03"
+          - "5.10.209-android13-2024-04"
+          - "5.10.209-android13-2024-05"
+          - "5.10.210-android13-2024-06"
+          - "5.10.214-android13-2024-07"
+          - "5.10.218-android13-2024-08"
+          - "5.10.223-android13-2024-09"
+          - "5.10.223-android13-2024-11"
+          - "5.10.228-android13-2025-01"
+          - "5.10.234-android13-2025-03"
+          - "5.10.236-android13-2025-05"
+          - "5.10.238-android13-2025-07"
+          - "5.10.243-android13-2025-10"
+          - "5.10.246-android13-2026-01"
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
+      kernel_version: ${{ matrix.kernel_version }}
       ksu_commit: ${{ inputs.ksu_commit || '' }}
       feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
 
   build-a13-5-15:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'a13-5-15' }}
     needs: download-dependencies
-    uses: ./.github/workflows/a13-5-15.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        kernel_version:
+          - "5.15.41-android13-2022-06"
+          - "5.15.41-android13-2022-07"
+          - "5.15.41-android13-2022-08"
+          - "5.15.41-android13-2022-09"
+          - "5.15.41-android13-2022-10"
+          - "5.15.41-android13-2022-11"
+          - "5.15.74-android13-2022-12"
+          - "5.15.74-android13-2023-01"
+          - "5.15.78-android13-2023-02"
+          - "5.15.78-android13-2023-03"
+          - "5.15.94-android13-2023-04"
+          - "5.15.94-android13-2023-05"
+          - "5.15.104-android13-2023-06"
+          - "5.15.104-android13-2023-07"
+          - "5.15.119-android13-2023-08"
+          - "5.15.119-android13-2023-09"
+          - "5.15.123-android13-2023-10"
+          - "5.15.123-android13-2023-11"
+          - "5.15.137-android13-2023-12"
+          - "5.15.137-android13-2024-01"
+          - "5.15.144-android13-2024-02"
+          - "5.15.144-android13-2024-03"
+          - "5.15.148-android13-2024-04"
+          - "5.15.148-android13-2024-05"
+          - "5.15.149-android13-2024-06"
+          - "5.15.149-android13-2024-07"
+          - "5.15.151-android13-2024-08"
+          - "5.15.153-android13-2024-09"
+          - "5.15.167-android13-2024-11"
+          - "5.15.170-android13-2025-01"
+          - "5.15.178-android13-2025-03"
+          - "5.15.180-android13-2025-05"
+          - "5.15.185-android13-2025-07"
+          - "5.15.189-android13-2025-09"
+          - "5.15.194-android13-2025-12"
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
+      kernel_version: ${{ matrix.kernel_version }}
       ksu_commit: ${{ inputs.ksu_commit || '' }}
       feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
 
   build-a14-5-15:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'a14-5-15' }}
     needs: download-dependencies
-    uses: ./.github/workflows/a14-5-15.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        kernel_version:
+          - "5.15.110-android14-2023-06"
+          - "5.15.110-android14-2023-08"
+          - "5.15.110-android14-2023-09"
+          - "5.15.131-android14-2023-11"
+          - "5.15.137-android14-2024-01"
+          - "5.15.144-android14-2024-02"
+          - "5.15.144-android14-2024-03"
+          - "5.15.148-android14-2024-04"
+          - "5.15.148-android14-2024-05"
+          - "5.15.149-android14-2024-06"
+          - "5.15.153-android14-2024-07"
+          - "5.15.158-android14-2024-08"
+          - "5.15.164-android14-2024-09"
+          - "5.15.167-android14-2024-11"
+          - "5.15.170-android14-2025-01"
+          - "5.15.178-android14-2025-03"
+          - "5.15.180-android14-2025-05"
+          - "5.15.185-android14-2025-07"
+          - "5.15.192-android14-2025-10"
+          - "5.15.196-android14-2026-01"
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
+      kernel_version: ${{ matrix.kernel_version }}
       ksu_commit: ${{ inputs.ksu_commit || '' }}
       feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
 
   build-a14-6-1:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'a14-6-1' }}
     needs: download-dependencies
-    uses: ./.github/workflows/a14-6-1.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        kernel_version:
+          - "6.1.25-android14-2023-06"
+          - "6.1.25-android14-2023-07"
+          - "6.1.25-android14-2023-08"
+          - "6.1.25-android14-2023-09"
+          - "6.1.25-android14-2023-10"
+          - "6.1.43-android14-2023-11"
+          - "6.1.57-android14-2023-12"
+          - "6.1.57-android14-2024-01"
+          - "6.1.68-android14-2024-02"
+          - "6.1.68-android14-2024-03"
+          - "6.1.75-android14-2024-04"
+          - "6.1.75-android14-2024-05"
+          - "6.1.78-android14-2024-06"
+          - "6.1.84-android14-2024-07"
+          - "6.1.90-android14-2024-08"
+          - "6.1.93-android14-2024-09"
+          - "6.1.99-android14-2024-10"
+          - "6.1.112-android14-2024-11"
+          - "6.1.115-android14-2024-12"
+          - "6.1.118-android14-2025-01"
+          - "6.1.124-android14-2025-02"
+          - "6.1.128-android14-2025-03"
+          - "6.1.129-android14-2025-04"
+          - "6.1.134-android14-2025-05"
+          - "6.1.138-android14-2025-06"
+          - "6.1.141-android14-2025-07"
+          - "6.1.145-android14-2025-08"
+          - "6.1.145-android14-2025-09"
+          - "6.1.157-android14-2025-12"
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
+      kernel_version: ${{ matrix.kernel_version }}
       ksu_commit: ${{ inputs.ksu_commit || '' }}
       feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
 
   build-a15-6-6:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'a15-6-6' }}
     needs: download-dependencies
-    uses: ./.github/workflows/a15-6-6.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        kernel_version:
+          - "6.6.30-android15-2024-07"
+          - "6.6.30-android15-2024-08"
+          - "6.6.46-android15-2024-09"
+          - "6.6.50-android15-2024-10"
+          - "6.6.56-android15-2024-11"
+          - "6.6.57-android15-2024-12"
+          - "6.6.58-android15-2025-01"
+          - "6.6.66-android15-2025-02"
+          - "6.6.77-android15-2025-03"
+          - "6.6.82-android15-2025-04"
+          - "6.6.87-android15-2025-05"
+          - "6.6.89-android15-2025-06"
+          - "6.6.92-android15-2025-07"
+          - "6.6.98-android15-2025-08"
+          - "6.6.98-android15-2025-09"
+          - "6.6.102-android15-2025-10"
+          - "6.6.118-android15-2026-01"
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
+      kernel_version: ${{ matrix.kernel_version }}
       ksu_commit: ${{ inputs.ksu_commit || '' }}
       feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
 
   build-a16-6-12:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'a16-6-12' }}
     needs: download-dependencies
-    uses: ./.github/workflows/a16-6-12.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        kernel_version:
+          - "6.12.23-android16-2025-05-exp"
+          - "6.12.23-android16-2025-06"
+          - "6.12.30-android16-2025-07"
+          - "6.12.38-android16-2025-08"
+          - "6.12.38-android16-2025-09"
+          - "6.12.58-android16-2025-12"
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
+      kernel_version: ${{ matrix.kernel_version }}
       ksu_commit: ${{ inputs.ksu_commit || '' }}
       feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
   
   build-lts:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'lts' || github.event_name == 'push' }}
     needs: download-dependencies
-    uses: ./.github/workflows/lts.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        kernel_version:
+          - "5.10.X-android12-lts"
+          - "5.10.X-android13-lts"
+          - "5.15.X-android13-lts"
+          - "5.15.X-android14-lts"
+          - "6.1.X-android14-lts"
+          - "6.6.X-android15-lts"
+          - "6.12.X-android16-lts"
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
+      kernel_version: ${{ matrix.kernel_version }}
       ksu_commit: ${{ inputs.ksu_commit || '' }}
       feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
 
   build-custom:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'custom' }}
     needs: download-dependencies
-    uses: ./.github/workflows/custom.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kernel_version: "5.10.226-android12-2024-11"
+            variant: "vTomsonek"
+          - kernel_version: "6.1.145-android14-2025-09"
+            variant: "TheWildJames"
+          - kernel_version: "6.1.157-android14-2025-12"
+            variant: "MarionKernel"
+          - kernel_version: "6.1.128-android14-2025-03"
+            variant: "Hakan"
+          - kernel_version: "5.10.226-android12-2024-11"
+            variant: "Neyugn"
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
+      kernel_version: ${{ matrix.kernel_version }}
+      variant: ${{ matrix.variant }}
       ksu_commit: ${{ inputs.ksu_commit || '' }}
       feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
 
   build-testing:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'testing' || github.event_name == 'push' }}
     needs: download-dependencies
-    uses: ./.github/workflows/testing.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kernel_version: "6.1.145-android14-2025-08"
+            variant: "Placeholder"
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
+      kernel_version: ${{ matrix.kernel_version }}
+      variant: ${{ matrix.variant }}
       ksu_commit: ${{ inputs.ksu_commit || '' }}
       feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
 
   build-bypass:
     if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'bypass' }}
     needs: download-dependencies
-    uses: ./.github/workflows/bypass.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kernel_version: "5.10.X-android12-lts"
+            variant: "Bypass"
+          - kernel_version: "5.10.X-android13-lts"
+            variant: "Bypass"
+          - kernel_version: "5.15.X-android13-lts"
+            variant: "Bypass"
+          - kernel_version: "5.15.X-android14-lts"
+            variant: "Bypass"
+          - kernel_version: "6.1.X-android14-lts"
+            variant: "Bypass"
+          - kernel_version: "6.6.X-android15-lts"
+            variant: "Bypass"
+          - kernel_version: "6.12.X-android16-lts"
+            variant: "Bypass"
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
+      kernel_version: ${{ matrix.kernel_version }}
+      variant: ${{ matrix.variant }}
       ksu_commit: ${{ inputs.ksu_commit || '' }}
       feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
 
