@@ -14,8 +14,6 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    name: "Android 14 - 6.1"
     strategy:
       fail-fast: false
       matrix:

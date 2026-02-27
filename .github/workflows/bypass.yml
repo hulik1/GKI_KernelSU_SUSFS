@@ -14,19 +14,17 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    name: "Bypass Kernels"
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - kernel_version: "5.10.X-android12-lts"
-          - kernel_version: "5.10.X-android13-lts"
-          - kernel_version: "5.15.X-android13-lts"
-          - kernel_version: "5.15.X-android14-lts"
-          - kernel_version: "6.1.X-android14-lts"
-          - kernel_version: "6.6.X-android15-lts"
-          - kernel_version: "6.12.X-android16-lts"
+        kernel_version:
+          - "5.10.X-android12-lts"
+          - "5.10.X-android13-lts"
+          - "5.15.X-android13-lts"
+          - "5.15.X-android14-lts"
+          - "6.1.X-android14-lts"
+          - "6.6.X-android15-lts"
+          - "6.12.X-android16-lts"
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
