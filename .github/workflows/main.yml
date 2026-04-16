@@ -24,7 +24,7 @@ on:
           - a14-6-1
           - a15-6-6
           - a16-6-12
-        default: custom
+        default: all
       feature_set:
         description: "Feature Set"
         type: choice
