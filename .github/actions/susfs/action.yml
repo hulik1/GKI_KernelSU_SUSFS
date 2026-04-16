@@ -89,7 +89,7 @@ runs:
 
     - name: Apply KSU SUSFS Patches
       shell: bash
-      working-directory: ${{ github.workspace }}/kernel/common/KernelSU-Next
+      working-directory: ${{ github.workspace }}/kernel/KernelSU-Next
       run: |
          for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej ;); do
                 echo "Patching file: $file with fix_$file.patch"
