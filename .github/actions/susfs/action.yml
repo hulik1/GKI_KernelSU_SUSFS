@@ -92,6 +92,10 @@ runs:
       working-directory: ${{ github.workspace }}/kernel/KernelSU-Next
       run: |
         set -e
+        echo "Applying SUSFS patches for version: $SUSFS_VERSION"
+        cp "${{ github.workspace }}/susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" "${{ github.workspace }}/kernel/KernelSU-Next"
+        patch -p1 --forward < "10_enable_susfs_for_ksu.patch"
+        echo "Patching remaining files..."
         for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej \;); do
           fix_patch="${{ github.workspace }}/kernel_patches/next/susfs_fix_patches/$SUSFS_VERSION/fix_${file}.patch"
           if [ -f "$fix_patch" ]; then
@@ -102,7 +106,8 @@ runs:
             echo "Warning: missing fix patch for $file ($fix_patch), skipping"
           fi
         done
-
+        echo "Patching remaining files 2..."
+        
         cp "${{ github.workspace }}/kernel_patches/next/susfs_fix_patches/$SUSFS_VERSION/overwrite_hook_mode.patch" "${{ github.workspace }}/kernel/KernelSU-Next"
         cp "${{ github.workspace }}/kernel_patches/next/susfs_fix_patches/$SUSFS_VERSION/ksu_toolkit.patch" "${{ github.workspace }}/kernel/KernelSU-Next"
         cp "${{ github.workspace }}/kernel_patches/next/susfs_fix_patches/$SUSFS_VERSION/multi_manager.patch" "${{ github.workspace }}/kernel/KernelSU-Next"
