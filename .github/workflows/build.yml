@@ -31,6 +31,10 @@ on:
 jobs:
   build-gki:
     name: "${{ inputs.kernel_version }}${{ inputs.variant && format('-{0}', inputs.variant) || '' }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ['Normal', 'Bypass']
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -83,13 +87,18 @@ jobs:
         remove_dotnet: true
         remove_haskell: true
         remove_tool_cache: true
-        remove_swap: true
         remove_packages: "azure-cli google-cloud-cli microsoft-edge-stable google-chrome-stable firefox postgresql* temurin-* *llvm* mysql* dotnet-sdk-*"
         remove_packages_one_command: true
         remove_folders: "/usr/share/swift /usr/share/miniconda /usr/share/az* /usr/local/lib/node_modules /usr/local/share/chromium /usr/local/share/powershell /usr/local/julia /usr/local/aws-cli /usr/local/aws-sam-cli /usr/share/gradle"
         rm_cmd: "rmz"  # Use 'rmz' for faster deletion (default: 'rm')
         rmz_version: "3.1.1"  # Required when rm_cmd is 'rmz'
         testing: false
+
+    - name: Setup more Swap (for LTO)
+      uses: thejerrybao/setup-swap-space@v1   # or pierotofy/set-swap-space
+      with:
+        swap-size-gb: 25          # 10-24 GB is common for heavy LTO
+        # swap-space-path: /mnt/swapfile   # optional
 
     - name: Setup Build Environment
       run: |
@@ -209,7 +218,7 @@ jobs:
       uses: ./.github/actions/bbg
 
     - name: Apply Module Check Bypass
-      if: ${{ inputs.variant == 'Bypass' || inputs.variant == 'Hakan' }}
+      if: ${{ inputs.variant == 'Bypass' }}
       run: |
         if [[ "$KERNEL_VERSION" == "6.1" || "$KERNEL_VERSION" == "6.6" || "$KERNEL_VERSION" == "6.12" ]]; then
           TARGET_FILE="$GITHUB_WORKSPACE/kernel/common/kernel/module/version.c"
@@ -319,7 +328,16 @@ jobs:
       working-directory: ${{ github.workspace }}/kernel
       run: |
         set -ex
-        #make -C common mrproper
+        if [ -f "build/build.sh" ]; then
+          # SKIP NOT NEEDED
+        else
+          # Bazel build system (newer kernels)
+          # Remove ABI protected exports to prevent build errors
+          rm -rf common/android/abi_gki_protected_exports_*
+          perl -pi -e 's/^\s*"protected_exports_list"\s*:\s*"android\/abi_gki_protected_exports_aarch64",\s*$//;' common/BUILD.bazel
+          sed -i 's/protected_modules = \[.*\]/protected_modules = []/' common/modules.bzl || true
+        fi
+
         if [ -f "build/build.sh" ]; then
           SKIP_MRPROPER=1 GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" LTO=thin BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh || exit 1
         else

@@ -24,10 +24,6 @@ on:
           - a14-6-1
           - a15-6-6
           - a16-6-12
-          - lts
-          - custom
-          - testing
-          - bypass
         default: custom
       feature_set:
         description: "Feature Set"
@@ -156,58 +152,6 @@ jobs:
       feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
     secrets: inherit
 
-  build-lts:
-    if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'lts' || github.event_name == 'push' }}
-    needs: fetch-commits
-    uses: ./.github/workflows/prepare.yml
-    with:
-      config_file: .github/kernel-config/lts.json
-      ksu_commit: ${{ inputs.ksu_commit || needs.fetch-commits.outputs.ksu_commit }}
-      anykernel_commit: ${{ needs.fetch-commits.outputs.anykernel_commit }}
-      patches_commit: ${{ needs.fetch-commits.outputs.patches_commit }}
-      susfs_commit: ${{ needs.fetch-commits.outputs.susfs_commit }}
-      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
-    secrets: inherit
-
-  build-custom:
-    if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'custom' }}
-    needs: fetch-commits
-    uses: ./.github/workflows/prepare.yml
-    with:
-      config_file: .github/kernel-config/custom.json
-      ksu_commit: ${{ inputs.ksu_commit || needs.fetch-commits.outputs.ksu_commit }}
-      anykernel_commit: ${{ needs.fetch-commits.outputs.anykernel_commit }}
-      patches_commit: ${{ needs.fetch-commits.outputs.patches_commit }}
-      susfs_commit: ${{ needs.fetch-commits.outputs.susfs_commit }}
-      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
-    secrets: inherit
-
-  build-testing:
-    if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'testing' || github.event_name == 'push' }}
-    needs: fetch-commits
-    uses: ./.github/workflows/prepare.yml
-    with:
-      config_file: .github/kernel-config/testing.json
-      ksu_commit: ${{ inputs.ksu_commit || needs.fetch-commits.outputs.ksu_commit }}
-      anykernel_commit: ${{ needs.fetch-commits.outputs.anykernel_commit }}
-      patches_commit: ${{ needs.fetch-commits.outputs.patches_commit }}
-      susfs_commit: ${{ needs.fetch-commits.outputs.susfs_commit }}
-      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
-    secrets: inherit
-
-  build-bypass:
-    if: ${{ inputs.kernel_build_version == 'all' || inputs.kernel_build_version == 'bypass' }}
-    needs: fetch-commits
-    uses: ./.github/workflows/prepare.yml
-    with:
-      config_file: .github/kernel-config/bypass.json
-      ksu_commit: ${{ inputs.ksu_commit || needs.fetch-commits.outputs.ksu_commit }}
-      anykernel_commit: ${{ needs.fetch-commits.outputs.anykernel_commit }}
-      patches_commit: ${{ needs.fetch-commits.outputs.patches_commit }}
-      susfs_commit: ${{ needs.fetch-commits.outputs.susfs_commit }}
-      feature_set: ${{ inputs.feature_set || 'WKSU+SUSFS+BBG' }}
-    secrets: inherit
-
   rej:
     if: always()
     runs-on: ubuntu-latest
@@ -291,9 +235,6 @@ jobs:
     - build-a14-6-1
     - build-a15-6-6
     - build-a16-6-12
-    - build-lts
-    - build-custom
-    - build-bypass
 
     env:
       GH_TOKEN: ${{ github.token }}
@@ -329,9 +270,6 @@ jobs:
         check_selected "a14-6-1" "build-a14-6-1" "${{ needs.build-a14-6-1.result }}"
         check_selected "a15-6-6" "build-a15-6-6" "${{ needs.build-a15-6-6.result }}"
         check_selected "a16-6-12" "build-a16-6-12" "${{ needs.build-a16-6-12.result }}"
-        check_selected "custom" "build-custom" "${{ needs.build-custom.result }}"
-        check_selected "lts" "build-lts" "${{ needs.build-lts.result }}"
-        check_selected "bypass" "build-bypass" "${{ needs.build-bypass.result }}"
 
         if [[ "$failed" -ne 0 ]]; then
           exit 1

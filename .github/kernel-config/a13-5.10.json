@@ -36,6 +36,7 @@
     {"kernel_version": "5.10.236-android13-2025-05"},
     {"kernel_version": "5.10.238-android13-2025-07"},
     {"kernel_version": "5.10.243-android13-2025-10"},
-    {"kernel_version": "5.10.246-android13-2026-01"}
+    {"kernel_version": "5.10.246-android13-2026-01"},
+    {"kernel_version": "5.10.X-android13-lts"}
   ]
 }

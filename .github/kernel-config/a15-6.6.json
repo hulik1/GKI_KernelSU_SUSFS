@@ -16,6 +16,8 @@
     {"kernel_version": "6.6.98-android15-2025-08"},
     {"kernel_version": "6.6.98-android15-2025-09"},
     {"kernel_version": "6.6.102-android15-2025-10"},
-    {"kernel_version": "6.6.118-android15-2026-01"}
+    {"kernel_version": "6.6.118-android15-2026-01"},
+    {"kernel_version": "6.6.127-android15-2026-04"},
+    {"kernel_version": "6.6.X-android15-lts"}
   ]
 }

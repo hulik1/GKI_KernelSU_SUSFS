@@ -19,6 +19,8 @@
     {"kernel_version": "5.15.180-android14-2025-05"},
     {"kernel_version": "5.15.185-android14-2025-07"},
     {"kernel_version": "5.15.192-android14-2025-10"},
-    {"kernel_version": "5.15.196-android14-2026-01"}
+    {"kernel_version": "5.15.196-android14-2026-01"},
+    {"kernel_version": "5.15.202-android14-2026-04"},
+    {"kernel_version": "5.15.X-android14-lts"}
   ]
 }
