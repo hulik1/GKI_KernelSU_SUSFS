@@ -352,6 +352,33 @@ jobs:
         -> https://github.com/sidex15/ksu_module_susfs
         EOF
 
+    - name: Download AnyKernel3 Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: release-assets
+        pattern: '*-AnyKernel3'
+        merge-multiple: false
+
+    - name: Download Boot Image Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: release-assets
+        pattern: '*-BootImages'
+        merge-multiple: false
+
+    - name: Zip AnyKernel3 for Release
+      run: |
+        set -e
+        shopt -s nullglob
+
+        for dir in release-assets/*-AnyKernel3; do
+          zip_name="${dir}.zip"
+          rm -f "$zip_name"
+          cd "$dir"
+          zip -r -q -9 "../$(basename "$zip_name")" .
+          cd - >/dev/null
+        done
+
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
@@ -361,5 +388,5 @@ jobs:
         draft: false
         prerelease: ${{ inputs.release_type == 'Pre-Release' }}
         files: |
-          AnyKernel3/**/*.zip
-          AIO-REJ.zip
+          release-assets/**/*.zip
+          release-assets/**/*-boot*.img

@@ -133,6 +133,21 @@ jobs:
            git clone https://github.com/WildKernels/AnyKernel3.git -b gki-2.0 "$GITHUB_WORKSPACE/AnyKernel3"
         fi
 
+        AOSP_MIRROR=https://android.googlesource.com
+        BRANCH=main-kernel-2026
+        git clone $AOSP_MIRROR/kernel/prebuilts/build-tools -b $BRANCH --depth 1 kernel-build-tools
+        git clone $AOSP_MIRROR/platform/system/tools/mkbootimg -b $BRANCH --depth 1 mkbootimg
+  
+        echo "AVBTOOL=$GITHUB_WORKSPACE/kernel-build-tools/linux-x86/bin/avbtool" >> $GITHUB_ENV
+        echo "MKBOOTIMG=$GITHUB_WORKSPACE/mkbootimg/mkbootimg.py" >> $GITHUB_ENV
+        echo "UNPACK_BOOTIMG=$GITHUB_WORKSPACE/mkbootimg/unpack_bootimg.py" >> $GITHUB_ENV
+        echo "BOOT_SIGN_KEY_PATH=$GITHUB_WORKSPACE/kernel-build-tools/linux-x86/share/avb/testkey_rsa2048.pem" >> $GITHUB_ENV
+        echo "PATH=$GITHUB_WORKSPACE/kernel-build-tools/linux-x86/bin:$PATH" >> $GITHUB_ENV
+
+        openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out $GITHUB_WORKSPACE/kernel-build-tools/linux-x86/share/avb/testkey_rsa2048.pem
+        chmod 600 $GITHUB_WORKSPACE/kernel-build-tools/linux-x86/share/avb/testkey_rsa2048.pem
+          
+
     - name: Download Kernel Repository
       uses: ./.github/actions/download-kernel
       with:
@@ -316,6 +331,90 @@ jobs:
           tools/bazel build --config=release --stamp --defconfig_fragment=//common:arch/arm64/configs/wild_gki.fragment //common:kernel_aarch64_dist || exit 1
           fi
         fi
+
+    - name: Create Bootimgs Folder and Build Boot Images
+      working-directory: ${{ github.workspace }}
+      run: |
+        set -e
+
+        mkdir -p bootimgs
+        mkdir -p boot-artifacts
+
+        echo "Creating bootimgs folder and copying images..."
+        if [ -f "$GITHUB_WORKSPACE/kernel/out/$ANDROID_VERSION-$KERNEL_VERSION/dist/Image" ]; then
+          cp "$GITHUB_WORKSPACE/kernel/out/$ANDROID_VERSION-$KERNEL_VERSION/dist/Image" "$GITHUB_WORKSPACE/bootimgs/Image"
+          cp "$GITHUB_WORKSPACE/kernel/out/$ANDROID_VERSION-$KERNEL_VERSION/dist/Image.lz4" "$GITHUB_WORKSPACE/bootimgs/Image.lz4"
+        else
+          cp "$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_aarch64/Image" "$GITHUB_WORKSPACE/bootimgs/Image"
+          cp "$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_aarch64/Image.lz4" "$GITHUB_WORKSPACE/bootimgs/Image.lz4"
+        fi
+        gzip -n -k -f -9 "$GITHUB_WORKSPACE/bootimgs/Image" > "$GITHUB_WORKSPACE/bootimgs/Image.gz"
+
+        cd "$GITHUB_WORKSPACE/bootimgs"
+
+        case "$ANDROID_VERSION" in
+          android12)
+            echo "Android 12: downloading certified boot image to extract ramdisk..."
+            GKI_URL="https://dl.google.com/android/gki/gki-certified-boot-android12-5.10-${OS_PATCH_LEVEL}_r1.zip"
+            FALLBACK_URL="https://dl.google.com/android/gki/gki-certified-boot-android12-5.10-2023-01_r1.zip"
+
+            echo "Checking if GKI kernel URL is reachable: $GKI_URL"
+            status="$(curl -sL -w "%{http_code}" "$GKI_URL" -o /dev/null || true)"
+
+            if [ "$status" = "200" ]; then
+              echo "Downloading from GKI_URL"
+              curl -L -o gki-kernel.zip "$GKI_URL"
+            else
+              echo "$GKI_URL not found (HTTP $status), using $FALLBACK_URL"
+              curl -L -o gki-kernel.zip "$FALLBACK_URL"
+            fi
+
+            echo "Unzipping the downloaded kernel..."
+            unzip -q gki-kernel.zip
+            rm -f gki-kernel.zip
+
+            echo "Unpacking boot image to extract ramdisk..."
+            if [ -f "./boot-5.10.img" ]; then
+              BOOT_IMG="./boot-5.10.img"
+            else
+              BOOT_IMG="$(ls -1 ./boot-*.img 2>/dev/null | head -n 1 || true)"
+            fi
+
+            if [ -z "${BOOT_IMG:-}" ]; then
+              echo "Error: could not find extracted boot-*.img in $PWD"
+              ls -la
+              exit 1
+            fi
+
+            "$UNPACK_BOOTIMG" --boot_img="$PWD/$BOOT_IMG"
+            ;;
+        esac
+
+        for kernel_image in Image Image.gz Image.lz4; do
+          case "$kernel_image" in
+            Image) output_image="boot.img" ;;
+            Image.gz) output_image="boot-gz.img" ;;
+            Image.lz4) output_image="boot-lz4.img" ;;
+          esac
+
+          echo "Building $output_image"
+          if [ "$ANDROID_VERSION" = "android12" ]; then
+            "$MKBOOTIMG" --header_version 4 --kernel "$kernel_image" --output "$output_image" --ramdisk out/ramdisk --os_version 12.0.0 --os_patch_level "$OS_PATCH_LEVEL"
+          else
+            "$MKBOOTIMG" --header_version 4 --kernel "$kernel_image" --output "$output_image"
+          fi
+
+          "$AVBTOOL" add_hash_footer --partition_name boot --partition_size $((64 * 1024 * 1024)) --image "$output_image" --algorithm SHA256_RSA2048 --key "$BOOT_SIGN_KEY_PATH"
+          cp "$output_image" "$GITHUB_WORKSPACE/boot-artifacts/${FILE_NAME}-${output_image}"
+        done
+
+    - name: Upload Boot Images
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.extract.outputs.file_name }}-BootImages
+        path: ${{ github.workspace }}/boot-artifacts/*.img
+        if-no-files-found: error
+        compression-level: 0
 
     - name: Prepare AnyKernel3 Zip
       run: |
