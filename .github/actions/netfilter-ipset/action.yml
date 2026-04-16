@@ -1,4 +1,4 @@
-name: 'Configure Kernel Options'
+name: 'Setup netfilter/ipset options'
 description: 'Set up kernel configuration fragment with required options'
 inputs:
   kernel_version:
@@ -18,14 +18,6 @@ runs:
         CONFIG_IP_NF_TARGET_TTL=y
         CONFIG_IP6_NF_TARGET_HL=y
         CONFIG_IP6_NF_MATCH_HL=y
-
-        # BBR TCP Congestion Control
-        CONFIG_TCP_CONG_ADVANCED=y
-        CONFIG_TCP_CONG_BBR=y
-        CONFIG_NET_SCH_FQ=y
-        # CONFIG_TCP_CONG_BIC is not set
-        # CONFIG_TCP_CONG_WESTWOOD is not set
-        # CONFIG_TCP_CONG_HTCP is not set
 
         # IPSet Support
         CONFIG_IP_SET=y

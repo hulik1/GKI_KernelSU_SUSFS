@@ -257,8 +257,13 @@ jobs:
       with:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
 
-    - name: Configure Kernel Options
-      uses: ./.github/actions/configure-kernel
+    - name: Setup netfilter/ipset options
+      uses: ./.github/actions/netfilter-ipset
+      with:
+        kernel_version: ${{ steps.parse.outputs.kernel_version }}
+
+    - name: Setup BBRv3
+      uses: ./.github/actions/bbr
       with:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
 
