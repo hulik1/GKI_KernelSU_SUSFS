@@ -134,7 +134,7 @@ jobs:
         fi
 
         AOSP_MIRROR=https://android.googlesource.com
-        BRANCH=main-kernel-2026
+        BRANCH=main-kernel-2025
         git clone $AOSP_MIRROR/kernel/prebuilts/build-tools -b $BRANCH --depth 1 kernel-build-tools
         git clone $AOSP_MIRROR/platform/system/tools/mkbootimg -b $BRANCH --depth 1 mkbootimg
   
@@ -142,10 +142,10 @@ jobs:
         echo "MKBOOTIMG=$GITHUB_WORKSPACE/mkbootimg/mkbootimg.py" >> $GITHUB_ENV
         echo "UNPACK_BOOTIMG=$GITHUB_WORKSPACE/mkbootimg/unpack_bootimg.py" >> $GITHUB_ENV
         echo "BOOT_SIGN_KEY_PATH=$GITHUB_WORKSPACE/kernel-build-tools/linux-x86/share/avb/testkey_rsa2048.pem" >> $GITHUB_ENV
-        echo "PATH=$GITHUB_WORKSPACE/kernel-build-tools/linux-x86/bin:$PATH" >> $GITHUB_ENV
 
-        openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out $GITHUB_WORKSPACE/kernel-build-tools/linux-x86/share/avb/testkey_rsa2048.pem
-        chmod 600 $GITHUB_WORKSPACE/kernel-build-tools/linux-x86/share/avb/testkey_rsa2048.pem
+        mkdir -p "$GITHUB_WORKSPACE/kernel-build-tools/linux-x86/share/avb"
+        openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$GITHUB_WORKSPACE/kernel-build-tools/linux-x86/share/avb/testkey_rsa2048.pem"
+        chmod 600 "$GITHUB_WORKSPACE/kernel-build-tools/linux-x86/share/avb/testkey_rsa2048.pem"
           
 
     - name: Download Kernel Repository
