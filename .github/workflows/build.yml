@@ -30,7 +30,7 @@ on:
 
 jobs:
   build-gki:
-    name: "${{ inputs.kernel_version }} ({{matrix.variant}})"
+    name: "${{ inputs.kernel_version }} (${{ matrix.variant }})"
     strategy:
       fail-fast: false
       matrix:
@@ -164,7 +164,8 @@ jobs:
           [[ -n "$EXTRACTED" ]] && SUBLEVEL="$EXTRACTED"
         fi
 
-        FILE_NAME="$KERNEL_VERSION.$SUBLEVEL-$ANDROID_VERSION-$OS_PATCH_LEVEL${{ inputs.variant && format('-{0}', inputs.variant) || '' }}"
+        VARIANT="${{ matrix.variant }}"
+        FILE_NAME="$KERNEL_VERSION.$SUBLEVEL-$ANDROID_VERSION-$OS_PATCH_LEVEL-$VARIANT"
         echo "SUBLEVEL=$SUBLEVEL" >> $GITHUB_ENV
         echo "FILE_NAME=$FILE_NAME" >> $GITHUB_ENV
         
@@ -233,7 +234,7 @@ jobs:
       uses: ./.github/actions/bbg
 
     - name: Apply Module Check Bypass
-      if: ${{ inputs.variant == 'Bypass' }}
+      if: ${{ matrix.variant == 'Bypass' }}
       run: |
         if [[ "$KERNEL_VERSION" == "6.1" || "$KERNEL_VERSION" == "6.6" || "$KERNEL_VERSION" == "6.12" ]]; then
           TARGET_FILE="$GITHUB_WORKSPACE/kernel/common/kernel/module/version.c"
@@ -290,7 +291,7 @@ jobs:
     - name: Apply Kernel Branding
       uses: ./.github/actions/apply-kernel-branding
       with:
-        build_type: ${{ inputs.variant || 'Normal' }}
+        build_type: ${{ matrix.variant }}
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
 
     - name: Remove Protected Exports
@@ -462,7 +463,6 @@ jobs:
         compression-level: 9
 
     - name: Upload Rejects
-      if: ${{ always() && inputs.variant != 'Bypass' && steps.scan.outputs.rej_count > 0 }}
       uses: actions/upload-artifact@v4
       with:
         name: ${{ steps.extract.outputs.file_name }}-Rejects
@@ -483,7 +483,7 @@ jobs:
         echo "Repo Branch         : common-$KERNEL_VERSION-$ANDROID_VERSION-$OS_PATCH_LEVEL || 'normal'"
         echo "Deprecated          : $DEPRECATED_BRANCH"
         # Build info
-        echo "Build Type          : ${{ inputs.variant || 'Normal' }}"
+        echo "Build Type          : ${{ matrix.variant }}"
         # Features info
         echo "Features            : ${{ inputs.feature_set || 'None' }}"
         echo "WKSU Commit         : ${{ inputs.ksu_commit || 'canary' }}"
@@ -492,6 +492,6 @@ jobs:
         echo "BBG Commit          : $BBG_COMMIT"
         echo "BBG Version         : $BBG_VERSION"
         # Variant info
-        echo "Variant             : ${{ inputs.variant || 'Standard' }}"
+        echo "Variant             : ${{ matrix.variant }}"
         echo "Features            : ${{ inputs.feature_set || 'None' }}"
 # End of workflow
