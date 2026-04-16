@@ -30,7 +30,7 @@ on:
 
 jobs:
   build-gki:
-    name: "${{ inputs.kernel_version }}${{ inputs.variant && format('-{0}', inputs.variant) || '' }}"
+    name: "${{ inputs.kernel_version }}"
     strategy:
       fail-fast: false
       matrix:
@@ -247,19 +247,6 @@ jobs:
       with:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
 
-    - name: Setup Hakan
-      if: ${{ inputs.variant == 'Hakan' }}
-      uses: ./.github/actions/hakan
-
-    - name: Setup vTomsonek
-      if: ${{ inputs.variant == 'vTomsonek' }}
-      uses: ./.github/actions/vtomsonek
-      with:
-        android_version: ${{ steps.parse.outputs.android_version }}
-        kernel_version: ${{ steps.parse.outputs.kernel_version }}
-        sublevel: ${{ steps.parse.outputs.sub_level }}
-        os_patch_level: ${{ steps.parse.outputs.os_patch_level }}
-
     - name: Apply ABI Compare Bypass
       if: false
       working-directory: ${{ github.workspace }}/kernel
@@ -280,51 +267,13 @@ jobs:
           perl -i -pe 's/^(\s*)return 1$/$1print("Who Cares? Bypassing Now!")\n$1return 0/g if /if missing_symbols:/../return 1/' build/kernel/abi/check_buildtime_symbol_protection.py
         fi
 
-    - name: Append ashmem exports if missing
-      if: ${{ steps.parse.outputs.android_version == 'android16' && steps.parse.outputs.kernel_version == '6.12' && false }}
-      working-directory: ${{ github.workspace }}/kernel
-      run: |
-        FILE=common/drivers/staging/android/ashmem.c
-        if [[ -f "$FILE" ]] && ! grep -q 'is_ashmem_file' "$FILE"; then
-        cat >>"$FILE" <<'EOF'
-        bool is_ashmem_file(struct file *file) { return false; }
-        int ashmem_area_name(struct file *file, char *name) { return 0; }
-        long ashmem_area_size(struct file *file) { return 0; }
-        struct file *ashmem_area_vmfile(struct file *file) { return NULL; }
-        EXPORT_SYMBOL_GPL(is_ashmem_file);
-        EXPORT_SYMBOL_GPL(ashmem_area_name);
-        EXPORT_SYMBOL_GPL(ashmem_area_size);
-        EXPORT_SYMBOL_GPL(ashmem_area_vmfile);
-        EOF
-        fi
-
-        if [ -f common/drivers/android/binder/Makefile ]; then
-          perl -i -0777 -pe 's/\$\(\s*CONFIG_ANDROID_BINDER_IPC_RUST\s*\)/m/' common/drivers/android/binder/Makefile
-          #perl -i -ne 'print unless /CONFIG_ANDROID_BINDER_IPC_RUST_DUMMY/' common/drivers/android/binder/Makefile
-          perl -i -pe 's/^rust_binder-\$\([^)]+\)\s*:=/rust_binder-y :=/' common/drivers/android/binder/Makefile
-          cat common/drivers/android/Makefile
-          cat common/drivers/android/binder/Makefile
-          #perl -ni -e 'print unless /rust_toolchain\s*=\s*"\/\/build\/rust:linux_kernel_toolchain",/' common/BUILD.bazel
-          #cat common/BUILD.bazel
-          rustup set profile minimal
-          rustup update nightly
-          rustup default nightly
-          rustup target add aarch64-unknown-none
-        else
-          perl -i -0777 -pe 's/\$\(\s*CONFIG_ANDROID_BINDER_IPC_RUST\s*\)/m/' common/drivers/android/Makefile
-          cat common/drivers/android/Makefile
-        fi
-
     - name: Apply Kernel Branding
       uses: ./.github/actions/apply-kernel-branding
       with:
         build_type: ${{ inputs.variant || 'Normal' }}
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
 
-    - name: Clean Kernel Flags
-      uses: ./.github/actions/clean-kernel-flags
-
-    - name: Build Kernel
+    - name: Remove Protected Exports
       working-directory: ${{ github.workspace }}/kernel
       run: |
         set -ex
@@ -338,15 +287,33 @@ jobs:
           sed -i 's/protected_modules = \[.*\]/protected_modules = []/' common/modules.bzl || true
         fi
 
+    - name: Clean Kernel Flags
+      uses: ./.github/actions/clean-kernel-flags
+
+    - name: Build Kernel
+      working-directory: ${{ github.workspace }}/kernel
+      env:
+        SOURCE_DATE_EPOCH: ${{ env.SOURCE_DATE_EPOCH }}
+        KBUILD_BUILD_TIMESTAMP: ${{ env.KBUILD_BUILD_TIMESTAMP }}
+      run: |
+        set -ex
         if [ -f "build/build.sh" ]; then
-          SKIP_MRPROPER=1 GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" LTO=thin BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh || exit 1
+          # SKIP NOT NEEDED
+        else
+          # Bazel build system (newer kernels)
+          # Remove ABI protected exports to prevent build errors
+          rm -rf common/android/abi_gki_protected_exports_*
+          perl -pi -e 's/^\s*"protected_exports_list"\s*:\s*"android\/abi_gki_protected_exports_aarch64",\s*$//;' common/BUILD.bazel
+          sed -i 's/protected_modules = \[.*\]/protected_modules = []/' common/modules.bzl || true
+        fi
+
+        if [ -f "build/build.sh" ]; then
+          #SKIP_MRPROPER=1
+          GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh || exit 1
         else
           # Copy fragment to kernel tree for bazel
           cp "$GITHUB_WORKSPACE/wild_gki.fragment" common/arch/arm64/configs/wild_gki.fragment
-          if [[ "$ANDROID_VERSION" == "android14" ]]; then
-            tools/bazel build --config=fast --lto=thin --defconfig_fragment=//common:arch/arm64/configs/wild_gki.fragment //common:kernel_aarch64_dist || exit 1
-          else
-            tools/bazel build --config=fast --lto=none --defconfig_fragment=//common:arch/arm64/configs/wild_gki.fragment //common:kernel_aarch64_dist || exit 1
+          tools/bazel build --config=release --stamp --defconfig_fragment=//common:arch/arm64/configs/wild_gki.fragment //common:kernel_aarch64_dist || exit 1
           fi
         fi
 
@@ -361,24 +328,6 @@ jobs:
           echo "Error: Image file not found in any expected location"
           exit 1
         fi
-    
-    - name: Copy snd-aloop module
-      if: ${{ inputs.variant == 'vTomsonek' }}
-      run: |
-        if [ "${{ inputs.variant }}" = "vTomsonek" ]; then
-          sed -i 's|^do\.modules=.*|do.modules=1|' "$GITHUB_WORKSPACE/AnyKernel3/anykernel.sh"
-        fi
-
-        mkdir -p "$GITHUB_WORKSPACE/AnyKernel3/modules/data/adb/lkm"
-
-        if [[ "$ANDROID_VERSION" == "android12" || "$ANDROID_VERSION" == "android13" ]]; then
-          SRC_DIR="$GITHUB_WORKSPACE/kernel/out/$ANDROID_VERSION-$KERNEL_VERSION/dist"
-        else
-          SRC_DIR="$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_aarch64"
-        fi
-
-        cp "$SRC_DIR/snd-aloop.ko" "$GITHUB_WORKSPACE/AnyKernel3/modules/data/adb/lkm/"
-        cp "$SRC_DIR/g_audio.ko" "$GITHUB_WORKSPACE/AnyKernel3/modules/data/adb/lkm/"
 
     - name: Scan and collect patch rejects
       id: scan
