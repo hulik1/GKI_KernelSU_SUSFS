@@ -321,11 +321,11 @@ jobs:
         Please ensure you have proper backups before installation.
 
         Features:
-        -> Wild KSU Manager Support, Also Compatible with KernelSU-Next Manager
-        -> SUSFS ඞ v2.0.0
+        -> KernelSU-Next Manager, Wild KSU Manager Support is temporary disabled
+        -> SUSFS ඞ v2.1.0
         -> SUSFS Inline Hooks
         -> IPSet Support for Advanced Network Filtering
-        -> BBRv1 TCP Congestion Control
+        -> BBRv3 TCP Congestion Control
         -> BBG: https://github.com/vc-teahouse/Baseband-guard
 
         🔹 BBG (Baseband-guard)
@@ -345,8 +345,8 @@ jobs:
         -> https://github.com/fatalcoder524/KernelFlasher/
 
         Manager:
-        -> Wild KSU Manager: https://github.com/WildKernels/Wild_KSU
-        -> Next: https://github.com/KernelSU-Next/KernelSU-Next
+        Temp Disabled (-> Wild KSU Manager: https://github.com/WildKernels/Wild_KSU)
+        -> KernelSU-Next Manager: https://github.com/KernelSU-Next/KernelSU-Next
 
         Module: 
         -> https://github.com/sidex15/ksu_module_susfs

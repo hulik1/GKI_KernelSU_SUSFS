@@ -30,7 +30,7 @@ on:
 
 jobs:
   build-gki:
-    name: "${{ inputs.kernel_version }}"
+    name: "${{ inputs.kernel_version }} ({{matrix.variant}})"
     strategy:
       fail-fast: false
       matrix:
