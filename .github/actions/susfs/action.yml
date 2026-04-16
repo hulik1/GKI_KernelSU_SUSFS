@@ -92,24 +92,23 @@ runs:
       working-directory: ${{ github.workspace }}/kernel/KernelSU-Next
       run: |
         set -e
-
-        PATCH_DIR="${{ github.workspace }}/kernel_patches/next/susfs_fix_patches/v2.1.0"
-        if [ ! -d "$PATCH_DIR" ]; then
-          echo "Error: SUSFS fix patch directory not found: $PATCH_DIR"
-          exit 1
-        fi
-
         for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej \;); do
-          fix_patch="${PATCH_DIR}/fix_${file}.patch"
+          fix_patch="${{ github.workspace }}/kernel_patches/next/susfs_fix_patches/$SUSFS_VERSION/fix_${file}.patch"
           if [ -f "$fix_patch" ]; then
             echo "Patching file: $file with fix_${file}.patch"
-            patch -p1 --forward < "$fix_patch"
+            cp "${{ github.workspace }}/kernel_patches/next/susfs_fix_patches/$SUSFS_VERSION/fix_${file}.patch" "${{ github.workspace }}/kernel/KernelSU-Next"
+            patch -p1 --forward < "fix_${file}.patch"
           else
             echo "Warning: missing fix patch for $file ($fix_patch), skipping"
           fi
         done
 
-        patch -p1 --forward < "${PATCH_DIR}/overwrite_hook_mode.patch"
-        patch -p1 --forward < "${PATCH_DIR}/ksu_toolkit.patch"
-        patch -p1 --forward < "${PATCH_DIR}/multi_manager.patch"
-        patch -p1 --forward < "${PATCH_DIR}/multi_sepolicy_fix.patch"
+        cp "${{ github.workspace }}/kernel_patches/next/susfs_fix_patches/$SUSFS_VERSION/overwrite_hook_mode.patch" "${{ github.workspace }}/kernel/KernelSU-Next"
+        cp "${{ github.workspace }}/kernel_patches/next/susfs_fix_patches/$SUSFS_VERSION/ksu_toolkit.patch" "${{ github.workspace }}/kernel/KernelSU-Next"
+        cp "${{ github.workspace }}/kernel_patches/next/susfs_fix_patches/$SUSFS_VERSION/multi_manager.patch" "${{ github.workspace }}/kernel/KernelSU-Next"
+        cp "${{ github.workspace }}/kernel_patches/next/susfs_fix_patches/$SUSFS_VERSION/multi_sepolicy_fix.patch" "${{ github.workspace }}/kernel/KernelSU-Next"
+
+        patch -p1 --forward < "overwrite_hook_mode.patch"
+        patch -p1 --forward < "ksu_toolkit.patch"
+        patch -p1 --forward < "multi_manager.patch"
+        patch -p1 --forward < "multi_sepolicy_fix.patch"
