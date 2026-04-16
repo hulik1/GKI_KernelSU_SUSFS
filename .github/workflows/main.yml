@@ -40,9 +40,6 @@ on:
         type: string
         default: ""
         required: false
-  push:
-    branches:
-      - main
 
 jobs:
   fetch-commits:
@@ -166,7 +163,7 @@ jobs:
     - build-a14-6-1
     - build-a15-6-6
     - build-a16-6-12
-    
+
     steps:
     - name: Download Misc Artifacts
       uses: actions/download-artifact@v4
