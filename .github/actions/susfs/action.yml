@@ -94,7 +94,7 @@ runs:
         set -e
         echo "Applying SUSFS patches for version: $SUSFS_VERSION"
         cp "${{ github.workspace }}/susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" "${{ github.workspace }}/kernel/KernelSU-Next"
-        patch -p1 --forward < "10_enable_susfs_for_ksu.patch"
+        patch -p1 --forward < "10_enable_susfs_for_ksu.patch" || true
         echo "Patching remaining files..."
         for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej \;); do
           fix_patch="${{ github.workspace }}/kernel_patches/next/susfs_fix_patches/$SUSFS_VERSION/fix_${file}.patch"
