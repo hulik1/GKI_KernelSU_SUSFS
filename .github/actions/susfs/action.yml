@@ -87,3 +87,9 @@ runs:
         cp ${{ github.workspace }}/susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch ./
         patch -p1 < 50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch || true
 
+    - name: Apply KSU SUSFS Patches
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel/KernelSU-Next
+      run: |
+        cp ${{ github.workspace }}/kernel_patches/wild/susfs_fix_patches/${SUSFS_VERSION}/susfs_v2.1.0.patch ./
+        patch -p1 < susfs_v2.1.0.patch
