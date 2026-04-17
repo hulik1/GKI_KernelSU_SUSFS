@@ -59,6 +59,11 @@ runs:
         SUSFS_VERSION="v2.1.0"
         echo "SUSFS_VERSION=$SUSFS_VERSION" >> $GITHUB_ENV
 
+        cd susfs4ksu
+        if [ ${{ inputs.android_version }} == "android14" && [ ${{ inputs.kernel_version }} == "6.1" ]; then
+          git checkout 971cc4e770b7f344a4df35ce92d7a859e6a1e0fd
+        fi
+        
     - name: Enable KernelSU SUSFS Config
       shell: bash
       working-directory: ${{ github.workspace }}/kernel
