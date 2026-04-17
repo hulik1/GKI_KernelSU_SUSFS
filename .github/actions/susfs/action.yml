@@ -56,8 +56,13 @@ runs:
           git clone "$SUSFS_REPO" -b "$SUSFS_BRANCH" --depth=1 susfs4ksu
         fi
         
-        SUSFS_VERSION="2.0.0"
+        SUSFS_VERSION="v2.1.0"
         echo "SUSFS_VERSION=$SUSFS_VERSION" >> $GITHUB_ENV
+
+        cd susfs4ksu
+        if [ ${{ inputs.android_version }} == "android14" && [ ${{ inputs.kernel_version }} == "6.1" ]; then
+          git checkout 971cc4e770b7f344a4df35ce92d7a859e6a1e0fd
+        fi
 
     - name: Enable KernelSU SUSFS Config
       shell: bash
@@ -91,11 +96,20 @@ runs:
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/KernelSU-Next
       run: |
-         for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej \;); do
-            echo "Patching: $file"
-            patch -p1 --forward < "${{ github.workspace }}/kernel/common/kernel_patches/next/susfs_fix_patches/2.1.0/fix_${file}.patch"
-          done
-          patch -p1 --forward < "${ github.workspace }}/kernel/common/kernel_patches/next/susfs_fix_patches/2.1.0/overwrite_hook_mode.patch"
-          patch -p1 --forward < "${ github.workspace }}/kernel/common/KernelSU-Next/kernel_patches/next/susfs_fix_patches/2.1.0/ksu_toolkit.patch"
-          patch -p1 --forward < "${ github.workspace }}/kernel/common/KernelSU-Next/kernel_patches/next/susfs_fix_patches/2.1.0/multi_manager.patch"
-          patch -p1 --forward < "${ github.workspace }}/kernel/common/KernelSU-Next/kernel_patches/next/susfs_fix_patches/2.1.0/multi_sepolicy_fix.patch"
+        set -e
+        echo "Applying SUSFS patches for version: $SUSFS_VERSION"
+        cp "${{ github.workspace }}/susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" "${{ github.workspace }}/kernel/KernelSU-Next"
+        patch -p1 --forward < "10_enable_susfs_for_ksu.patch" || true
+        echo "Patching remaining files..."
+        for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej \;); do
+          cp "${{ github.workspace }}/kernel_patches/next/susfs_fix_patches/$SUSFS_VERSION/fix_${file}.patch" "${{ github.workspace }}/kernel/KernelSU-Next"
+          patch -p1 --forward < "fix_${file}.patch" || true
+        done
+        echo "Patching remaining files 2..."
+      
+        cp "${{ github.workspace }}/kernel_patches/next/susfs_fix_patches/$SUSFS_VERSION/overwrite_hook_mode.patch" "${{ github.workspace }}/kernel/KernelSU-Next"
+        patch -p1 --forward < "overwrite_hook_mode.patch"
+
+        cp "${{ github.workspace }}/kernel_patches/next/susfs_fix_patches/$SUSFS_VERSION/ksu_toolkit.patch" "${{ github.workspace }}/kernel/KernelSU-Next"
+        patch -p1 --forward < "ksu_toolkit.patch"
+        
