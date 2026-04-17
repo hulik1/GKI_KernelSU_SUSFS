@@ -101,8 +101,10 @@ runs:
         SUBLEVEL=${{ env.SUBLEVEL }}
         SUSFS_VERSION=${{ env.SUSFS_VERSION }}
 
-        cp ${{ github.workspace }}/kernel_patches/wild/susfs_fix_patches/${SUSFS_VERSION}/a14-6.1/base.c.patch ./
-        patch -p1 < base.c.patch
+        if [[ "$SUBLEVEL" -le 141 ]]; then
+          cp ${{ github.workspace }}/kernel_patches/wild/susfs_fix_patches/${SUSFS_VERSION}/a14-6.1/base.c.patch ./
+          patch -p1 < base.c.patch
+        fi
 
         if [[ "$SUBLEVEL" -le 75 && "${{ inputs.os_patch_level }}" != "2024-05" ]]; then
           sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
