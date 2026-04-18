@@ -91,5 +91,5 @@ runs:
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/KernelSU-Next
       run: |
-        cp ${{ github.workspace }}/kernel_patches/wild/susfs_fix_patches/${SUSFS_VERSION}/susfs_v2.1.0.patch ./
-        patch -p1 < susfs_v2.1.0.patch
+        cp ${{ github.workspace }}/kernel_patches/wild/ksun-0daf55582-susfs-v2.1.0-e259e7d6.patch ./
+        patch -p1 < ksun-0daf55582-susfs-v2.1.0-e259e7d6.patch
