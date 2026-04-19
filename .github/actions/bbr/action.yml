@@ -15,15 +15,15 @@ runs:
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
-        cp "$GITHUB_WORKSPACE/kernel_patches/bbrv3-${inputs.android_version}-${inputs.kernel_version}.patch" $GITHUB_WORKSPACE/kernel/common
-        patch -p1 < "bbrv3-${inputs.android_version}-${inputs.kernel_version}.patch"
+        cp "$GITHUB_WORKSPACE/kernel_patches/bbrv3-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch" "$GITHUB_WORKSPACE/kernel/common"
+        patch -p1 < "bbrv3-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch"
 
     - name: Fix modules.bzl
       shell: bash
       if: false
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
-        if [ "$inputs.kernel_version" == "6.1" ]; then
+        if [ "${{ inputs.kernel_version }}" = "6.1" ]; then
           mods_file=modules.bzl
           for m in "net/ipv4/tcp_bic.ko" "net/ipv4/tcp_htcp.ko" "net/ipv4/tcp_westwood.ko"; do
             grep -q "'$m'" "$mods_file" && continue
