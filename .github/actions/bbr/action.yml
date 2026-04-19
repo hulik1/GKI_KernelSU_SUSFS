@@ -4,6 +4,9 @@ inputs:
   kernel_version:
     description: 'Kernel version (e.g., 6.6)'
     required: true
+  android_version:
+    description: 'Android version (e.g., 12)'
+    required: true
 
 runs:
   using: composite
@@ -12,10 +15,8 @@ runs:
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
-        if [ "$inputs.kernel_version" == "6.1" ]; then
-          cp $GITHUB_WORKSPACE/kernel_patches/bbrv3-a14-6.1.patch $GITHUB_WORKSPACE/kernel/common
-          patch -p1 < bbrv3-a14-6.1.patch
-        fi
+        cp "$GITHUB_WORKSPACE/kernel_patches/bbrv3-${inputs.android_version}-${inputs.kernel_version}.patch" $GITHUB_WORKSPACE/kernel/common
+        patch -p1 < "bbrv3-${inputs.android_version}-${inputs.kernel_version}.patch"
 
     - name: Fix modules.bzl
       shell: bash
