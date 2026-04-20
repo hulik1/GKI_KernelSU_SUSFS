@@ -403,7 +403,7 @@ jobs:
         done
 
     - name: Upload Boot Images
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ${{ steps.extract.outputs.file_name }}-BootImages
         path: ${{ github.workspace }}/boot-artifacts/*.img
@@ -455,7 +455,7 @@ jobs:
         fi
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ${{ steps.extract.outputs.file_name }}-AnyKernel3
         path: ${{ github.workspace }}/AnyKernel3/**
@@ -464,7 +464,7 @@ jobs:
 
     - name: Upload Rejects
       if: ${{ always() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ${{ steps.extract.outputs.file_name }}-Rejects
         path: patch-rejects/
@@ -474,25 +474,25 @@ jobs:
     - name: Build Summary
       if: ${{ always() }}
       run: |
-        # Kernel info
-        echo "Android Version     : $ANDROID_VERSION"
-        echo "Kernel Version      : $KERNEL_VERSION"
-        echo "Sub Level           : $SUB_LEVEL"
-        echo "Sub level (Makefile): $SUBLEVEL"
-        echo "Patch Level         : $OS_PATCH_LEVEL"
-        # Branch info
-        echo "Repo Branch         : common-$KERNEL_VERSION-$ANDROID_VERSION-$OS_PATCH_LEVEL || 'normal'"
-        echo "Deprecated          : $DEPRECATED_BRANCH"
-        # Build info
-        echo "Build Type          : ${{ matrix.variant }}"
-        # Features info
-        echo "Features            : ${{ inputs.feature_set || 'None' }}"
-        echo "KSUN Commit         : ${{ inputs.ksu_commit || 'canary' }}"
-        echo "KSUN Tag            : $KSU_GIT_TAG"
-        echo "KSUN Version        : $KSU_VERSION"
-        echo "BBG Commit          : $BBG_COMMIT"
-        echo "BBG Version         : $BBG_VERSION"
-        # Variant info
-        echo "Variant             : ${{ matrix.variant }}"
-        echo "Features            : ${{ inputs.feature_set || 'None' }}"
+        cat <<EOF >> $GITHUB_STEP_SUMMARY
+        ## 🚀 Build Summary: ${{ inputs.kernel_version }} (${{ matrix.variant }})
+        
+        ### 🔧 Build Info
+        | Component | Version/Value |
+        | --- | --- |
+        | **Kernel Version** | \`${KERNEL_VERSION}.${SUBLEVEL}\` |
+        | **Android Version** | \`${ANDROID_VERSION}\` |
+        | **Patch Level** | \`${OS_PATCH_LEVEL}\` |
+        | **Variant** | \`${{ matrix.variant }}\` |
+        | **Feature Set** | \`${{ inputs.feature_set || 'None' }}\` |
+        
+        ### 📦 Component Details
+        | Component | Branch / Tag | Commit / Version |
+        | --- | --- | --- |
+        | **KernelSU-Next** | \`${KSU_GIT_TAG:-None}\` | \`${KSU_COMMIT:-None}\` |
+        | **SUSFS** | \`${SUSFS_BRANCH:-None}\` | \`${SUSFS_COMMIT:-Latest}\` |
+        | **BBG** | \`main\` | \`${BBG_COMMIT:-None}\` |
+        | **AnyKernel3** | \`gki-2.0\` | \`${{ inputs.anykernel_commit || 'Latest' }}\` |
+        | **Kernel Patches** | \`main\` | \`${{ inputs.patches_commit || 'Latest' }}\` |
+        EOF
 # End of workflow
