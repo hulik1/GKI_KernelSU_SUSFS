@@ -258,17 +258,10 @@ jobs:
       with:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
 
-    - name: Setup netfilter/ipset options
-      uses: ./.github/actions/netfilter-ipset
+    - name: Setup Networking options
+      uses: ./.github/actions/networking
       with:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
-
-    - name: Setup BBRv3
-      if: false
-      uses: ./.github/actions/bbr
-      with:
-        kernel_version: ${{ steps.parse.outputs.kernel_version }}
-        android_version: ${{ steps.parse.outputs.android_version }}
 
     - name: Apply ABI Compare Bypass
       if: false
@@ -471,29 +464,3 @@ jobs:
         path: patch-rejects/
         if-no-files-found: ignore
         compression-level: 9
-
-    - name: Build Summary
-      if: ${{ always() }}
-      run: |
-        cat <<EOF >> $GITHUB_STEP_SUMMARY
-        ## 🚀 Build Summary: ${{ inputs.kernel_version }} (${{ matrix.variant }})
-        
-        ### 🔧 Build Info
-        | Component | Version/Value |
-        | --- | --- |
-        | **Kernel Version** | \`${KERNEL_VERSION}.${SUBLEVEL}\` |
-        | **Android Version** | \`${ANDROID_VERSION}\` |
-        | **Patch Level** | \`${OS_PATCH_LEVEL}\` |
-        | **Variant** | \`${{ matrix.variant }}\` |
-        | **Feature Set** | \`${{ inputs.feature_set || 'None' }}\` |
-        
-        ### 📦 Component Details
-        | Component | Branch / Tag | Commit / Version |
-        | --- | --- | --- |
-        | **KernelSU-Next** | \`${KSU_GIT_TAG:-None}\` | \`${KSU_COMMIT:-None}\` |
-        | **SUSFS** | \`${SUSFS_BRANCH:-None}\` | \`${SUSFS_COMMIT:-Latest}\` |
-        | **BBG** | \`main\` | \`${BBG_COMMIT:-None}\` |
-        | **AnyKernel3** | \`gki-2.0\` | \`${{ inputs.anykernel_commit || 'Latest' }}\` |
-        | **Kernel Patches** | \`main\` | \`${{ inputs.patches_commit || 'Latest' }}\` |
-        EOF
-# End of workflow

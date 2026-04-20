@@ -318,9 +318,11 @@ jobs:
 
         FEATURE_SET="${{ inputs.feature_set }}"
         KSUN_COMMIT="${{ needs.fetch-commits.outputs.ksu_commit }}"
+        KSUN_TAG="${{ needs.fetch-commits.outputs.ksu_tag }}"
         AK3_COMMIT="${{ needs.fetch-commits.outputs.anykernel_commit }}"
         PATCHES_COMMIT="${{ needs.fetch-commits.outputs.patches_commit }}"
         SUSFS_MAP="${{ needs.fetch-commits.outputs.susfs_commit }}"
+        BBG_COMMIT="${{ needs.fetch-commits.outputs.bbg_commit }}"
         SUSFS_VERSION="v2.1.0"
         : > release_body.md
 
@@ -336,9 +338,11 @@ jobs:
           echo "|---|---|"
           echo "| Feature Set | ${FEATURE_SET} |"
           echo "| KernelSU-Next Commit | ${KSUN_COMMIT} |"
+          echo "| KernelSU-Next Tag | ${KSUN_TAG:-None} |"
           echo "| SUSFS Version | ${SUSFS_VERSION} |"
           echo "| AnyKernel3 Commit | ${AK3_COMMIT} |"
           echo "| Kernel Patches Commit | ${PATCHES_COMMIT} |"
+          echo "| BBG Commit | ${BBG_COMMIT} |"
           echo "| Optimization Level | O2 |"
           echo "| Clean Build | ❌ No (ccache enabled) |"
           echo
@@ -397,6 +401,44 @@ jobs:
             echo "- Baseband Guard (BBG): https://github.com/vc-teahouse/Baseband-guard"
           } >> release_body.md
         fi
+
+    - name: Workflow Summary
+      if: ${{ always() }}
+      run: |
+        set -e
+
+        KSUN_COMMIT="${{ needs.fetch-commits.outputs.ksu_commit }}"
+        KSUN_TAG="${{ needs.fetch-commits.outputs.ksu_tag }}"
+        AK3_COMMIT="${{ needs.fetch-commits.outputs.anykernel_commit }}"
+        PATCHES_COMMIT="${{ needs.fetch-commits.outputs.patches_commit }}"
+        SUSFS_MAP="${{ needs.fetch-commits.outputs.susfs_commit }}"
+        BBG_COMMIT="${{ needs.fetch-commits.outputs.bbg_commit }}"
+
+        short() { echo "${1:0:8}"; }
+
+        {
+          echo "## 📦 Components"
+          echo "| Component | Branch / Tag | Commit / Version |"
+          echo "|---|---|---|"
+          echo "| KernelSU-Next | ${KSUN_TAG:-dev} | $(short "$KSUN_COMMIT") |"
+          echo "| AnyKernel3 | gki-2.0 | $(short "$AK3_COMMIT") |"
+          echo "| Kernel Patches | main | $(short "$PATCHES_COMMIT") |"
+          echo "| BBG | main | $(short "$BBG_COMMIT") |"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        {
+          echo
+          echo "## 📌 SUSFS Branch Mapping"
+          echo "| Kernel Version | SUSFS Commit |"
+          echo "|---|---|"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        echo "$SUSFS_MAP" | tr ',' '\n' | while IFS=':' read -r branch commit; do
+          [ -n "${branch:-}" ] || continue
+          [ -n "${commit:-}" ] || continue
+          kernel_version="${branch#gki-}"
+          echo "| ${kernel_version} | ${commit} |" >> "$GITHUB_STEP_SUMMARY"
+        done
 
     - name: Download AnyKernel3 Artifacts
       uses: actions/download-artifact@v5
