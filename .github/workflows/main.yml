@@ -166,7 +166,7 @@ jobs:
 
     steps:
     - name: Download Misc Artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         path: ./downloaded-artifacts
         pattern: '*-Rejects'
@@ -210,7 +210,7 @@ jobs:
         fi
 
     - name: Upload AIO-REJ Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: AIO-REJ
         path: AIO-REJ.zip
@@ -222,6 +222,7 @@ jobs:
     permissions:
       contents: write
     needs:
+    - fetch-commits
     - build-a12-5-10
     - build-a13-5-10
     - build-a13-5-15
@@ -313,54 +314,141 @@ jobs:
 
     - name: Set release body
       run: |
-        cat << 'EOF' > release_body.md
+        set -e
 
-        **IMPORTANT DISCLAIMER**
-        This software is provided for testing and educational purposes only. Use at your own risk.
-        The developers are not responsible for any damage, data loss, or issues that may occur.
-        Please ensure you have proper backups before installation.
+        FEATURE_SET="${{ inputs.feature_set }}"
+        KSUN_COMMIT="${{ needs.fetch-commits.outputs.ksu_commit }}"
+        KSUN_TAG="${{ needs.fetch-commits.outputs.ksu_tag }}"
+        AK3_COMMIT="${{ needs.fetch-commits.outputs.anykernel_commit }}"
+        PATCHES_COMMIT="${{ needs.fetch-commits.outputs.patches_commit }}"
+        SUSFS_MAP="${{ needs.fetch-commits.outputs.susfs_commit }}"
+        BBG_COMMIT="${{ needs.fetch-commits.outputs.bbg_commit }}"
+        SUSFS_VERSION="v2.1.0"
+        : > release_body.md
 
-        Features:
-        -> KernelSU-Next Manager, Wild KSU Manager Support is temporary disabled
-        -> SUSFS ඞ v2.1.0
-        -> SUSFS Inline Hooks
-        -> IPSet Support for Advanced Network Filtering
-        -> BBRv3 TCP Congestion Control
-        -> BBG: https://github.com/vc-teahouse/Baseband-guard
+        {
+          echo
+          echo "**IMPORTANT DISCLAIMER**"
+          echo "This software is provided for testing and educational purposes only. Use at your own risk."
+          echo "The developers are not responsible for any damage, data loss, or issues that may occur."
+          echo "Please ensure you have proper backups before installation."
+          echo
+          echo "## 🔧 Build Configuration"
+          echo "| Component | Version/Setting |"
+          echo "|---|---|"
+          echo "| Feature Set | ${FEATURE_SET} |"
+          echo "| KernelSU-Next Commit | ${KSUN_COMMIT} |"
+          echo "| KernelSU-Next Tag | ${KSUN_TAG:-None} |"
+          echo "| SUSFS Version | ${SUSFS_VERSION} |"
+          echo "| AnyKernel3 Commit | ${AK3_COMMIT} |"
+          echo "| Kernel Patches Commit | ${PATCHES_COMMIT} |"
+          echo "| BBG Commit | ${BBG_COMMIT} |"
+          echo "| Optimization Level | O2 |"
+          echo "| Clean Build | ❌ No (ccache enabled) |"
+          echo
+          echo "## 📌 SUSFS Branch Mapping"
+          echo "| Kernel Version | SUSFS Commit |"
+          echo "|---|---|"
+        } >> release_body.md
 
-        🔹 BBG (Baseband-guard)
-        - A lightweight LSM (Linux Security Module) for Android kernel
-        - Blocks unauthorized writes to critical partitions/device nodes
-        - Prevents malicious tampering with baseband and boot chain
-        - Kernel-level protection via LSM hooks
-        - Reduces risk of soft-brick/hard-brick issues
+        echo "$SUSFS_MAP" | tr ',' '\n' | while IFS=':' read -r branch commit; do
+          [ -n "${branch:-}" ] || continue
+          [ -n "${commit:-}" ] || continue
+          kernel_version="${branch#gki-}"
+          echo "| ${kernel_version} | ${commit} |" >> release_body.md
+        done
 
-        🔹 Bypass Builds
-        - Includes module check bypass modifications 
-        - What are kernel modules? Kernel modules are pieces of code that can be loaded into the kernel at runtime to extend functionality (like device drivers, filesystem support, etc.). These are different from KernelSU/Magisk modules. 
-        - The Problem: Sometimes when installing a custom kernel, the device tries to load a kernel module that fails due to version mismatches, missing dependencies, or signature verification issues. This can cause boot failures or device instability. 
-        - The Solution: These versions change one line from false to true to force load the kernel module, bypassing the failure check that would normally prevent loading.
+        {
+          echo
+          echo "## ✨ Features & Capabilities"
+        } >> release_body.md
 
-        Kernel Flasher:
-        -> https://github.com/fatalcoder524/KernelFlasher/
+        if [[ "$FEATURE_SET" == *"KSUN"* ]]; then
+          {
+            echo "### 🔐 Root Management"
+            echo "- KernelSU-Next (kernel-level root)"
+          } >> release_body.md
+        fi
 
-        Manager:
-        Temp Disabled (-> Wild KSU Manager: https://github.com/WildKernels/Wild_KSU)
-        -> KernelSU-Next Manager: https://github.com/KernelSU-Next/KernelSU-Next
+        if [[ "$FEATURE_SET" == *"SUSFS"* ]]; then
+          echo "- SUSFS ${SUSFS_VERSION}" >> release_body.md
+        fi
 
-        Module: 
-        -> https://github.com/sidex15/ksu_module_susfs
-        EOF
+        {
+          echo
+          echo "### 🚀 Performance & Networking"
+          echo "- BBRv3 TCP Congestion Control"
+          echo "- IP Set support"
+          echo "- TTL target support (IPv4/IPv6)"
+          echo
+          echo "### 🔹 Bypass Builds"
+          echo "- Includes module check bypass variant (Bypass)"
+          echo
+          echo "## 📦 Release Files"
+          echo "- AnyKernel3: uploaded as ZIP in the Release"
+          echo "- Boot images: uploaded as raw .img files in the Release"
+          echo
+          echo "## 📥 Recommended Tools"
+          echo "- Kernel Flasher: https://github.com/fatalcoder524/KernelFlasher/"
+          echo "- KernelSU-Next Manager: https://github.com/KernelSU-Next/KernelSU-Next"
+          echo "- SUSFS Module: https://github.com/sidex15/ksu_module_susfs"
+        } >> release_body.md
+
+        if [[ "$FEATURE_SET" == *"BBG"* ]]; then
+          {
+            echo
+            echo "### 🛡️ Security & Privacy"
+            echo "- Baseband Guard (BBG): https://github.com/vc-teahouse/Baseband-guard"
+          } >> release_body.md
+        fi
+
+    - name: Workflow Summary
+      if: ${{ always() }}
+      run: |
+        set -e
+
+        KSUN_COMMIT="${{ needs.fetch-commits.outputs.ksu_commit }}"
+        KSUN_TAG="${{ needs.fetch-commits.outputs.ksu_tag }}"
+        AK3_COMMIT="${{ needs.fetch-commits.outputs.anykernel_commit }}"
+        PATCHES_COMMIT="${{ needs.fetch-commits.outputs.patches_commit }}"
+        SUSFS_MAP="${{ needs.fetch-commits.outputs.susfs_commit }}"
+        BBG_COMMIT="${{ needs.fetch-commits.outputs.bbg_commit }}"
+
+        short() { echo "${1:0:8}"; }
+
+        {
+          echo "## 📦 Components"
+          echo "| Component | Branch / Tag | Commit / Version |"
+          echo "|---|---|---|"
+          echo "| KernelSU-Next | ${KSUN_TAG:-dev} | $(short "$KSUN_COMMIT") |"
+          echo "| AnyKernel3 | gki-2.0 | $(short "$AK3_COMMIT") |"
+          echo "| Kernel Patches | main | $(short "$PATCHES_COMMIT") |"
+          echo "| BBG | main | $(short "$BBG_COMMIT") |"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        {
+          echo
+          echo "## 📌 SUSFS Branch Mapping"
+          echo "| Kernel Version | SUSFS Commit |"
+          echo "|---|---|"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        echo "$SUSFS_MAP" | tr ',' '\n' | while IFS=':' read -r branch commit; do
+          [ -n "${branch:-}" ] || continue
+          [ -n "${commit:-}" ] || continue
+          kernel_version="${branch#gki-}"
+          echo "| ${kernel_version} | ${commit} |" >> "$GITHUB_STEP_SUMMARY"
+        done
 
     - name: Download AnyKernel3 Artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         path: release-assets
         pattern: '*-AnyKernel3'
         merge-multiple: false
 
     - name: Download Boot Image Artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         path: release-assets
         pattern: '*-BootImages'

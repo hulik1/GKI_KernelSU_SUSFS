@@ -258,13 +258,8 @@ jobs:
       with:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
 
-    - name: Setup netfilter/ipset options
-      uses: ./.github/actions/netfilter-ipset
-      with:
-        kernel_version: ${{ steps.parse.outputs.kernel_version }}
-
-    - name: Setup BBRv3
-      uses: ./.github/actions/bbr
+    - name: Setup Networking options
+      uses: ./.github/actions/networking
       with:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
         android_version: ${{ steps.parse.outputs.android_version }}
@@ -403,7 +398,7 @@ jobs:
         done
 
     - name: Upload Boot Images
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ${{ steps.extract.outputs.file_name }}-BootImages
         path: ${{ github.workspace }}/boot-artifacts/*.img
@@ -455,7 +450,7 @@ jobs:
         fi
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ${{ steps.extract.outputs.file_name }}-AnyKernel3
         path: ${{ github.workspace }}/AnyKernel3/**
@@ -464,35 +459,9 @@ jobs:
 
     - name: Upload Rejects
       if: ${{ always() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ${{ steps.extract.outputs.file_name }}-Rejects
         path: patch-rejects/
         if-no-files-found: ignore
         compression-level: 9
-
-    - name: Build Summary
-      if: ${{ always() }}
-      run: |
-        # Kernel info
-        echo "Android Version     : $ANDROID_VERSION"
-        echo "Kernel Version      : $KERNEL_VERSION"
-        echo "Sub Level           : $SUB_LEVEL"
-        echo "Sub level (Makefile): $SUBLEVEL"
-        echo "Patch Level         : $OS_PATCH_LEVEL"
-        # Branch info
-        echo "Repo Branch         : common-$KERNEL_VERSION-$ANDROID_VERSION-$OS_PATCH_LEVEL || 'normal'"
-        echo "Deprecated          : $DEPRECATED_BRANCH"
-        # Build info
-        echo "Build Type          : ${{ matrix.variant }}"
-        # Features info
-        echo "Features            : ${{ inputs.feature_set || 'None' }}"
-        echo "KSUN Commit         : ${{ inputs.ksu_commit || 'canary' }}"
-        echo "KSUN Tag            : $KSU_GIT_TAG"
-        echo "KSUN Version        : $KSU_VERSION"
-        echo "BBG Commit          : $BBG_COMMIT"
-        echo "BBG Version         : $BBG_VERSION"
-        # Variant info
-        echo "Variant             : ${{ matrix.variant }}"
-        echo "Features            : ${{ inputs.feature_set || 'None' }}"
-# End of workflow

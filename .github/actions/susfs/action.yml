@@ -58,6 +58,8 @@ runs:
         
         SUSFS_VERSION="v2.1.0"
         echo "SUSFS_VERSION=$SUSFS_VERSION" >> $GITHUB_ENV
+        echo "SUSFS_BRANCH=$SUSFS_BRANCH" >> $GITHUB_ENV
+        echo "SUSFS_COMMIT=$TARGET_COMMIT" >> $GITHUB_ENV
 
     - name: Enable KernelSU SUSFS Config
       shell: bash
