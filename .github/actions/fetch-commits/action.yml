@@ -41,7 +41,7 @@ runs:
           repo="$1"
           commit="$2"
           git ls-remote --tags "$repo" | awk -v c="$commit" '$1==c && $2 ~ /^refs\/tags\// {print $2}' \
-            | sed -E 's#^refs/tags/##; s#\\^\\{\\}\\$##' \
+            | sed -E 's#^refs/tags/##; s#\^\{\}$##' \
             | sort -V \
             | tail -n 1
         }
