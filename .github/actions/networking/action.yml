@@ -2,7 +2,10 @@ name: 'Setup Networking Options'
 description: 'Set up kernel configuration fragment with required options'
 inputs:
   kernel_version:
-    description: 'Kernel version (e.g., 6.6)'
+    description: 'Kernel version (e.g., 6.1)'
+    required: true
+  android_version:
+    description: 'Android version (e.g., android14)'
     required: true
 
 runs:
