@@ -264,6 +264,7 @@ jobs:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
 
     - name: Setup BBRv3
+      if: false
       uses: ./.github/actions/bbr
       with:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
