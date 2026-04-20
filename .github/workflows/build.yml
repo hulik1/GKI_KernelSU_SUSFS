@@ -267,6 +267,7 @@ jobs:
       uses: ./.github/actions/bbr
       with:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
+        android_version: ${{ steps.parse.outputs.android_version }}
 
     - name: Apply ABI Compare Bypass
       if: false

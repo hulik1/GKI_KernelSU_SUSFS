@@ -15,11 +15,16 @@ runs:
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
-        # Apply kernel branding based on version and variant
-        if [[ "${{ inputs.kernel_version }}" == "5."* ]] || [[ "${{ inputs.kernel_version }}" == "6.1" ]]; then
-          perl -i -0777 -pe 's/(.*)echo "\$res"/$1echo "\$res-Wild"/s' scripts/setlocalversion
+        CONFIG_FRAGMENT="${GITHUB_WORKSPACE}/wild_gki.fragment"
+        touch "$CONFIG_FRAGMENT"
+
+        DEFCONFIG="${GITHUB_WORKSPACE}/kernel/common/arch/arm64/configs/gki_defconfig"
+
+        if grep -q '^CONFIG_LOCALVERSION=' "$DEFCONFIG"; then
+          LOCALVERSION_VALUE="$(grep -m1 '^CONFIG_LOCALVERSION=' "$DEFCONFIG" | sed -E 's/^CONFIG_LOCALVERSION="?([^"]*)"?$/\1/')"
+          echo "CONFIG_LOCALVERSION=\"${LOCALVERSION_VALUE}-Wild\"" >> "$CONFIG_FRAGMENT"
         else
-          perl -i -0777 -pe 's/(.*)echo "\$\{KERNELVERSION\}\$\{file_localversion\}\$\{config_localversion\}\$\{LOCALVERSION\}\$\{scm_version\}"/$1echo "\${KERNELVERSION}\${file_localversion}\${config_localversion}\${LOCALVERSION}-Wild\${scm_version}"/s' scripts/setlocalversion
+          echo 'CONFIG_LOCALVERSION="-Wild"' >> "$CONFIG_FRAGMENT"
         fi
 
         : > .scmversion
