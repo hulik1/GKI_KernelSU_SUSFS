@@ -10,6 +10,9 @@ inputs:
   android_version:
     description: 'Android version (e.g., android14)'
     required: true
+  sublevel:
+    description: 'Sublevel of kernel version (e.g., 1)'
+    required: true
 
 runs:
   using: "composite"
@@ -26,8 +29,9 @@ runs:
         if [ "${{ inputs.variant }}" = "Wild" ]; then
           tac scripts/setlocalversion | awk '!seen && /^echo / {seen=1; next} 1' | tac > scripts/setlocalversion.tmp
           mv scripts/setlocalversion.tmp scripts/setlocalversion
-          if [ "$(printf '%s\n' "${{ inputs.kernel_version }}" "6.6" | sort -V | head -n1)" = "6.6" ]; then
-            echo 'echo "${KERNELVERSION}-Wild"' >> scripts/setlocalversion
+          if [ ${{ inputs.kernel_version }} == "6.6" || ${{ inputs.kernel_version }} == "6.12" ]; then
+            KERNEL_STRING="${{ inputs.kernel_version }}.${{ inputs.sublevel }}"
+            echo 'echo "${KERNEL_STRING}-Wild"' >> scripts/setlocalversion
           else
             echo 'echo "-Wild"' >> scripts/setlocalversion
           fi
