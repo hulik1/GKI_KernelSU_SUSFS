@@ -50,14 +50,20 @@ runs:
         
         # KernelSU-Next
         if [ -n "${{ inputs.ksu_commit }}" ]; then
-          # Try to resolve input as a ref (branch/tag)
-          resolved_commit=$(get_commit "https://github.com/KernelSU-Next/KernelSU-Next.git" "${{ inputs.ksu_commit }}")
+          input_ref="${{ inputs.ksu_commit }}"
+          resolved_commit="$(get_commit "https://github.com/KernelSU-Next/KernelSU-Next.git" "$input_ref")"
+          if [ -z "$resolved_commit" ]; then
+            resolved_commit="$(get_commit "https://github.com/KernelSU-Next/KernelSU-Next.git" "refs/heads/$input_ref")"
+          fi
+          if [ -z "$resolved_commit" ]; then
+            resolved_commit="$(get_commit "https://github.com/KernelSU-Next/KernelSU-Next.git" "refs/tags/$input_ref")"
+          fi
           
           if [ -n "$resolved_commit" ]; then
             ksu_commit="$resolved_commit"
           else
             # If resolution failed, assume input is a commit SHA
-            ksu_commit="${{ inputs.ksu_commit }}"
+            ksu_commit="$input_ref"
           fi
           echo "Using provided KernelSU-Next commit: $ksu_commit"
         else
