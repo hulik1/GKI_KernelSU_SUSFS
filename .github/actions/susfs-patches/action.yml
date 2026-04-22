@@ -106,7 +106,7 @@ runs:
           patch -p1 < base.c.patch
         fi
 
-        if [[ "$SUBLEVEL" -le 75 && "${{ inputs.os_patch_level }}" != "2024-05" ]]; then
+        if grep -q 'goto show_pad;' ./fs/proc/task_mmu.c; then
           sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
         fi
 
