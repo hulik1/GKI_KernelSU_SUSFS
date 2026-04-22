@@ -164,10 +164,7 @@ jobs:
 
     - name: Apply Kernel Branding
       uses: ./.github/actions/apply-kernel-branding
-      with:
-        build_type: ${{ matrix.variant }}
-        kernel_version: ${{ steps.parse.outputs.kernel_version }}
-
+      
     - name: Remove Protected Exports
       uses: ./.github/actions/remove-protected-exports
 
