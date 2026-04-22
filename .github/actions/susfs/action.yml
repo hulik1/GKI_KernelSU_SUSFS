@@ -102,6 +102,23 @@ runs:
           sed -i '/^#include "internal.h"$/a #include <trace/hooks/blk.h>' fs/namespace.c
         fi
 
+        SHOULD_FIX=0
+        if [[ "${{ inputs.android_version }}" = "android12" && "${{ inputs.kernel_version }}" = "5.10" && "${{ inputs.sublevel }}" -le 209 ]]; then
+          SHOULD_FIX=1
+        elif [[ "${{ inputs.android_version }}" = "android13" && "${{ inputs.kernel_version }}" = "5.10" && "${{ inputs.sublevel }}" -le 209 && "${{ inputs.os_patch_level }}" != "2024-05" ]]; then
+          SHOULD_FIX=1
+        elif [[ "${{ inputs.android_version }}" = "android13" && "${{ inputs.kernel_version }}" = "5.15" && "${{ inputs.sublevel }}" -le 148 && "${{ inputs.os_patch_level }}" != "2024-05" ]]; then
+          SHOULD_FIX=1
+        elif [[ "${{ inputs.android_version }}" = "android14" && "${{ inputs.kernel_version }}" = "5.15" && "${{ inputs.sublevel }}" -le 148 && "${{ inputs.os_patch_level }}" != "2024-05" ]]; then
+          SHOULD_FIX=1
+        elif [[ "${{ inputs.android_version }}" = "android14" && "${{ inputs.kernel_version }}" = "6.1" ]]; then
+          SHOULD_FIX=1
+        fi
+
+        if [[ "$SHOULD_FIX" = "1" ]]; then
+          sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
+        fi
+
     - name: Apply KSU SUSFS Patches
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/KernelSU-Next

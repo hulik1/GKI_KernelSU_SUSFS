@@ -171,6 +171,20 @@ jobs:
     - name: Clean Kernel Flags
       uses: ./.github/actions/clean-kernel-flags
 
+    - name: Scan and collect patch rejects
+      id: scan
+      if: ${{ always() }}
+      uses: ./.github/actions/scan-patch-rejects
+
+    - name: Upload Rejects
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ steps.extract.outputs.file_name }}-Rejects
+        path: patch-rejects/
+        if-no-files-found: ignore
+        compression-level: 9
+
     - name: Build Kernel
       env:
         SOURCE_DATE_EPOCH: ${{ env.SOURCE_DATE_EPOCH }}
@@ -204,24 +218,10 @@ jobs:
     - name: Prepare AnyKernel3 Zip
       uses: ./.github/actions/prepare-anykernel3
 
-    - name: Scan and collect patch rejects
-      id: scan
-      if: ${{ always() }}
-      uses: ./.github/actions/scan-patch-rejects
-
     - name: Upload Artifacts
       uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.extract.outputs.file_name }}-AnyKernel3
         path: ${{ github.workspace }}/AnyKernel3/**
-        if-no-files-found: ignore
-        compression-level: 9
-
-    - name: Upload Rejects
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v7
-      with:
-        name: ${{ steps.extract.outputs.file_name }}-Rejects
-        path: patch-rejects/
         if-no-files-found: ignore
         compression-level: 9
