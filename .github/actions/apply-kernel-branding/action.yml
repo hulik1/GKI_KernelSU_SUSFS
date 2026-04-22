@@ -35,6 +35,7 @@ runs:
           else
             echo 'echo "-Wild"' >> scripts/setlocalversion
           fi
+          chmod +x scripts/setlocalversion
         else
           if grep -q '^CONFIG_LOCALVERSION=' "$DEFCONFIG"; then
             LOCALVERSION_VALUE="$(grep -m1 '^CONFIG_LOCALVERSION=' "$DEFCONFIG" | sed -E 's/^CONFIG_LOCALVERSION="?([^"]*)"?$/\1/')"
