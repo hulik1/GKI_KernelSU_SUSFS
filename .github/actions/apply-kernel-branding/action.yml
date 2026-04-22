@@ -31,7 +31,7 @@ runs:
           mv scripts/setlocalversion.tmp scripts/setlocalversion
           if [ ${{ inputs.kernel_version }} == "6.6" || ${{ inputs.kernel_version }} == "6.12" ]; then
             KERNEL_STRING="${{ inputs.kernel_version }}.${{ inputs.sublevel }}"
-            echo 'echo "${KERNEL_STRING}-Wild"' >> scripts/setlocalversion
+            echo "echo \"$KERNEL_STRING-Wild\"" >> scripts/setlocalversion
           else
             echo 'echo "-Wild"' >> scripts/setlocalversion
           fi
