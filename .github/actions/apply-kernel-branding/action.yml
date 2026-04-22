@@ -24,7 +24,8 @@ runs:
         DEFCONFIG="${GITHUB_WORKSPACE}/kernel/common/arch/arm64/configs/gki_defconfig"
 
         if [ "${{ inputs.variant }}" = "Wild" ]; then
-          sed -i ':a; $!{N; ba}; s/\n\([^\n]*^echo [^\n]*\)\n$/\n/;' scripts/setlocalversion
+          tac scripts/setlocalversion | awk '!seen && /^echo / {seen=1; next} 1' | tac > scripts/setlocalversion.tmp
+          mv scripts/setlocalversion.tmp scripts/setlocalversion
           if [ "$(printf '%s\n' "${{ inputs.kernel_version }}" "6.6" | sort -V | head -n1)" = "6.6" ]; then
             echo 'echo "${KERNELVERSION}-Wild"' >> scripts/setlocalversion
           else
