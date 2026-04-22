@@ -30,7 +30,7 @@ runs:
           tac scripts/setlocalversion | awk '!seen && /^echo / {seen=1; next} 1' | tac > scripts/setlocalversion.tmp
           mv scripts/setlocalversion.tmp scripts/setlocalversion
           if [[ ${{ inputs.kernel_version }} == "6.6" || ${{ inputs.kernel_version }} == "6.12" ]]; then
-            KERNEL_STRING="${{ inputs.kernel_version }}.${{ inputs.sublevel }}"
+            KERNEL_STRING="${{ inputs.kernel_version }}.${{ inputs.sublevel }}-${{ inputs.android_version }}"
             echo "echo \"$KERNEL_STRING-Wild\"" >> scripts/setlocalversion
           else
             echo 'echo "-Wild"' >> scripts/setlocalversion
