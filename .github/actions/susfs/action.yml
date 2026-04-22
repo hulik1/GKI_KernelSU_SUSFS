@@ -88,8 +88,8 @@ runs:
         cp "${{ github.workspace }}/susfs4ksu/kernel_patches/include/linux/"* "${{ github.workspace }}/kernel/common/include/linux/"
         cp ${{ github.workspace }}/susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch ./
 
-        if [ "${ inputs.kernel_version }}" = "6.1" ]; then
-          FIX_NAMESPACE=0
+        FIX_NAMESPACE=0
+        if [ "${{ inputs.kernel_version }}" = "6.1" ]; then
           if grep -q '^#include <trace/hooks/blk.h>$' fs/namespace.c; then
             sed -i '/^#include <trace\/hooks\/blk.h>$/d' fs/namespace.c
             FIX_NAMESPACE=1
