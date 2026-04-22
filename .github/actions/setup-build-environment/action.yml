@@ -3,10 +3,8 @@ description: 'Clones dependencies and exports mkbootimg/avbtool paths'
 inputs:
   patches_commit:
     required: false
-    type: string
   anykernel_commit:
     required: false
-    type: string
 
 runs:
   using: composite

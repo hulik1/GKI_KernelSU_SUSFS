@@ -4,7 +4,6 @@ inputs:
   ksu_commit:
     description: "KernelSU-Next ref/commit (optional, defaults to dev)"
     required: false
-    type: string
     default: ""
 
 runs:

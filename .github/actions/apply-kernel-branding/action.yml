@@ -1,16 +1,6 @@
 name: 'Apply Kernel Branding & Timestamp'
 description: 'Apply Wild kernel branding to kernel version string'
 
-inputs:
-  build_type:
-    required: false
-    type: string
-    default: ""
-  kernel_version:
-    required: false
-    type: string
-    default: ""
-
 runs:
   using: "composite"
   steps:

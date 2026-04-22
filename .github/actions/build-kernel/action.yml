@@ -9,6 +9,11 @@ runs:
       run: |
         set -euo pipefail
 
+        if [ -f "$GITHUB_WORKSPACE/wild_gki.fragment" ]; then
+          sed -i '/^CONFIG_TRIM_UNUSED_KSYMS=/d' "$GITHUB_WORKSPACE/wild_gki.fragment"
+          printf '%s\n' 'CONFIG_TRIM_UNUSED_KSYMS=n' >> "$GITHUB_WORKSPACE/wild_gki.fragment"
+        fi
+
         if [ -f "build/build.sh" ]; then
           GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh
           exit 0
