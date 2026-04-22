@@ -17,8 +17,8 @@ runs:
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
         set -euo pipefail
-        curl -L -o bbrv3.patch "https://github.com/ahmed-alnassif/GKI-Duchamp/blob/dev/kernel-patches/bbrv3/bbrv3.patch?raw=1"
-        patch -p1 --forward < bbrv3.patch
+        cp -f "${{ github.workspace }}/kernel_patches/bbr/bbrv3-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch" .
+        patch -p1 < bbrv3-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch
 
     - name: Fix modules.bzl
       shell: bash
