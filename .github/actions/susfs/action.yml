@@ -83,18 +83,13 @@ runs:
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
-        ANDROID_VERSION='${{ inputs.android_version }}'
-        KERNEL_VERSION='${{ inputs.kernel_version }}'
-        OS_PATCH_LEVEL='${{ inputs.os_patch_level }}'
-        SUBLEVEL='${{ inputs.sublevel }}'
-
         # Apply base SUSFS patches
         cp "${{ github.workspace }}/susfs4ksu/kernel_patches/fs/"* "${{ github.workspace }}/kernel/common/fs/"
         cp "${{ github.workspace }}/susfs4ksu/kernel_patches/include/linux/"* "${{ github.workspace }}/kernel/common/include/linux/"
         cp ${{ github.workspace }}/susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch ./
 
         FIX_NAMESPACE=0
-        if [ "$KERNEL_VERSION" = "6.1" ]; then
+        if [ "${{ inputs.kernel_version }}" = "6.1" ]; then
           if grep -q '^#include <trace/hooks/blk.h>$' fs/namespace.c; then
             sed -i '/^#include <trace\/hooks\/blk.h>$/d' fs/namespace.c
             FIX_NAMESPACE=1
@@ -108,15 +103,15 @@ runs:
         fi
 
         SHOULD_FIX=0
-        if [[ "$ANDROID_VERSION" = "android12" && "$KERNEL_VERSION" = "5.10" && "$SUBLEVEL" -le 209 ]]; then
+        if [[ "${{ inputs.android_version }}" = "android12" && "${{ inputs.kernel_version }}" = "5.10" && "${{ inputs.sublevel }}" -le 209 ]]; then
           SHOULD_FIX=1
-        elif [[ "$ANDROID_VERSION" = "android13" && "$KERNEL_VERSION" = "5.10" && "$SUBLEVEL" -le 209 && "$OS_PATCH_LEVEL" != "2024-05" ]]; then
+        elif [[ "${{ inputs.android_version }}" = "android13" && "${{ inputs.kernel_version }}" = "5.10" && "${{ inputs.sublevel }}" -le 209 && "${{ inputs.os_patch_level }}" != "2024-05" ]]; then
           SHOULD_FIX=1
-        elif [[ "$ANDROID_VERSION" = "android13" && "$KERNEL_VERSION" = "5.15" && "$SUBLEVEL" -le 148 && "$OS_PATCH_LEVEL" != "2024-05" ]]; then
+        elif [[ "${{ inputs.android_version }}" = "android13" && "${{ inputs.kernel_version }}" = "5.15" && "${{ inputs.sublevel }}" -le 148 && "${{ inputs.os_patch_level }}" != "2024-05" ]]; then
           SHOULD_FIX=1
-        elif [[ "$ANDROID_VERSION" = "android14" && "$KERNEL_VERSION" = "5.15" && "$SUBLEVEL" -le 148 && "$OS_PATCH_LEVEL" != "2024-05" ]]; then
+        elif [[ "${{ inputs.android_version }}" = "android14" && "${{ inputs.kernel_version }}" = "5.15" && "${{ inputs.sublevel }}" -le 148 && "${{ inputs.os_patch_level }}" != "2024-05" ]]; then
           SHOULD_FIX=1
-        elif [[ "$ANDROID_VERSION" = "android14" && "$KERNEL_VERSION" = "6.1" ]]; then
+        elif [[ "${{ inputs.android_version }}" = "android14" && "${{ inputs.kernel_version }}" = "6.1" ]]; then
           SHOULD_FIX=1
         fi
 
