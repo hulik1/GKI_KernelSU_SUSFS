@@ -25,4 +25,5 @@ runs:
         CONFIG_KALLSYMS_ALL=y
 
         # CONFIG_TRIM_UNUSED_KSYMS is not set
+        CONFIG_MODULE_SIG_PROTECT_LIST=""
         EOF
