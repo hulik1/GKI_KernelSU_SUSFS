@@ -2,9 +2,9 @@ name: Setup Wild KSU
 description: Download and configure Wild KSU with version tracking
 inputs:
   ksu_commit:
-    description: "KSU Commit"
-    required: true
-    type: string
+    description: "KernelSU-Next ref/commit (optional, defaults to dev)"
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -13,8 +13,32 @@ runs:
       shell: bash
       working-directory: ${{ github.workspace }}/kernel
       run: |
-        # Clone the repository
+        set -euo pipefail
+
+        TARGET_REF="${{ inputs.ksu_commit }}"
+        if [ -z "$TARGET_REF" ]; then TARGET_REF="dev"; fi
+
         curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/dev/kernel/setup.sh" | bash -s dev
+
+        if [ "$TARGET_REF" != "dev" ]; then
+          cd KernelSU-Next
+          if git rev-parse --is-shallow-repository >/dev/null 2>&1 && git rev-parse --is-shallow-repository | grep -q true; then
+            git fetch --unshallow --tags --prune || true
+          fi
+          git fetch --all --tags --prune
+
+          if git checkout "$TARGET_REF" 2>/dev/null; then
+            :
+          elif git checkout "origin/$TARGET_REF" 2>/dev/null; then
+            :
+          elif git checkout "refs/tags/$TARGET_REF" 2>/dev/null; then
+            :
+          else
+            echo "Error: could not checkout KernelSU-Next ref/commit/tag: $TARGET_REF"
+            exit 1
+          fi
+          cd "$GITHUB_WORKSPACE/kernel"
+        fi
         
         cd KernelSU-Next/kernel
         
