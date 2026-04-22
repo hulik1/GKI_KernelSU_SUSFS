@@ -1,5 +1,15 @@
 name: 'Apply Kernel Branding & Timestamp'
 description: 'Apply Wild kernel branding to kernel version string'
+inputs:
+  variant:
+    description: 'Variant of kernel to apply branding to'
+    required: true
+  kernel_version:
+    description: 'Kernel version (e.g., 6.1)'
+    required: true
+  android_version:
+    description: 'Android version (e.g., android14)'
+    required: true
 
 runs:
   using: "composite"
@@ -13,16 +23,26 @@ runs:
 
         DEFCONFIG="${GITHUB_WORKSPACE}/kernel/common/arch/arm64/configs/gki_defconfig"
 
-        if grep -q '^CONFIG_LOCALVERSION=' "$DEFCONFIG"; then
-          LOCALVERSION_VALUE="$(grep -m1 '^CONFIG_LOCALVERSION=' "$DEFCONFIG" | sed -E 's/^CONFIG_LOCALVERSION="?([^"]*)"?$/\1/')"
-          echo "CONFIG_LOCALVERSION=\"${LOCALVERSION_VALUE}-Wild\"" >> "$CONFIG_FRAGMENT"
+        if [ "${{ inputs.variant }}" = "Wild" ]; then
+          sed -i '${/^echo /d;}' scripts/setlocalversion
+          if [ "${{ inputs.kernel_version }}" -gt "6.6" ]; then
+            echo 'echo "${KERNELVERSION}-Wild"'
+          else
+            echo 'echo "-Wild"'
+          fi
         else
-          echo 'CONFIG_LOCALVERSION="-Wild"' >> "$CONFIG_FRAGMENT"
+          if grep -q '^CONFIG_LOCALVERSION=' "$DEFCONFIG"; then
+            LOCALVERSION_VALUE="$(grep -m1 '^CONFIG_LOCALVERSION=' "$DEFCONFIG" | sed -E 's/^CONFIG_LOCALVERSION="?([^"]*)"?$/\1/')"
+           echo "CONFIG_LOCALVERSION=\"${LOCALVERSION_VALUE}-Wild\"" >> "$CONFIG_FRAGMENT"
+          else
+            echo 'CONFIG_LOCALVERSION="-Wild"' >> "$CONFIG_FRAGMENT"
+          fi
         fi
 
         : > .scmversion
 
         echo "Getting last commit timestamp from kernel source..."
+
 
         COMMIT_TIMESTAMP=$(git log -1 --format=%ct 2>/dev/null || echo "$(date +%s)")
         KERNEL_BUILD_DATE=$(date -u)
@@ -32,3 +52,12 @@ runs:
         
         export KBUILD_BUILD_TIMESTAMP="$KERNEL_BUILD_DATE"
         echo "KBUILD_BUILD_TIMESTAMP=$KERNEL_BUILD_DATE" >> $GITHUB_ENV
+
+    - name: Apply Kernel Configuration
+      if: "${{ inputs.variant }}" == "Wild"
+      shell: bash
+      run: |
+        cat >> "${{ github.workspace }}/wild_gki.fragment" << 'EOF'
+        CONFIG_LOCALVERSION=""
+        # CONFIG_LOCALVERSION_AUTO is not set
+        EOF
