@@ -1,12 +1,5 @@
-name: 'Apply Kernel Branding'
+name: 'Apply Kernel Branding & Timestamp'
 description: 'Apply Wild kernel branding to kernel version string'
-inputs:
-  build_type:
-    description: 'Build type (Normal, Bypass, MarionKernel, Hakan, etc.)'
-    required: true
-  kernel_version:
-    description: 'Kernel version (e.g., 5.10, 6.1, 6.6)'
-    required: true
 
 runs:
   using: "composite"
