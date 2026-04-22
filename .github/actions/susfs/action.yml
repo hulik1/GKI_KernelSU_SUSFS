@@ -83,13 +83,18 @@ runs:
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
+        ANDROID_VERSION='${{ inputs.android_version }}'
+        KERNEL_VERSION='${{ inputs.kernel_version }}'
+        OS_PATCH_LEVEL='${{ inputs.os_patch_level }}'
+        SUBLEVEL='${{ inputs.sublevel }}'
+
         # Apply base SUSFS patches
         cp "${{ github.workspace }}/susfs4ksu/kernel_patches/fs/"* "${{ github.workspace }}/kernel/common/fs/"
         cp "${{ github.workspace }}/susfs4ksu/kernel_patches/include/linux/"* "${{ github.workspace }}/kernel/common/include/linux/"
         cp ${{ github.workspace }}/susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch ./
 
         FIX_NAMESPACE=0
-        if [ "${{ inputs.kernel_version }}" = "6.1" ]; then
+        if [ "$KERNEL_VERSION" = "6.1" ]; then
           if grep -q '^#include <trace/hooks/blk.h>$' fs/namespace.c; then
             sed -i '/^#include <trace\/hooks\/blk.h>$/d' fs/namespace.c
             FIX_NAMESPACE=1
@@ -102,7 +107,20 @@ runs:
           sed -i '/^#include "internal.h"$/a #include <trace/hooks/blk.h>' fs/namespace.c
         fi
 
-        if grep -q 'goto show_pad;' ./fs/proc/task_mmu.c; then
+        SHOULD_FIX=0
+        if [[ "$ANDROID_VERSION" = "android12" && "$KERNEL_VERSION" = "5.10" && "$SUBLEVEL" -le 209 ]]; then
+          SHOULD_FIX=1
+        elif [[ "$ANDROID_VERSION" = "android13" && "$KERNEL_VERSION" = "5.10" && "$SUBLEVEL" -le 209 && "$OS_PATCH_LEVEL" != "2024-05" ]]; then
+          SHOULD_FIX=1
+        elif [[ "$ANDROID_VERSION" = "android13" && "$KERNEL_VERSION" = "5.15" && "$SUBLEVEL" -le 148 && "$OS_PATCH_LEVEL" != "2024-05" ]]; then
+          SHOULD_FIX=1
+        elif [[ "$ANDROID_VERSION" = "android14" && "$KERNEL_VERSION" = "5.15" && "$SUBLEVEL" -le 148 && "$OS_PATCH_LEVEL" != "2024-05" ]]; then
+          SHOULD_FIX=1
+        elif [[ "$ANDROID_VERSION" = "android14" && "$KERNEL_VERSION" = "6.1" ]]; then
+          SHOULD_FIX=1
+        fi
+
+        if [[ "$SHOULD_FIX" = "1" ]]; then
           sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
         fi
 
