@@ -221,7 +221,7 @@ runs:
             return None
 
         def get_toolchain_release_assets() -> list[dict]:
-            nonlocal _release_assets_cache
+            global _release_assets_cache
             with _release_assets_lock:
                 if _release_assets_cache is not None:
                     return _release_assets_cache
@@ -254,7 +254,7 @@ runs:
                     return _release_assets_cache
 
         def get_or_create_toolchain_release() -> dict | None:
-            nonlocal _release_info_cache, _release_assets_cache
+            global _release_info_cache, _release_assets_cache
             with _release_info_lock:
                 if _release_info_cache is not None:
                     return _release_info_cache
