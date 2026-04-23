@@ -15,6 +15,7 @@ from typing import Any
 from urllib.error import HTTPError
 from urllib.request import Request
 from urllib.request import urlopen
+import hashlib
 
 
 def parse_args() -> argparse.Namespace:
@@ -49,7 +50,12 @@ def main() -> int:
         "clang/host/linux-x86": "clang",
         "prebuilts/rust": "rust",
         "prebuilts/clang-tools": "clang-tools",
-        "prebuilts/build-tools": "build-tools",
+        "platform/prebuilts/build-tools": "build-tools",
+        "kernel/prebuilts/build-tools": "kernel-build-tools",
+        "platform/prebuilts/bazel/linux-x86_64": "bazel-linux-x86_64",
+        "platform/prebuilts/jdk/jdk11": "jdk11",
+        "toolchain/prebuilts/ndk/r23": "ndk-r23",
+        "platform/prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8": "gcc-glibc2.17-4.8",
     }
 
     release_assets_lock = threading.Lock()
@@ -194,15 +200,17 @@ def main() -> int:
         with release_assets_lock:
             if release_assets_cache is not None:
                 return release_assets_cache
-            if not target_repo:
+
+        if not target_repo:
+            with release_assets_lock:
                 release_assets_cache = []
                 return release_assets_cache
-            url = f"https://api.github.com/repos/{target_repo}/releases?per_page=100"
-            try:
-                releases = github_api_get_json(url)
-                if not isinstance(releases, list):
-                    release_assets_cache = []
-                    return release_assets_cache
+
+        assets: list[dict[str, Any]] = []
+        url = f"https://api.github.com/repos/{target_repo}/releases?per_page=100"
+        try:
+            releases = github_api_get_json(url)
+            if isinstance(releases, list):
                 release = next(
                     (
                         r
@@ -212,15 +220,21 @@ def main() -> int:
                     ),
                     None,
                 )
-                if not release:
-                    release_assets_cache = []
-                    return release_assets_cache
-                assets = release.get("assets", [])
-                release_assets_cache = assets if isinstance(assets, list) else []
-                return release_assets_cache
-            except Exception:
-                release_assets_cache = []
-                return release_assets_cache
+                if isinstance(release, dict):
+                    raw_assets = release.get("assets", [])
+                    assets = raw_assets if isinstance(raw_assets, list) else []
+        except Exception:
+            assets = []
+
+        if not assets and github_token:
+            release = get_or_create_toolchain_release()
+            if isinstance(release, dict):
+                raw_assets = release.get("assets", [])
+                assets = raw_assets if isinstance(raw_assets, list) else []
+
+        with release_assets_lock:
+            release_assets_cache = assets
+            return release_assets_cache
 
     def get_or_create_toolchain_release() -> dict[str, Any] | None:
         nonlocal release_info_cache, release_assets_cache
@@ -345,6 +359,21 @@ def main() -> int:
             if os.path.exists(tmp_resp):
                 os.remove(tmp_resp)
 
+    def build_release_asset_index() -> dict[str, dict[str, Any]]:
+        assets = get_toolchain_release_assets()
+        index: dict[str, dict[str, Any]] = {}
+        for a in assets:
+            if isinstance(a, dict) and isinstance(a.get("name"), str):
+                index[a["name"]] = a
+        return index
+
+    def sha256_file(path: str) -> str:
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                h.update(chunk)
+        return h.hexdigest()
+
     def ensure_toolchain_cached(label: str, rev: str, src_dir: str) -> None:
         nonlocal release_assets_cache
         if not github_token or not target_repo:
@@ -360,12 +389,10 @@ def main() -> int:
         with lock:
             try:
                 base_filename = f"{label}-{rev}.tar.gz"
-                assets = get_toolchain_release_assets()
-                for a in assets:
-                    if isinstance(a, dict):
-                        asset_name = a.get("name")
-                        if isinstance(asset_name, str) and asset_name.startswith(base_filename):
-                            return
+                meta_name = f"{label}-{rev}.cache.json"
+                asset_index = build_release_asset_index()
+                if meta_name in asset_index:
+                    return
 
                 release = get_or_create_toolchain_release()
                 if not release:
@@ -386,8 +413,23 @@ def main() -> int:
                     size = os.path.getsize(archive_path)
                     max_part = 1900 * 1024 * 1024
 
+                    meta: dict[str, Any] = {
+                        "format": 1,
+                        "label": label,
+                        "rev": rev,
+                        "archive": base_filename,
+                        "parts": [],
+                    }
+
                     if size <= max_part:
                         upload_release_asset(upload_url_template, archive_path, base_filename)
+                        meta["parts"].append(
+                            {
+                                "name": base_filename,
+                                "size": size,
+                                "sha256": sha256_file(archive_path),
+                            }
+                        )
                     else:
                         subprocess.run(
                             ["split", "-b", str(max_part), "-d", "-a", "2", archive_path, f"{archive_path}.part"],
@@ -398,6 +440,18 @@ def main() -> int:
                             if name.startswith(f"{base_filename}.part"):
                                 part_path = os.path.join(tmp_dir, name)
                                 upload_release_asset(upload_url_template, part_path, name)
+                                meta["parts"].append(
+                                    {
+                                        "name": name,
+                                        "size": os.path.getsize(part_path),
+                                        "sha256": sha256_file(part_path),
+                                    }
+                                )
+
+                    meta_path = os.path.join(tmp_dir, meta_name)
+                    with open(meta_path, "w", encoding="utf-8") as f:
+                        json.dump(meta, f, separators=(",", ":"))
+                    upload_release_asset(upload_url_template, meta_path, meta_name)
 
                     with release_assets_lock:
                         release_assets_cache = None
@@ -411,19 +465,38 @@ def main() -> int:
         if not label:
             return False
 
-        assets = get_toolchain_release_assets()
-        if not assets:
-            return False
+        asset_index = build_release_asset_index()
 
         base_filename = f"{label}-{rev}.tar.gz"
+        meta_name = f"{label}-{rev}.cache.json"
         matching: list[tuple[str, str]] = []
-        for a in assets:
-            if not isinstance(a, dict):
-                continue
-            asset_name = a.get("name")
-            asset_url = a.get("url")
-            if isinstance(asset_name, str) and isinstance(asset_url, str) and asset_name.startswith(base_filename):
-                matching.append((asset_name, asset_url))
+
+        if meta_name in asset_index and isinstance(asset_index[meta_name].get("url"), str):
+            tmp_fd, tmp_meta = tempfile.mkstemp(prefix="toolchain-cache-", suffix=".json")
+            os.close(tmp_fd)
+            try:
+                download_github_release_asset(asset_index[meta_name]["url"], tmp_meta)
+                with open(tmp_meta, "r", encoding="utf-8", errors="replace") as f:
+                    meta = json.load(f)
+                parts = meta.get("parts", [])
+                if not isinstance(parts, list) or not parts:
+                    return False
+                for p in parts:
+                    if not isinstance(p, dict):
+                        continue
+                    name = p.get("name")
+                    if isinstance(name, str) and name in asset_index and isinstance(asset_index[name].get("url"), str):
+                        matching.append((name, asset_index[name]["url"]))
+                if not matching:
+                    return False
+            finally:
+                if os.path.exists(tmp_meta):
+                    os.remove(tmp_meta)
+        else:
+            for asset_name, a in asset_index.items():
+                asset_url = a.get("url")
+                if isinstance(asset_url, str) and asset_name.startswith(base_filename):
+                    matching.append((asset_name, asset_url))
 
         if not matching:
             return False
