@@ -491,6 +491,16 @@ runs:
                 cmd.extend(["--strip-components", str(strip_components)])
             subprocess.run(cmd, check=True, text=True)
 
+        def googlesource_archive_urls(repo_url: str, rev: str) -> list[str]:
+            qrev = url_quote_rev(rev)
+            if rev.startswith("refs/"):
+                return [f"{repo_url}/+archive/{qrev}.tar.gz"]
+            return [
+                f"{repo_url}/+archive/{url_quote_rev(f'refs/heads/{rev}')}.tar.gz",
+                f"{repo_url}/+archive/{url_quote_rev(f'refs/tags/{rev}')}.tar.gz",
+                f"{repo_url}/+archive/{qrev}.tar.gz",
+            ]
+
         def github_archive_urls(repo_url: str, rev: str) -> list[str]:
             if rev.startswith("refs/"):
                 return [f"{repo_url}/archive/{rev}.tar.gz"]
@@ -510,7 +520,7 @@ runs:
                 return github_archive_urls(repo_url, rev), 1
 
             if "googlesource.com" in base_url or "android.googlesource.com" in base_url:
-                return [f"{repo_url}/+archive/{url_quote_rev(rev)}.tar.gz"], 0
+                return googlesource_archive_urls(repo_url, rev), 0
 
             if "git.codelinaro.org" in base_url or "gitlab" in base_url:
                 repo_basename = name.rstrip("/").split("/")[-1]
@@ -518,7 +528,7 @@ runs:
 
             return [], 0
 
-        def sync_project(task: tuple[str, str, str, str]) -> bool:
+        def sync_project(task: tuple[str, str, str, str]) -> dict:
             name, path, rev, base_url = task
             start_time = time.time()
             dest_dir = os.path.abspath(path if path not in ("./", ".") else ".")
@@ -527,17 +537,17 @@ runs:
             try:
                 urls, strip_components = build_project_urls(base_url, name, rev)
                 if not urls:
-                    return False
+                    return {"ok": False, "name": name, "path": path, "rev": rev, "base_url": base_url, "error": "no supported remote"}
 
                 if try_extract_toolchain_cache(name, rev, dest_dir, strip_components):
                     duration = time.time() - start_time
                     print(f"Synced {name} -> {path} ({duration:.2f}s)")
-                    return True
+                    return {"ok": True}
 
                 tmp_fd, tmp_path = tempfile.mkstemp(prefix="kernel-src-", suffix=".tar.gz")
                 os.close(tmp_fd)
                 try:
-                    last_err = None
+                    last_err: str | None = None
                     for url in urls:
                         try:
                             run_curl_download(url, tmp_path)
@@ -547,18 +557,18 @@ runs:
                                 ensure_toolchain_cached(label, rev, dest_dir, strip_components)
                             duration = time.time() - start_time
                             print(f"Synced {name} -> {path} ({duration:.2f}s)")
-                            return True
+                            return {"ok": True}
                         except subprocess.CalledProcessError as e:
-                            last_err = e
+                            last_err = f"{e}"
                             continue
                     if last_err:
-                        raise last_err
-                    return False
+                        return {"ok": False, "name": name, "path": path, "rev": rev, "base_url": base_url, "error": last_err, "urls": urls}
+                    return {"ok": False, "name": name, "path": path, "rev": rev, "base_url": base_url, "error": "download/extract failed", "urls": urls}
                 finally:
                     if os.path.exists(tmp_path):
                         os.remove(tmp_path)
             except Exception:
-                return False
+                return {"ok": False, "name": name, "path": path, "rev": rev, "base_url": base_url, "error": "unexpected exception", "urls": urls if "urls" in locals() else []}
 
         sync_tasks: list[tuple[str, str, str, str]] = []
 
@@ -579,11 +589,22 @@ runs:
             sync_tasks.append((name, path, rev, base_url))
 
         max_workers = min(32, (os.cpu_count() or 2) * 2)
-        results = []
+        results: list[dict] = []
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             results = list(executor.map(sync_project, sync_tasks))
 
-        if not all(results):
+        failed = [r for r in results if not r.get("ok")]
+        if failed:
+            for r in failed[:25]:
+                n = r.get("name")
+                p = r.get("path")
+                rv = r.get("rev")
+                bu = r.get("base_url")
+                err = r.get("error")
+                print(f"[FAIL] {n} -> {p} rev={rv} remote={bu} err={err}")
+                urls = r.get("urls") or []
+                for u in urls[:5]:
+                    print(f"       url={u}")
             raise SystemExit("One or more projects failed to sync")
 
         for project_path, child in link_copy:
