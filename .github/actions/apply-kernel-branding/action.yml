@@ -26,12 +26,10 @@ runs:
 
         DEFCONFIG="${GITHUB_WORKSPACE}/kernel/common/arch/arm64/configs/gki_defconfig"
 
-        if [ "${{ inputs.variant }}" = "Wild" ]; then
+        if [ "${{ inputs.variant }}" == "Wild" ]; then
           tac scripts/setlocalversion | awk '!seen && /^echo / {seen=1; next} 1' | tac > scripts/setlocalversion.tmp
           mv scripts/setlocalversion.tmp scripts/setlocalversion
-          if [[ ${{ inputs.kernel_version }} == "6.12" && ${{ inputs.sublevel }} == "129" ]]; then
-            echo "echo "6.6.129-4k-g6b6b461c9b5c"" >> scripts/setlocalversion
-          elif [[ ${{ inputs.kernel_version }} == "6.6" || ${{ inputs.kernel_version }} == "6.12" ]]; then
+          if [[ ${{ inputs.kernel_version }} == "6.6" || ${{ inputs.kernel_version }} == "6.12" ]]; then
             KERNEL_STRING="${{ inputs.kernel_version }}.${{ inputs.sublevel }}-${{ inputs.android_version }}"
             echo "echo \"$KERNEL_STRING-Wild\"" >> scripts/setlocalversion
           else
