@@ -539,7 +539,7 @@ def main() -> int:
                     os.remove(p)
 
     def url_quote_rev(rev: str) -> str:
-        return urllib.parse.quote(rev, safe="")
+        return urllib.parse.quote(rev, safe="/")
 
     def googlesource_archive_urls(repo_url: str, rev: str) -> list[str]:
         qrev = url_quote_rev(rev)
@@ -614,6 +614,41 @@ def main() -> int:
                             last_err = err
                             continue
                         extract_tar_gz(tmp_path, dest_dir, strip_components)
+                        if path == "prebuilts/build-tools":
+                            try:
+                                build_bazel = os.path.join(dest_dir, "BUILD.bazel")
+                                if not os.path.exists(build_bazel):
+                                    return {
+                                        "ok": False,
+                                        "name": name,
+                                        "path": path,
+                                        "rev": rev,
+                                        "base_url": base_url,
+                                        "error": "BUILD.bazel missing after extract",
+                                        "urls": urls,
+                                    }
+                                with open(build_bazel, "r", encoding="utf-8", errors="replace") as f:
+                                    content = f.read()
+                                if "py_toolchain" not in content:
+                                    return {
+                                        "ok": False,
+                                        "name": name,
+                                        "path": path,
+                                        "rev": rev,
+                                        "base_url": base_url,
+                                        "error": "BUILD.bazel missing py_toolchain",
+                                        "urls": urls,
+                                    }
+                            except Exception:
+                                return {
+                                    "ok": False,
+                                    "name": name,
+                                    "path": path,
+                                    "rev": rev,
+                                    "base_url": base_url,
+                                    "error": "failed to validate build-tools BUILD.bazel",
+                                    "urls": urls,
+                                }
                         label = get_toolchain_label(name)
                         if label:
                             ensure_toolchain_cached(label, rev, dest_dir)

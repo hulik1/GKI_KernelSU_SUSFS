@@ -48,7 +48,7 @@ runs:
       run: |
         mkdir -p "${{ github.workspace }}/kernel"
 
-    - name: Download Kernel Repository (Manifest Archives)
+    - name: Prepare Manifest
       id: sync
       shell: bash
       working-directory: ${{ github.workspace }}/kernel
@@ -56,4 +56,31 @@ runs:
         PYTHONUNBUFFERED: "1"
         GITHUB_TOKEN: ${{ github.token }}
       run: |
-        python3 "${{ github.action_path }}/download_kernel_archives.py" --android-version "${{ inputs.android_version }}" --kernel-version "${{ inputs.kernel_version }}" --os-patch-level "${{ inputs.os_patch_level }}"
+        bash "${{ github.action_path }}/download_kernel_archives.sh" prepare "${{ inputs.android_version }}" "${{ inputs.kernel_version }}" "${{ inputs.os_patch_level }}"
+
+    - name: Parse Manifest
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel
+      env:
+        PYTHONUNBUFFERED: "1"
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        bash "${{ github.action_path }}/download_kernel_archives.sh" parse "${{ inputs.android_version }}" "${{ inputs.kernel_version }}" "${{ inputs.os_patch_level }}"
+
+    - name: Sync Projects
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel
+      env:
+        PYTHONUNBUFFERED: "1"
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        bash "${{ github.action_path }}/download_kernel_archives.sh" sync "${{ inputs.android_version }}" "${{ inputs.kernel_version }}" "${{ inputs.os_patch_level }}"
+
+    - name: Post Process
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel
+      env:
+        PYTHONUNBUFFERED: "1"
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        bash "${{ github.action_path }}/download_kernel_archives.sh" post "${{ inputs.android_version }}" "${{ inputs.kernel_version }}" "${{ inputs.os_patch_level }}"
