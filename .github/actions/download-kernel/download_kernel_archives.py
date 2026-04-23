@@ -40,6 +40,7 @@ def main() -> int:
     manifest_branch = f"common-{formatted_branch}"
     manifest_ref = f"refs/heads/{manifest_branch}"
     manifest_base = f"https://android.googlesource.com/kernel/manifest/+/{manifest_ref}/"
+    manifest_origin = f"{urllib.parse.urlparse(manifest_base).scheme}://{urllib.parse.urlparse(manifest_base).netloc}"
 
     target_repo = os.environ.get("GITHUB_REPOSITORY", "")
     github_token = os.environ.get("GITHUB_TOKEN", "")
@@ -138,7 +139,20 @@ def main() -> int:
         return combined, link_copy
 
     manifest_root, link_copy = load_manifest_with_includes("default.xml")
-    remotes = {r.get("name"): (r.get("fetch") or "").rstrip("/") for r in manifest_root.findall("remote")}
+
+    def resolve_remote_fetch(fetch: str) -> str:
+        fetch = fetch.strip()
+        if fetch.startswith("https://") or fetch.startswith("http://"):
+            return fetch.rstrip("/")
+        base = f"{manifest_origin}/"
+        resolved = urllib.parse.urljoin(base, f"{fetch.rstrip('/')}/")
+        return resolved.rstrip("/")
+
+    remotes = {
+        r.get("name"): resolve_remote_fetch(r.get("fetch") or "")
+        for r in manifest_root.findall("remote")
+        if r.get("name") and r.get("fetch") is not None
+    }
     default = manifest_root.find("default")
     def_remote = default.get("remote") if default is not None else None
     def_rev = default.get("revision") if default is not None else None
