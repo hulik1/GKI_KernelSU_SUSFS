@@ -565,6 +565,31 @@ def main() -> int:
                 "urls": [],
             }
 
+    def ensure_build_tools_python(kernel_root: str) -> None:
+        build_tools_dir = os.path.join(kernel_root, "prebuilts", "build-tools")
+        expected = os.path.join(build_tools_dir, "path", "linux-x86", "python3")
+        if os.path.exists(expected):
+            return
+
+        os.makedirs(os.path.dirname(expected), exist_ok=True)
+
+        candidate: str | None = None
+        for root_dir, _, files in os.walk(build_tools_dir):
+            if "python3" in files:
+                candidate = os.path.join(root_dir, "python3")
+                break
+
+        if candidate is None:
+            candidate = shutil.which("python3") or "/usr/bin/python3"
+
+        try:
+            if os.path.lexists(expected):
+                os.remove(expected)
+            rel_target = os.path.relpath(candidate, os.path.dirname(expected))
+            os.symlink(rel_target, expected)
+        except Exception:
+            return
+
     sync_tasks: list[tuple[str, str, str, str]] = []
     for project in manifest_root.findall("project"):
         name = project.get("name")
@@ -595,6 +620,8 @@ def main() -> int:
             for u in (r.get("urls") or [])[:5]:
                 print(f"       url={u}")
         return 1
+
+    ensure_build_tools_python(os.getcwd())
 
     for project_path, child in link_copy:
         src_rel = child.get("src")
