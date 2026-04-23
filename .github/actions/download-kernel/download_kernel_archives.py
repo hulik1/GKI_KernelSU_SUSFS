@@ -302,12 +302,18 @@ def main() -> int:
         with urlopen(req, timeout=120) as resp, open(out_path, "wb") as f:
             shutil.copyfileobj(resp, f, length=1024 * 1024)
 
-    def run_curl_download(url: str, out_path: str) -> None:
-        subprocess.run(
+    def run_curl_download(url: str, out_path: str) -> tuple[bool, str]:
+        res = subprocess.run(
             ["curl", "-LfsS", "--retry", "5", "--connect-timeout", "30", "-o", out_path, url],
-            check=True,
             text=True,
+            capture_output=True,
         )
+        if res.returncode == 0:
+            return True, ""
+        err = (res.stderr or res.stdout or "").strip()
+        if not err:
+            err = f"curl failed ({res.returncode})"
+        return False, err
 
     def extract_tar_gz(archive_path: str, dest_dir: str, strip_components: int) -> None:
         cmd = ["tar", "-xzf", archive_path, "-C", dest_dir]
@@ -603,7 +609,10 @@ def main() -> int:
                 last_err: str | None = None
                 for url in urls:
                     try:
-                        run_curl_download(url, tmp_path)
+                        ok, err = run_curl_download(url, tmp_path)
+                        if not ok:
+                            last_err = err
+                            continue
                         extract_tar_gz(tmp_path, dest_dir, strip_components)
                         label = get_toolchain_label(name)
                         if label:
