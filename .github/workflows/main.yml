@@ -38,8 +38,8 @@ on:
           - KSUN+NET
           - BBG
           - None
-          - ALL
-        default: ALL
+          - FULL
+        default: FULL
       ksu_commit:
         description: "KSU Commit (optional)"
         type: string
@@ -82,7 +82,7 @@ jobs:
       anykernel_commit: ${{ needs.fetch-commits.outputs.anykernel_commit }}
       patches_commit: ${{ needs.fetch-commits.outputs.patches_commit }}
       susfs_commit: ${{ needs.fetch-commits.outputs.susfs_commit }}
-      feature_set: ${{ inputs.feature_set || 'ALL' }}
+      feature_set: ${{ inputs.feature_set || 'FULL' }}
       variant: ${{ inputs.variant || 'Normal' }}
     secrets: inherit
 
@@ -96,7 +96,7 @@ jobs:
       anykernel_commit: ${{ needs.fetch-commits.outputs.anykernel_commit }}
       patches_commit: ${{ needs.fetch-commits.outputs.patches_commit }}
       susfs_commit: ${{ needs.fetch-commits.outputs.susfs_commit }}
-      feature_set: ${{ inputs.feature_set || 'ALL' }}
+      feature_set: ${{ inputs.feature_set || 'FULL' }}
       variant: ${{ inputs.variant || 'Normal' }}
     secrets: inherit
 
@@ -110,7 +110,7 @@ jobs:
       anykernel_commit: ${{ needs.fetch-commits.outputs.anykernel_commit }}
       patches_commit: ${{ needs.fetch-commits.outputs.patches_commit }}
       susfs_commit: ${{ needs.fetch-commits.outputs.susfs_commit }}
-      feature_set: ${{ inputs.feature_set || 'ALL' }}
+      feature_set: ${{ inputs.feature_set || 'FULL' }}
       variant: ${{ inputs.variant || 'Normal' }}
     secrets: inherit
 
@@ -124,7 +124,7 @@ jobs:
       anykernel_commit: ${{ needs.fetch-commits.outputs.anykernel_commit }}
       patches_commit: ${{ needs.fetch-commits.outputs.patches_commit }}
       susfs_commit: ${{ needs.fetch-commits.outputs.susfs_commit }}
-      feature_set: ${{ inputs.feature_set || 'ALL' }}
+      feature_set: ${{ inputs.feature_set || 'FULL' }}
       variant: ${{ inputs.variant || 'Normal' }}
     secrets: inherit
 
@@ -138,7 +138,7 @@ jobs:
       anykernel_commit: ${{ needs.fetch-commits.outputs.anykernel_commit }}
       patches_commit: ${{ needs.fetch-commits.outputs.patches_commit }}
       susfs_commit: ${{ needs.fetch-commits.outputs.susfs_commit }}
-      feature_set: ${{ inputs.feature_set || 'ALL' }}
+      feature_set: ${{ inputs.feature_set || 'FULL' }}
       variant: ${{ inputs.variant || 'Normal' }}
     secrets: inherit
 
@@ -152,7 +152,7 @@ jobs:
       anykernel_commit: ${{ needs.fetch-commits.outputs.anykernel_commit }}
       patches_commit: ${{ needs.fetch-commits.outputs.patches_commit }}
       susfs_commit: ${{ needs.fetch-commits.outputs.susfs_commit }}
-      feature_set: ${{ inputs.feature_set || 'ALL' }}
+      feature_set: ${{ inputs.feature_set || 'FULL' }}
       variant: ${{ inputs.variant || 'Normal' }}
     secrets: inherit
 
@@ -166,7 +166,7 @@ jobs:
       anykernel_commit: ${{ needs.fetch-commits.outputs.anykernel_commit }}
       patches_commit: ${{ needs.fetch-commits.outputs.patches_commit }}
       susfs_commit: ${{ needs.fetch-commits.outputs.susfs_commit }}
-      feature_set: ${{ inputs.feature_set || 'ALL' }}
+      feature_set: ${{ inputs.feature_set || 'FULL' }}
       variant: ${{ inputs.variant || 'Normal' }}
     secrets: inherit
 
