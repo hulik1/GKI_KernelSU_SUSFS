@@ -78,7 +78,14 @@ runs:
         CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
         CONFIG_KSU_SUSFS_SUS_MAP=y
         EOF
-    
+
+    - name: Apply KSU SUSFS Patches
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel/KernelSU-Next
+      run: |
+        cp ${{ github.workspace }}/kernel_patches/wild/ksun-0daf55582-susfs-v2.1.0-e259e7d6.patch ./
+        patch -p1 < ksun-0daf55582-susfs-v2.1.0-e259e7d6.patch
+
     - name: Apply Kernel SUSFS Patches
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
@@ -119,9 +126,70 @@ runs:
           sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
         fi
 
-    - name: Apply KSU SUSFS Patches
+    - name: Apply Android 12 5.10 Fixes
+      if: inputs.android_version == 'android12' && inputs.kernel_version == '5.10'
       shell: bash
-      working-directory: ${{ github.workspace }}/kernel/KernelSU-Next
+      working-directory: ${{ github.workspace }}/kernel/common
       run: |
-        cp ${{ github.workspace }}/kernel_patches/wild/ksun-0daf55582-susfs-v2.1.0-e259e7d6.patch ./
-        patch -p1 < ksun-0daf55582-susfs-v2.1.0-e259e7d6.patch
+        if [ {{ inputs.sublevel }} -le "43" ]; then
+        sed '/size_t this_len = min_t(size_t, count, PAGE_SIZE);/r'<(cat <<'EOF'
+        #ifdef CONFIG_KSU_SUSFS_SUS_MAP
+            vma = find_vma(mm, addr);
+            if (vma && vma->vm_file) {
+                struct inode *inode = file_inode(vma->vm_file);
+                if (SUSFS_IS_INODE_SUS_MAP(inode)) {
+                    if (write) {
+                        copied = -EFAULT;
+                    } else {
+                        copied = -EIO;
+                    }
+                    *ppos = addr;
+                    mmput(mm);
+                    goto free;
+                }
+            }
+        #endif
+        EOF
+        ) fs/proc/base.c
+
+        if [ {{ inputs.sublevel }} -le "117" ]; then
+        sed '/size_t this_len = min_t(size_t, count, PAGE_SIZE);/r'<(cat <<'EOF'
+        #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+        		mnt = real_mount(file->f_path.mnt);
+        		if (mnt->mnt_id >= DEFAULT_KSU_MNT_ID &&
+        			likely(susfs_is_current_proc_umounted()))
+        		{
+        			struct path path;
+        			char *pathname = kmalloc(PAGE_SIZE, GFP_KERNEL);
+        			char *dpath;
+        			if (!pathname) {
+        				goto orig_flow;
+        			}
+        			dpath = d_path(&file->f_path, pathname, PAGE_SIZE);
+        			if (!dpath) {
+        				goto out_kfree;
+        			}
+        			if (kern_path(dpath, 0, &path)) {
+        				goto out_kfree;
+        			}
+        			if (!path.dentry->d_inode) {
+        				goto out_path_put;
+        			}
+        			seq_printf(m, "inotify wd:%x ino:%lx sdev:%x mask:%x ignored_mask:0 ",
+        					inode_mark->wd, path.dentry->d_inode->i_ino, path.dentry->d_inode->i_sb->s_dev,
+        					inotify_mark_user_mask(mark));
+        			show_mark_fhandle(m, path.dentry->d_inode);
+        			seq_putc(m, '\n');
+        			path_put(&path);
+        			kfree(pathname);
+        			iput(inode);
+        			return;
+        out_path_put:
+        			path_put(&path);
+        out_kfree:
+        			kfree(pathname);
+        		}
+        orig_flow:
+        #endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+        EOF
+        ) fs/notify/fdinfo.c
