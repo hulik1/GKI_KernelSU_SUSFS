@@ -100,13 +100,13 @@ jobs:
         os_patch_level: ${{ steps.parse.outputs.os_patch_level }}
 
     - name: Setup KernelSU-Next
-      if: contains(inputs.feature_set, 'KSUN') || inputs.feature_set == 'All'
+      if: contains(inputs.feature_set, 'KSUN') || inputs.feature_set == 'all'
       uses: ./.github/actions/kernelsu
       with:
         ksu_commit: ${{ inputs.ksu_commit }}
 
     - name: SUSFS
-      if: contains(inputs.feature_set, 'SUSFS') || inputs.feature_set == 'All'
+      if: contains(inputs.feature_set, 'SUSFS') || inputs.feature_set == 'all'
       uses: ./.github/actions/susfs
       with:
         android_version: ${{ steps.parse.outputs.android_version }}
@@ -116,11 +116,11 @@ jobs:
         susfs_commit: ${{ inputs.susfs_commit }}
 
     - name: Baseband Guard
-      if: contains(inputs.feature_set, 'BBG') || inputs.feature_set == 'All'
+      if: contains(inputs.feature_set, 'BBG') || inputs.feature_set == 'all'
       uses: ./.github/actions/bbg
 
     - name: Setup Networking
-      if: contains(inputs.feature_set, 'NET') || inputs.feature_set == 'All'
+      if: contains(inputs.feature_set, 'NET') || inputs.feature_set == 'all'
       uses: ./.github/actions/networking
       with:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
