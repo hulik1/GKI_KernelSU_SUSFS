@@ -63,16 +63,6 @@ jobs:
           fi
           
           echo "Matrix content: $MATRIX_JSON"
-
-          # Filter the matrix by variant input if not ALL
-          if [ "${{ inputs.variant }}" != "" ] && [ "${{ inputs.variant }}" != "ALL" ]; then
-            if command -v jq &> /dev/null; then
-              MATRIX_JSON=$(echo "$MATRIX_JSON" | jq -c --arg v "${{ inputs.variant }}" '[.[] | select(.variant == $v)]')
-            else
-              echo "Warning: jq not found, cannot filter variants."
-            fi
-          fi
-          echo "Matrix content: $MATRIX_JSON"
           echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
 
   build:
