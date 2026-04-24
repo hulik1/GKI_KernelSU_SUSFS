@@ -178,7 +178,7 @@ jobs:
 
     - name: Scan and collect patch rejects
       id: scan
-      if: ${{ always() }}
+      if: ${{ always() && matrix.variant == 'Normal' }}
       uses: ./.github/actions/scan-patch-rejects
 
     - name: Upload Rejects
