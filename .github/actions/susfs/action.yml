@@ -151,6 +151,7 @@ runs:
         #endif
         EOF
         ) fs/proc/base.c
+        fi
 
         if [ "${{ inputs.sublevel }}" -le "117" ]; then
         sed '/size_t this_len = min_t(size_t, count, PAGE_SIZE);/r'<(cat <<'EOF'
@@ -193,3 +194,4 @@ runs:
         #endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
         EOF
         ) fs/notify/fdinfo.c
+        fi
