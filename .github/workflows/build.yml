@@ -33,8 +33,7 @@ jobs:
     name: "${{ inputs.kernel_version }} (${{ matrix.variant }})"
     strategy:
       fail-fast: false
-      matrix:
-        variant: ${{ inputs.variant == 'All' && fromJson('["Normal","Bypass","Wild"]') || fromJson(format('["{0}"]', inputs.variant)) }}
+      matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
