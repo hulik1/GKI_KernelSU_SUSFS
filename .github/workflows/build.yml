@@ -182,7 +182,7 @@ jobs:
       uses: ./.github/actions/scan-patch-rejects
 
     - name: Upload Rejects
-      if: ${{ always() }}
+      if: ${{ always() && matrix.variant == 'Normal' }}
       uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.extract.outputs.file_name }}-Rejects
