@@ -12,7 +12,7 @@ runs:
   using: "composite"
   steps:
     - name: Patch with BBRv3
-      if: inputs.kernel_version == '6.1'
+      if: false
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
@@ -65,6 +65,7 @@ runs:
         CONFIG_IP_SET_HASH_NETPORT=y
         CONFIG_IP_SET_HASH_NETIFACE=y
         CONFIG_IP_SET_LIST_SET=y
+        CONFIG_IP_SET_MAX="256"
 
         CONFIG_TCP_CONG_ADVANCED=y
         CONFIG_TCP_CONG_BBR=y
@@ -76,10 +77,4 @@ runs:
         CONFIG_DEFAULT_TCP_CONG="bbr"
         CONFIG_NET_SCH_FQ=y
         EOF
-      
-    - name: Apply Kernel Config for 5.10
-      shell: bash
-      working-directory: ${{ github.workspace }}/kernel/common
-      if: inputs.kernel_version == '5.10' && false
-      run: |
-        sed -i 's/CONFIG_IP_SET_MAX/65534/g' net/netfilter/ipset/ip_set_core.c
+        

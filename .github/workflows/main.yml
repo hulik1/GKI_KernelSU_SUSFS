@@ -169,7 +169,7 @@ jobs:
       uses: actions/download-artifact@v7
       with:
         path: ./downloaded-artifacts
-        pattern: '*-Rejects'
+        pattern: '*-Normal-Rejects'
         merge-multiple: false
 
     - name: Process Reject Artifacts
