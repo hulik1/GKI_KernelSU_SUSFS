@@ -36,43 +36,42 @@ jobs:
   generate-matrix:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      matrix: ${{ steps.final.outputs.matrix }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
 
-      - name: Read Config and Generate Matrix
-        id: set-matrix
+      - name: Read Config and Build Final Matrix
+        id: final
+        shell: bash
         run: |
-          echo "Reading config from ${{ inputs.config_file }}"
           if [ ! -f "${{ inputs.config_file }}" ]; then
             echo "Error: Config file not found: ${{ inputs.config_file }}"
             exit 1
           fi
-          
-          # Read the file content
-          MATRIX_JSON=$(cat "${{ inputs.config_file }}")
-          
-          # Compact the JSON to a single line to avoid issues
-          # If jq is not available, we might need another way, but ubuntu-latest usually has it.
-          if command -v jq &> /dev/null; then
-            MATRIX_JSON=$(echo "$MATRIX_JSON" | jq -c .)
+
+          CONFIG_JSON=$(cat "${{ inputs.config_file }}" | jq -c .)
+
+          # Build the variant list as a JSON array
+          if [ "${{ inputs.variant }}" = "All" ] || [ -z "${{ inputs.variant }}" ]; then
+            VARIANTS='["Normal","Bypass","Wild"]'
           else
-            # Fallback for simple minification if jq missing (unlikely on runner)
-            MATRIX_JSON=$(echo "$MATRIX_JSON" | tr -d '\n' | tr -d ' ')
+            VARIANTS=$(jq -cn --arg v "${{ inputs.variant }}" '[$v]')
           fi
-          
-          echo "Matrix content: $MATRIX_JSON"
-          echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
-      
-      - name: Build matrix
-        id: matrix
-        run: |
-          if [ "${{ inputs.variant }}" = "All" ]; then
-            echo "matrix={\"variant\":[\"Normal\",\"Bypass\",\"Wild\"]}" >> "$GITHUB_OUTPUT"
-          else
-            echo "matrix={\"variant\":[\"${{ inputs.variant }}\"]}" >> "$GITHUB_OUTPUT"
-          fi
+
+          # Build { "include": [ {kernel_version:..., variant: ...}, ... ] }
+          FINAL=$(jq -cn \
+            --argjson cfg "$CONFIG_JSON" \
+            --argjson variants "$VARIANTS" '
+            {
+              include: [
+                $cfg.include[] as $item
+                | $variants[] as $variant
+                | $item + {variant: $variant}
+              ]
+            }')
+
+          echo "matrix=$FINAL" >> "$GITHUB_OUTPUT"
 
   build:
     needs: generate-matrix
