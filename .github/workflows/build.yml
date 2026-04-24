@@ -30,11 +30,7 @@ on:
 
 jobs:
   build-gki:
-    name: "${{ inputs.kernel_version }} (${{ matrix.variant }})"
-    strategy:
-      fail-fast: false
-      matrix:
-        variant: ${{ inputs.variant == 'All' && fromJson('["Normal","Bypass","Wild"]') || fromJson(format('["{0}"]', inputs.variant)) }}
+    name: "${{ inputs.kernel_version }} (${{ inputs.variant }})"
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
