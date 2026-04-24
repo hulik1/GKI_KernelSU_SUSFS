@@ -10,13 +10,16 @@ on:
       release_type:
         description: "Release Type"
         type: choice
-        options: [ Actions, Pre-Release, Release ]
+        options:
+          - Action
+          - Pre-Release
+          - Release
         default: Actions
       kernel_build_version:
-        description: "Kernel Version to Build"
+        description: "Kernel Version"
         type: choice
         options:
-          - all
+          - All
           - a12-5-10
           - a13-5-10
           - a13-5-15
@@ -24,7 +27,7 @@ on:
           - a14-6-1
           - a15-6-6
           - a16-6-12
-        default: all
+        default: All
       feature_set:
         description: "Feature Set"
         type: choice
@@ -43,7 +46,7 @@ on:
         default: ""
         required: false
       variant:
-        description: "Build Variant (All, Normal, Bypass, Wild)"
+        description: "Build Variant"
         type: choice
         options:
           - All
