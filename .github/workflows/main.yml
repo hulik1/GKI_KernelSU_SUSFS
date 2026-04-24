@@ -38,6 +38,7 @@ on:
           - KSUN+SUSFS
           - KSUN+BBG
           - KSUN+NET
+          - KSUN
           - BBG
           - NET
           - NONE
