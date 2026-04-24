@@ -105,7 +105,7 @@ jobs:
       with:
         ksu_commit: ${{ inputs.ksu_commit }}
 
-    - name: Feature: KSUN+SUSFS
+    - name: SUSFS
       if: contains(inputs.feature_set, 'SUSFS') || inputs.feature_set == 'All'
       uses: ./.github/actions/susfs
       with:
