@@ -35,6 +35,7 @@ on:
           - KSUN+SUSFS+BBG+NET
           - KSUN+SUSFS+BBG
           - KSUN+SUSFS+NET
+          - KSUN+SUSFS
           - KSUN+BBG
           - KSUN+NET
           - BBG
