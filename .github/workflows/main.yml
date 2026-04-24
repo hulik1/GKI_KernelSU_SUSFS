@@ -33,11 +33,13 @@ on:
         type: choice
         options:
           - KSUN+SUSFS+BBG+NET
-          - KSUN+SUSFS
+          - KSUN+SUSFS+BBG
+          - KSUN+SUSFS+NET
           - KSUN+BBG
           - KSUN+NET
           - BBG
-          - None
+          - NET
+          - NONE
           - FULL
         default: FULL
       ksu_commit:
