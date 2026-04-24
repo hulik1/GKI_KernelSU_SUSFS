@@ -27,6 +27,10 @@ on:
         description: "Feature Set"
         required: false
         type: string
+      variant:
+        description: "Build Variant (ALL, Normal, Bypass, Wild)"
+        required: false
+        type: string
 
 jobs:
   generate-matrix:
@@ -59,7 +63,17 @@ jobs:
           fi
           
           echo "Matrix content: $MATRIX_JSON"
-          echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+
+            # Filter the matrix by variant input if not ALL
+            if [ "${{ inputs.variant }}" != "" ] && [ "${{ inputs.variant }}" != "ALL" ]; then
+              if command -v jq &> /dev/null; then
+                MATRIX_JSON=$(echo "$MATRIX_JSON" | jq -c --arg v "${{ inputs.variant }}" '[.[] | select(.variant == $v)]')
+              else
+                echo "Warning: jq not found, cannot filter variants."
+              fi
+            fi
+            echo "Matrix content: $MATRIX_JSON"
+            echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
 
   build:
     needs: generate-matrix
