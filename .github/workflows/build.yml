@@ -73,7 +73,6 @@ jobs:
         patches_commit: ${{ inputs.patches_commit }}
         anykernel_commit: ${{ inputs.anykernel_commit }}
           
-
     - name: Download Kernel Repository
       uses: ./.github/actions/download-kernel
       with:
@@ -122,6 +121,12 @@ jobs:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
         android_version: ${{ steps.parse.outputs.android_version }}
 
+    - name: Setup Misc Configs
+      uses: ./.github/actions/misc
+      with:
+        kernel_version: ${{ steps.parse.outputs.kernel_version }}
+        android_version: ${{ steps.parse.outputs.android_version }}
+
     - name: Apply Module Check Bypass
       if: ${{ matrix.variant == 'Bypass' }}
       uses: ./.github/actions/module-check-bypass
@@ -132,18 +137,6 @@ jobs:
       uses: ./.github/actions/apply-device-patches
       with:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
-
-    - name: Setup Networking Configs
-      uses: ./.github/actions/networking
-      with:
-        kernel_version: ${{ steps.parse.outputs.kernel_version }}
-        android_version: ${{ steps.parse.outputs.android_version }}
-
-    - name: Setup Misc Configs
-      uses: ./.github/actions/misc
-      with:
-        kernel_version: ${{ steps.parse.outputs.kernel_version }}
-        android_version: ${{ steps.parse.outputs.android_version }}
 
     - name: Apply ABI Compare Bypass
       if: false
