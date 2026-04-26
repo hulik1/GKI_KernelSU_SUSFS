@@ -190,15 +190,15 @@ jobs:
         if-no-files-found: ignore
         compression-level: 9
 
+    - name: Grep for vm_flags_clear before build
+      run: |
+        grep -n 'vm_flags_clear' ${{ github.workspace }}/kernel/common/mm/mmap.c || echo 'Not found'
+
     - name: Build Kernel
       env:
         SOURCE_DATE_EPOCH: ${{ env.SOURCE_DATE_EPOCH }}
         KBUILD_BUILD_TIMESTAMP: ${{ env.KBUILD_BUILD_TIMESTAMP }}
       uses: ./.github/actions/build-kernel
-      pre:
-        - name: Grep for vm_flags_clear before build
-          run: |
-            grep -n 'vm_flags_clear' ${{ github.workspace }}/kernel/common/mm/mmap.c || echo 'Not found'
 
     - name: Create Bootimgs Folder and Build Boot Images
       uses: ./.github/actions/build-boot-images
