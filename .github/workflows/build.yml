@@ -80,6 +80,10 @@ jobs:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
         os_patch_level: ${{ steps.parse.outputs.os_patch_level }}
 
+    - name: Grep for vm_flags_clear after download
+      run: |
+        grep -n 'vm_flags_clear' ${{ github.workspace }}/kernel/common/mm/mmap.c || echo 'Not found'
+
     - name: Extract Sublevel and Set File Name
       id: extract
       uses: ./.github/actions/extract-sublevel-file-name
@@ -191,6 +195,10 @@ jobs:
         SOURCE_DATE_EPOCH: ${{ env.SOURCE_DATE_EPOCH }}
         KBUILD_BUILD_TIMESTAMP: ${{ env.KBUILD_BUILD_TIMESTAMP }}
       uses: ./.github/actions/build-kernel
+      pre:
+        - name: Grep for vm_flags_clear before build
+          run: |
+            grep -n 'vm_flags_clear' ${{ github.workspace }}/kernel/common/mm/mmap.c || echo 'Not found'
 
     - name: Create Bootimgs Folder and Build Boot Images
       uses: ./.github/actions/build-boot-images
