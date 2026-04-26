@@ -104,7 +104,7 @@ runs:
     - name: Apply Kernel Config for 5.10
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
-      if: inputs.kernel_version == '5.10' && false
+      if: inputs.kernel_version == '5.10'
       run: |
         sed -i 's/CONFIG_IP_SET_MAX/256/g' net/netfilter/ipset/ip_set_core.c
         
