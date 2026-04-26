@@ -33,7 +33,7 @@ runs:
           done
         fi
 
-    - name: Apply Kernel Configuration
+    - name: Apply Netfilter Base Config
       shell: bash
       working-directory: ${{ github.workspace }}/kernel
       run: |
@@ -42,12 +42,29 @@ runs:
         CONFIG_NETFILTER_ADVANCED=y
         CONFIG_NETFILTER_XTABLES=y
         CONFIG_NF_CONNTRACK=y
-        CONFIG_NF_TABLES=y
+        EOF
 
+        if [ "${{ inputs.kernel_version }}" = "5.10" ]; then
+          echo "# CONFIG_NF_TABLES is not set" >> "${{ github.workspace }}/wild_gki.fragment"
+        else
+          echo "CONFIG_NF_TABLES=y" >> "${{ github.workspace }}/wild_gki.fragment"
+        fi
+
+    - name: Apply IP Tables Extensions
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel
+      run: |
+        cat >> "${{ github.workspace }}/wild_gki.fragment" << 'EOF'
         CONFIG_IP_NF_TARGET_TTL=y
         CONFIG_IP6_NF_TARGET_HL=y
         CONFIG_IP6_NF_MATCH_HL=y
+        EOF
 
+    - name: Apply IP Set Base
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel
+      run: |
+        cat >> "${{ github.workspace }}/wild_gki.fragment" << 'EOF'
         CONFIG_IP_SET=y
         CONFIG_IP_SET_BITMAP_IP=y
         CONFIG_IP_SET_BITMAP_IPMAC=y
@@ -66,7 +83,13 @@ runs:
         CONFIG_IP_SET_HASH_NETIFACE=y
         CONFIG_IP_SET_LIST_SET=y
         CONFIG_IP_SET_MAX=256
+        EOF
 
+    - name: Apply TCP Congestion Control
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel
+      run: |
+        cat >> "${{ github.workspace }}/wild_gki.fragment" << 'EOF'
         CONFIG_TCP_CONG_ADVANCED=y
         CONFIG_TCP_CONG_BBR=y
         CONFIG_TCP_CONG_CUBIC=y
@@ -77,4 +100,11 @@ runs:
         CONFIG_DEFAULT_TCP_CONG="bbr"
         CONFIG_NET_SCH_FQ=y
         EOF
+
+    - name: Apply Kernel Config for 5.10
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel/common
+      if: inputs.kernel_version == '5.10'
+      run: |
+        sed -i 's/CONFIG_IP_SET_MAX/256/g' net/netfilter/ipset/ip_set_core.c
         

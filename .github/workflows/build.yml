@@ -73,7 +73,6 @@ jobs:
         patches_commit: ${{ inputs.patches_commit }}
         anykernel_commit: ${{ inputs.anykernel_commit }}
           
-
     - name: Download Kernel Repository
       uses: ./.github/actions/download-kernel
       with:
@@ -96,13 +95,13 @@ jobs:
         os_patch_level: ${{ steps.parse.outputs.os_patch_level }}
 
     - name: Setup KernelSU-Next
-      if: contains(inputs.feature_set, 'KSUN') || inputs.feature_set == 'all'
+      if: contains(inputs.feature_set, 'KSUN') || inputs.feature_set == 'FULL'
       uses: ./.github/actions/kernelsu
       with:
         ksu_commit: ${{ inputs.ksu_commit }}
 
     - name: SUSFS
-      if: contains(inputs.feature_set, 'SUSFS') || inputs.feature_set == 'all'
+      if: contains(inputs.feature_set, 'SUSFS') || inputs.feature_set == 'FULL'
       uses: ./.github/actions/susfs
       with:
         android_version: ${{ steps.parse.outputs.android_version }}
@@ -112,12 +111,18 @@ jobs:
         susfs_commit: ${{ inputs.susfs_commit }}
 
     - name: Baseband Guard
-      if: contains(inputs.feature_set, 'BBG') || inputs.feature_set == 'all'
+      if: contains(inputs.feature_set, 'BBG') || inputs.feature_set == 'FULL'
       uses: ./.github/actions/bbg
 
     - name: Setup Networking
-      if: contains(inputs.feature_set, 'NET') || inputs.feature_set == 'all'
+      if: contains(inputs.feature_set, 'NET') || inputs.feature_set == 'FULL'
       uses: ./.github/actions/networking
+      with:
+        kernel_version: ${{ steps.parse.outputs.kernel_version }}
+        android_version: ${{ steps.parse.outputs.android_version }}
+
+    - name: Setup Misc Configs
+      uses: ./.github/actions/misc
       with:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
         android_version: ${{ steps.parse.outputs.android_version }}
@@ -132,18 +137,6 @@ jobs:
       uses: ./.github/actions/apply-device-patches
       with:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
-
-    - name: Setup Networking Configs
-      uses: ./.github/actions/networking
-      with:
-        kernel_version: ${{ steps.parse.outputs.kernel_version }}
-        android_version: ${{ steps.parse.outputs.android_version }}
-
-    - name: Setup Misc Configs
-      uses: ./.github/actions/misc
-      with:
-        kernel_version: ${{ steps.parse.outputs.kernel_version }}
-        android_version: ${{ steps.parse.outputs.android_version }}
 
     - name: Apply ABI Compare Bypass
       if: false
