@@ -31,7 +31,7 @@ on:
 jobs:
   build-gki:
     name: "${{ inputs.kernel_version }} (${{ inputs.variant }})"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 60
 
     steps:
