@@ -80,6 +80,11 @@ jobs:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
         os_patch_level: ${{ steps.parse.outputs.os_patch_level }}
 
+
+    - name: Patch tools/bazel to use system python3 on ARM
+      run: |
+        sed -i 's|exec ".*py3-cmd.*" "$MYDIR"/bazel.py "$@"|exec /usr/bin/python3 "$MYDIR"/bazel.py "$@"|' ${{ github.workspace }}/kernel/tools/bazel || true
+
     - name: Grep for vm_flags_clear after download
       run: |
         grep -n 'vm_flags_clear' ${{ github.workspace }}/kernel/common/mm/mmap.c || echo 'Not found'
