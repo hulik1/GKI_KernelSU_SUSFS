@@ -51,3 +51,9 @@ runs:
             sed -i '/#include <trace\/hooks\/blk.h>/a #include <trace\/hooks\/fs.h>' ./fs/namespace.c
           fi
         fi
+
+    - shell: bash
+      if: ${{ inputs.kernel_version == '5.10' && inputs.android_version == 'android12' && inputs.sublevel == 226 }}
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
+        sed -i 's/vm_flags_clear(new_vma, VM_PAD_MASK);/new_vma->vm_flags &= ~VM_PAD_MASK;/' mm/mmap.c
