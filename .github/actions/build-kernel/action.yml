@@ -12,5 +12,7 @@ runs:
           SKIP_MRPROPER=1 GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh
         else
           cp "$GITHUB_WORKSPACE/wild_gki.fragment" common/arch/arm64/configs/wild_gki.fragment
+          export PYTHON3=/usr/bin/python3
+          export PATH="/usr/bin:$PATH"
           tools/bazel build --config=release --stamp --notrim --defconfig_fragment=//common:arch/arm64/configs/wild_gki.fragment //common:kernel_aarch64_dist
         fi
