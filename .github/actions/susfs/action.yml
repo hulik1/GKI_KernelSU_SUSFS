@@ -201,7 +201,7 @@ runs:
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
-        if [ "${{ inputs.sublevel }}" -le "117" ]; then
+        if [ "${{ inputs.sublevel }}" -le "141" ]; then
         sed -i '/#include "fd.h"/r'<(cat <<'EOF'
         #ifdef CONFIG_KSU_SUSFS_SUS_MAP
         #include <linux/susfs_def.h>
