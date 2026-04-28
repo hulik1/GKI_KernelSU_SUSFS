@@ -60,37 +60,37 @@ runs:
         NPROC = int(subprocess.check_output("nproc", shell=True).strip())
 
         def sync_project(task):
-        name, path, url, strip, rev, linkfiles, copyfiles = task
-        if path not in ["./", "."]:
-          os.makedirs(path, exist_ok=True)
-        print(f"Syncing: {name} -> {path}")
-        try:
-          aria_cmd = f"aria2c -x16 -s16 -k1M -j5 --file-allocation=none -o {name}.tar.gz '{url}'"
-          subprocess.run(aria_cmd, shell=True, check=True)
-          tar_cmd = f"tar -I 'pigz -p {NPROC} -b 256' -x --record-size=1M -C {path} {strip} -f {name}.tar.gz"
-          subprocess.run(tar_cmd, shell=True, check=True)
-          os.remove(f"{name}.tar.gz")
-          # Handle linkfiles and copyfiles
-          top_dir = os.getcwd()
-          for src_rel, dest_rel in linkfiles:
-            src_path = os.path.join(top_dir, path, src_rel)
-            dest_path = os.path.join(top_dir, dest_rel)
-            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-            if os.path.lexists(dest_path): os.remove(dest_path)
-            rel_target = os.path.relpath(src_path, os.path.dirname(dest_path))
-            os.symlink(rel_target, dest_path)
-            print(f"  [Link] {dest_rel} -> {src_rel}")
-          for src_rel, dest_rel in copyfiles:
-            src_path = os.path.join(top_dir, path, src_rel)
-            dest_path = os.path.join(top_dir, dest_rel)
-            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-            shutil.copy2(src_path, dest_path)
-            print(f"  [Copy] {dest_rel} from {src_rel}")
-          print(f"Synced {name} successfully!")
-          return True
-        except Exception as e:
-          print(f"Failed to sync {name}: {e}")
-          return False
+            name, path, url, strip, rev, linkfiles, copyfiles = task
+            if path not in ["./", "."]:
+                os.makedirs(path, exist_ok=True)
+            print(f"Syncing: {name} -> {path}")
+            try:
+                aria_cmd = f"aria2c -x16 -s16 -k1M -j5 --file-allocation=none -o {name}.tar.gz '{url}'"
+                subprocess.run(aria_cmd, shell=True, check=True)
+                tar_cmd = f"tar -I 'pigz -p {NPROC} -b 256' -x --record-size=1M -C {path} {strip} -f {name}.tar.gz"
+                subprocess.run(tar_cmd, shell=True, check=True)
+                os.remove(f"{name}.tar.gz")
+                # Handle linkfiles and copyfiles
+                top_dir = os.getcwd()
+                for src_rel, dest_rel in linkfiles:
+                    src_path = os.path.join(top_dir, path, src_rel)
+                    dest_path = os.path.join(top_dir, dest_rel)
+                    os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+                    if os.path.lexists(dest_path): os.remove(dest_path)
+                    rel_target = os.path.relpath(src_path, os.path.dirname(dest_path))
+                    os.symlink(rel_target, dest_path)
+                    print(f"  [Link] {dest_rel} -> {src_rel}")
+                for src_rel, dest_rel in copyfiles:
+                    src_path = os.path.join(top_dir, path, src_rel)
+                    dest_path = os.path.join(top_dir, dest_rel)
+                    os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+                    shutil.copy2(src_path, dest_path)
+                    print(f"  [Copy] {dest_rel} from {src_rel}")
+                print(f"Synced {name} successfully!")
+                return True
+            except Exception as e:
+                print(f"Failed to sync {name}: {e}")
+                return False
 
         with open('manifest.xml', 'r') as f:
           manifest_content = f.read()
