@@ -132,7 +132,7 @@ runs:
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
         if [ "${{ inputs.sublevel }}" -le "43" ]; then
-        sed '/size_t this_len = min_t(size_t, count, PAGE_SIZE);/r'<(cat <<'EOF'
+        sed -i '/size_t this_len = min_t(size_t, count, PAGE_SIZE);/r'<(cat <<'EOF'
         #ifdef CONFIG_KSU_SUSFS_SUS_MAP
             vma = find_vma(mm, addr);
             if (vma && vma->vm_file) {
@@ -154,7 +154,7 @@ runs:
         fi
 
         if [ "${{ inputs.sublevel }}" -le "117" ]; then
-        sed '/size_t this_len = min_t(size_t, count, PAGE_SIZE);/r'<(cat <<'EOF'
+        sed -i '/size_t this_len = min_t(size_t, count, PAGE_SIZE);/r'<(cat <<'EOF'
         #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
         		mnt = real_mount(file->f_path.mnt);
         		if (mnt->mnt_id >= DEFAULT_KSU_MNT_ID &&
