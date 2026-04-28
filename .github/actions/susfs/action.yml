@@ -118,7 +118,7 @@ runs:
           SHOULD_FIX=1
         elif [[ "${{ inputs.android_version }}" = "android14" && "${{ inputs.kernel_version }}" = "5.15" && "${{ inputs.sublevel }}" -le 148 && "${{ inputs.os_patch_level }}" != "2024-05" ]]; then
           SHOULD_FIX=1
-        elif [[ "${{ inputs.android_version }}" = "android14" && "${{ inputs.kernel_version }}" = "6.1" ]]; then
+        elif [[ "${{ inputs.android_version }}" = "android14" && "${{ inputs.kernel_version }}" = "6.1" && "${{ inputs.sublevel }}" -le 75 && "${{ inputs.os_patch_level }}" != "2024-05" ]]; then
           SHOULD_FIX=1
         fi
 
