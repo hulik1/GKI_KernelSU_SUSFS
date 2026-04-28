@@ -46,18 +46,14 @@ runs:
         FORMATTED_BRANCH="${{ inputs.android_version }}-${{ inputs.kernel_version }}-${{ inputs.os_patch_level }}"
         MAIN_MANIFEST_URL="https://android.googlesource.com/kernel/manifest/+/refs/heads/common-${FORMATTED_BRANCH}/default.xml?format=TEXT"
         DEPRECATED_MANIFEST_URL="https://android.googlesource.com/kernel/manifest/+/refs/heads/deprecated/common-${FORMATTED_BRANCH}/default.xml?format=TEXT"
-        CHECK_URL="https://android.googlesource.com/kernel/manifest/+/refs/heads/common-${FORMATTED_BRANCH}/default.xml"
-        DEPRECATED_CHECK_URL="https://android.googlesource.com/kernel/manifest/+/refs/heads/deprecated/common-${FORMATTED_BRANCH}/default.xml"
-        echo "Checking if branch exists: $CHECK_URL"
-        if curl -fsI "$CHECK_URL" | grep -q '200 OK'; then
-          echo "Fetching manifest from $MAIN_MANIFEST_URL"
-          curl -fsSL "$MAIN_MANIFEST_URL" | base64 -d > manifest.xml
+        echo "Trying to fetch manifest from $MAIN_MANIFEST_URL"
+        if curl -fsSL "$MAIN_MANIFEST_URL" | base64 -d > manifest.xml; then
+          echo "Fetched manifest from $MAIN_MANIFEST_URL"
         else
-          echo "Branch not found at $CHECK_URL, trying deprecated: $DEPRECATED_CHECK_URL"
+          echo "Main manifest fetch failed, trying deprecated branch."
           echo "⚠ Note: Branch common-${FORMATTED_BRANCH} is considered deprecated."
-          if curl -fsI "$DEPRECATED_CHECK_URL" | grep -q '200 OK'; then
-            echo "Fetching manifest from $DEPRECATED_MANIFEST_URL"
-            curl -fsSL "$DEPRECATED_MANIFEST_URL" | base64 -d > manifest.xml
+          if curl -fsSL "$DEPRECATED_MANIFEST_URL" | base64 -d > manifest.xml; then
+            echo "Fetched manifest from $DEPRECATED_MANIFEST_URL"
           else
             echo "ERROR: Neither main nor deprecated branch exists for $FORMATTED_BRANCH" >&2
             exit 22
