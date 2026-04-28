@@ -103,7 +103,13 @@ runs:
         with open('manifest.xml', 'r') as f:
           manifest_content = f.read()
         root = ET.fromstring(manifest_content)
-        remotes = {r.get('name'): r.get('fetch').rstrip('/') for r in root.findall('remote')}
+        # Resolve fetch paths: '..' means 'https://android.googlesource.com'
+        remotes = {}
+        for r in root.findall('remote'):
+          fetch = r.get('fetch').rstrip('/')
+          if fetch == '..':
+            fetch = 'https://android.googlesource.com'
+          remotes[r.get('name')] = fetch
         default = root.find('default')
         def_remote = default.get('remote') if default is not None else None
         def_rev = default.get('revision') if default is not None else None
