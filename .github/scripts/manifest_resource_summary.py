@@ -1,31 +1,46 @@
+import os
+import glob
+import json
 import base64
 import requests
 import xml.etree.ElementTree as ET
 from collections import defaultdict
-import re
 
-REFS_URL = "https://android.googlesource.com/kernel/manifest/+refs"
-MANIFEST_URL_TEMPLATE = "https://android.googlesource.com/kernel/manifest/+/refs/heads/{branch}/default.xml?format=TEXT"
+CONFIG_DIR = ".github/kernel-config"
+MANIFEST_URL_TEMPLATE = "https://android.googlesource.com/kernel/manifest/+/refs/heads/common-{branch}/default.xml?format=TEXT"
 
-print("Fetching all manifest branches from googlesource...")
-refs_resp = requests.get(REFS_URL)
-refs = refs_resp.text.splitlines()
-branches = set()
-for line in refs:
-    m = re.search(r'refs/heads/(common-[^<"\s]+)', line)
+# Gather all kernel versions from config files
+kernel_versions = set()
+config_map = {}  # kernel_version -> config file
+for config_path in glob.glob(os.path.join(CONFIG_DIR, "*.json")):
+    with open(config_path) as f:
+        data = json.load(f)
+        for entry in data.get("include", []):
+            ver = entry.get("kernel_version")
+            if ver:
+                kernel_versions.add(ver)
+                config_map[ver] = os.path.basename(config_path)
+
+# Map kernel_version to manifest branch name
+def kernel_version_to_branch(ver):
+    # e.g. 6.1.25-android14-2023-06 -> android14-6.1-2023-06
+    m = None
+    import re
+    m = re.match(r"([\d.]+)-android(\d+)-(\d{4}-\d{2}|lts|exp)", ver)
     if m:
-        branches.add(m.group(1))
-    m2 = re.search(r'refs/heads/deprecated/(common-[^<"\s]+)', line)
-    if m2:
-        branches.add(f"deprecated/{m2.group(1)}")
+        kver, android, date = m.groups()
+        return f"android{android}-{kver}-{date}"
+    return None
 
-manifest_projects = defaultdict(set)  # resource -> set of manifest names
-manifest_names = []
+manifest_projects = defaultdict(set)  # resource -> set of kernel_versions
 
-for branch in sorted(branches):
-    manifest_name = branch
+for ver in sorted(kernel_versions):
+    branch = kernel_version_to_branch(ver)
+    if not branch:
+        print(f"Could not parse branch for kernel version: {ver}")
+        continue
     url = MANIFEST_URL_TEMPLATE.format(branch=branch)
-    print(f"Fetching manifest: {manifest_name}")
+    print(f"Fetching manifest for {ver} ({branch})")
     resp = requests.get(url)
     if resp.status_code != 200:
         print(f"Failed to fetch {url}")
@@ -35,13 +50,12 @@ for branch in sorted(branches):
     for project in root.findall("project"):
         name = project.get("name")
         path = project.get("path", name)
-        manifest_projects[(name, path)].add(manifest_name)
-    manifest_names.append(manifest_name)
+        manifest_projects[(name, path)].add(ver)
 
 with open("manifest_resource_summary.md", "w") as f:
-    f.write("| Resource Name | Path | Appears In Manifests |\n")
-    f.write("|--------------|------|----------------------|\n")
-    for (name, path), manifests in sorted(manifest_projects.items()):
-        f.write(f"| `{name}` | `{path}` | {', '.join(sorted(manifests))} |\n")
+    f.write("| Resource Name | Path | Appears In Kernel Versions |\n")
+    f.write("|--------------|------|----------------------------|\n")
+    for (name, path), vers in sorted(manifest_projects.items()):
+        f.write(f"| `{name}` | `{path}` | {', '.join(sorted(vers))} |\n")
 
 print("Summary written to manifest_resource_summary.md")
