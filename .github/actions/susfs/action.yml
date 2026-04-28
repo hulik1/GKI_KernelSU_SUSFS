@@ -83,8 +83,8 @@ runs:
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/KernelSU-Next
       run: |
-        cp ${{ github.workspace }}/kernel_patches/wild/ksun-8c1b4a9-susfs-v2.1.0-a14-6.1-45013457.patch ./
-        patch -p1 < ksun-8c1b4a9-susfs-v2.1.0-a14-6.1-45013457.patch
+        cp ${{ github.workspace }}/kernel_patches/wild/ksun-e6ba52b-susfs-v2.1.0-a14-6.1-e1c57040.patch ./
+        patch -p1 < ksun-e6ba52b-susfs-v2.1.0-a14-6.1-e1c57040.patch
 
     - name: Apply Kernel SUSFS Patches
       shell: bash
