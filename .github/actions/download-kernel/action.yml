@@ -85,11 +85,18 @@ runs:
           print(f"Syncing: {name} -> {path}")
           print(f"  Download URL: {url}")
           try:
+
+            import time
             def try_download(url, name):
-                aria_cmd = f"aria2c -x16 -s16 -k1M -j5 --file-allocation=none -o {name}.tar.gz '{url}'"
-                print(f"  Trying download: {url}")
-                result = subprocess.run(aria_cmd, shell=True)
-                return result.returncode == 0
+              aria_cmd = f"aria2c -x16 -s16 -k1M -j5 --file-allocation=none -o {name}.tar.gz '{url}'"
+              print(f"  Trying download: {url}")
+              result = subprocess.run(aria_cmd, shell=True)
+              if result.returncode == 0:
+                return True
+              print(f"  Download failed, retrying in 10 seconds...")
+              time.sleep(10)
+              result = subprocess.run(aria_cmd, shell=True)
+              return result.returncode == 0
 
             downloaded = False
             # Only apply deprecated fallback for googlesource URLs
