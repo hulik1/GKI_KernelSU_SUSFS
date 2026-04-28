@@ -1,39 +1,43 @@
-import os
 import base64
 import requests
 import xml.etree.ElementTree as ET
 from collections import defaultdict
+import re
 
-MANIFEST_URLS = [
-    url.strip()
-    for url in os.environ.get("MANIFEST_URLS", "").splitlines()
-    if url.strip()
-]
+REFS_URL = "https://android.googlesource.com/kernel/manifest/+refs"
+MANIFEST_URL_TEMPLATE = "https://android.googlesource.com/kernel/manifest/+/refs/heads/{branch}/default.xml?format=TEXT"
+
+print("Fetching all manifest branches from googlesource...")
+refs_resp = requests.get(REFS_URL)
+refs = refs_resp.text.splitlines()
+branches = set()
+for line in refs:
+    m = re.search(r'refs/heads/(common-[^<"\s]+)', line)
+    if m:
+        branches.add(m.group(1))
+    m2 = re.search(r'refs/heads/deprecated/(common-[^<"\s]+)', line)
+    if m2:
+        branches.add(f"deprecated/{m2.group(1)}")
 
 manifest_projects = defaultdict(set)  # resource -> set of manifest names
 manifest_names = []
 
-for url in MANIFEST_URLS:
-    # Extract manifest name from URL (branch or last path segment)
-    if "/+/refs/heads/" in url:
-        manifest_name = url.split("/+/refs/heads/")[-1].split("/")[0]
-    else:
-        manifest_name = url.split("/")[-2]
-    manifest_names.append(manifest_name)
+for branch in sorted(branches):
+    manifest_name = branch
+    url = MANIFEST_URL_TEMPLATE.format(branch=branch)
     print(f"Fetching manifest: {manifest_name}")
     resp = requests.get(url)
     if resp.status_code != 200:
         print(f"Failed to fetch {url}")
         continue
-    # Googlesource returns base64-encoded XML
     xml_content = base64.b64decode(resp.content).decode("utf-8")
     root = ET.fromstring(xml_content)
     for project in root.findall("project"):
         name = project.get("name")
         path = project.get("path", name)
         manifest_projects[(name, path)].add(manifest_name)
+    manifest_names.append(manifest_name)
 
-# Write summary as markdown
 with open("manifest_resource_summary.md", "w") as f:
     f.write("| Resource Name | Path | Appears In Manifests |\n")
     f.write("|--------------|------|----------------------|\n")
