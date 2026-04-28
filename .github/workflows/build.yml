@@ -45,7 +45,7 @@ jobs:
         kernel_version: ${{ inputs.kernel_version }}
 
     - name: Free Disk Space
-      if: true
+      if: false
       uses: endersonmenezes/free-disk-space@v3  # Use @main for latest, @v3 for stable
       with:
         remove_android: true
@@ -58,6 +58,10 @@ jobs:
         rm_cmd: "rmz"  # Use 'rmz' for faster deletion (default: 'rm')
         rmz_version: "3.1.1"  # Required when rm_cmd is 'rmz'
         testing: false
+
+    - name: Disk Cleanup by Deleting files
+      if: true
+      uses: ./.github/actions/disk-cleanup
 
     - name: Setup more Swap (for LTO)
       uses: thejerrybao/setup-swap-space@v1   # or pierotofy/set-swap-space
