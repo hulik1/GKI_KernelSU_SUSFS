@@ -102,29 +102,30 @@ runs:
 
         sync_tasks = []
         for project in root.findall('project'):
-        name = project.get('name')
-        path = project.get('path', name)
-        remote_name = project.get('remote', def_remote)
-        rev = project.get('revision', def_rev)
-        base_url = remotes.get(remote_name)
-        if not base_url: continue
-        if "github.com" in base_url:
-          url = f"{base_url}/{name}/archive/{rev}.tar.gz"
-          strip = "--strip-components=1"
-        elif "googlesource.com" in base_url:
-          url = f"{base_url}/{name}/+archive/{rev}.tar.gz"
-          strip = ""
-        elif "git.codelinaro.org" in base_url:
-          url = f"{base_url}/{name}/-/archive/{rev}.tar.gz"
-          strip = "--strip-components=1"
-        else:
-          continue
-        linkfiles = [(lf.get('src'), lf.get('dest')) for lf in project.findall('linkfile')]
-        copyfiles = [(cf.get('src'), cf.get('dest')) for cf in project.findall('copyfile')]
-        sync_tasks.append((name, path, url, strip, rev, linkfiles, copyfiles))
+          name = project.get('name')
+          path = project.get('path', name)
+          remote_name = project.get('remote', def_remote)
+          rev = project.get('revision', def_rev)
+          base_url = remotes.get(remote_name)
+          if not base_url:
+            continue
+          if "github.com" in base_url:
+            url = f"{base_url}/{name}/archive/{rev}.tar.gz"
+            strip = "--strip-components=1"
+          elif "googlesource.com" in base_url:
+            url = f"{base_url}/{name}/+archive/{rev}.tar.gz"
+            strip = ""
+          elif "git.codelinaro.org" in base_url:
+            url = f"{base_url}/{name}/-/archive/{rev}.tar.gz"
+            strip = "--strip-components=1"
+          else:
+            continue
+          linkfiles = [(lf.get('src'), lf.get('dest')) for lf in project.findall('linkfile')]
+          copyfiles = [(cf.get('src'), cf.get('dest')) for cf in project.findall('copyfile')]
+          sync_tasks.append((name, path, url, strip, rev, linkfiles, copyfiles))
 
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-          results = list(executor.map(sync_project, sync_tasks))
+            results = list(executor.map(sync_project, sync_tasks))
         if not all(results):
-        print("One or more projects failed to sync!")
-        exit(1)
+            print("One or more projects failed to sync!")
+            exit(1)
