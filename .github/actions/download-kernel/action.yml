@@ -47,6 +47,11 @@ runs:
         echo "Fetching manifest from $MANIFEST_URL"
         curl -fsSL "$MANIFEST_URL" | base64 -d > manifest.xml
 
+    - name: Debug Show manifest.xml
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel
+      run: cat manifest.xml
+
     - name: Fast Parallel Archive Download
       shell: python
       working-directory: ${{ github.workspace }}/kernel
