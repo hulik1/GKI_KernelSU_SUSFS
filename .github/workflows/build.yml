@@ -254,6 +254,15 @@ jobs:
         KBUILD_BUILD_TIMESTAMP: ${{ env.KBUILD_BUILD_TIMESTAMP }}
       uses: ./.github/actions/build-kernel
 
+    - name: List cache contents
+      run: |
+        echo "=== .ccache ==="
+        du -sh .ccache || true
+        ls -l .ccache || true
+        echo "=== .cache/bazel ==="
+        du -sh .cache/bazel || true
+        ls -l .cache/bazel || true
+
     - name: Save build caches (ccache, Bazel)
       if: always()
       uses: actions/cache@v4
