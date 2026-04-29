@@ -40,8 +40,8 @@ runs:
         else
           cat >> "${{ github.workspace }}/wild_gki.fragment" << 'EOF'
           CONFIG_NF_TABLES=y
-          CONFIG_NFT_REJECT
-          CONFIG_NFT_LOG
+          CONFIG_NFT_REJECT=y
+          CONFIG_NFT_LOG=y
           EOF
         fi
 
