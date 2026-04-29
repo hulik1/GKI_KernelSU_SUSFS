@@ -8,7 +8,7 @@ runs:
       working-directory: ${{ github.workspace }}/kernel
       run: |
         set -euo pipefail
-        export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
+        export CCACHE_DIR="$GITHUB_WORKSPACE/kernel/.ccache"
         export PATH="/usr/lib/ccache:$PATH"
         export CC="ccache gcc"
         export CXX="ccache g++"
