@@ -10,9 +10,25 @@ runs:
         set -euo pipefail
         export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
         export PATH="/usr/lib/ccache:$PATH"
-        # For build.sh, force CC/CXX to use ccache
         export CC="ccache gcc"
         export CXX="ccache g++"
+        export CCACHE_MAXSIZE=1G
+        export CCACHE_COMPILERCHECK=content
+        export CCACHE_BASEDIR="$GITHUB_WORKSPACE"
+        export CCACHE_NOHASHDIR=true
+        export CCACHE_IGNOREOPTIONS=--sysroot*
+        export CCACHE_COMPRESSION=true
+        export CCACHE_COMPRESSION_LEVEL=3
+        export CCACHE_DIRECT=true
+        export CCACHE_FILE_CLONE=true
+        export CCACHE_INODE_CACHE=true
+        export CCACHE_UMASK=002
+        export CCACHE_SLOPPINESS="file_macro,time_macros,include_file_mtime,include_file_ctime,pch_defines,system_headers,locale"
+        if ccache --help 2>&1 | grep -q 'depend_mode'; then
+          export CCACHE_DEPEND=true
+        fi
+        echo "✅ ccache environment variables set"
+        ccache -p
         if [ -f "build/build.sh" ]; then
           SKIP_MRPROPER=1 SKIP_EXT_MODULES=1 SKIP_CP_KERNEL_HDR=1 GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" BUILD_CONFIG=common/build.config.gki.aarch64 CC="$CC" CXX="$CXX" build/build.sh
         else
