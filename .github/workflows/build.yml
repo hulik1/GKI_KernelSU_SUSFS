@@ -203,13 +203,12 @@ jobs:
       uses: actions/cache@v4
       with:
         path: |
-          .ccache
-          bazel-*
-          .cache/bazel
+          kernel/.ccache
+          kernel/bazel-*
+          kernel/.cache/bazel
         key: buildcache-${{ inputs.kernel_version }}
         restore-keys: |
           buildcache-
-
 
     - name: Build Kernel
       env:
@@ -225,16 +224,6 @@ jobs:
         echo "=== .cache/bazel ==="
         du -sh .cache/bazel || true
         ls -l .cache/bazel || true
-
-    - name: Save build caches (ccache, Bazel)
-      if: always()
-      uses: actions/cache@v4
-      with:
-        path: |
-          .ccache
-          bazel-*
-          .cache/bazel
-        key: buildcache-${{ inputs.kernel_version }}
 
     - name: Create Bootimgs Folder and Build Boot Images
       uses: ./.github/actions/build-boot-images
