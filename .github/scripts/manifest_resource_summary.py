@@ -32,7 +32,8 @@ def kernel_version_to_branch(ver):
         return f"android{android}-{kver}-{date}"
     return None
 
-manifest_projects = defaultdict(set)  # resource -> set of kernel_versions
+manifest_details = defaultdict(lambda: defaultdict(dict))
+# manifest_details[(name, path)][kernel_version] = {"tool": ..., "revision": ...}
 
 for ver in sorted(kernel_versions):
     branch = kernel_version_to_branch(ver)
@@ -50,12 +51,30 @@ for ver in sorted(kernel_versions):
     for project in root.findall("project"):
         name = project.get("name")
         path = project.get("path", name)
-        manifest_projects[(name, path)].add(ver)
+        tool = project.get("tool", "")
+        revision = project.get("revision", "")
+        manifest_details[(name, path)][ver] = {"tool": tool, "revision": revision}
 
+# Output detailed table
 with open("manifest_resource_summary.md", "w") as f:
-    f.write("| Resource Name | Path | Appears In Kernel Versions |\n")
-    f.write("|--------------|------|----------------------------|\n")
-    for (name, path), vers in sorted(manifest_projects.items()):
-        f.write(f"| `{name}` | `{path}` | {', '.join(sorted(vers))} |\n")
+    f.write("| Resource Name | Path | Kernel Version | Tool | Revision |\n")
+    f.write("|--------------|------|---------------|------|----------|\n")
+    for (name, path), ver_map in sorted(manifest_details.items()):
+        for ver, attrs in sorted(ver_map.items()):
+            tool = attrs.get("tool", "")
+            revision = attrs.get("revision", "")
+            f.write(f"| `{name}` | `{path}` | `{ver}` | `{tool}` | `{revision}` |\n")
+
+    # Optionally, add a summary for resources with differing tool/revision
+    f.write("\n## Resources with differing tool or revision across kernel versions\n\n")
+    for (name, path), ver_map in sorted(manifest_details.items()):
+        tools = set(attrs.get("tool", "") for attrs in ver_map.values())
+        revisions = set(attrs.get("revision", "") for attrs in ver_map.values())
+        if len(tools) > 1 or len(revisions) > 1:
+            f.write(f"- `{name}` (`{path}`):\n")
+            for ver, attrs in sorted(ver_map.items()):
+                tool = attrs.get("tool", "")
+                revision = attrs.get("revision", "")
+                f.write(f"    - {ver}: tool=`{tool}` revision=`{revision}`\n")
 
 print("Summary written to manifest_resource_summary.md")
