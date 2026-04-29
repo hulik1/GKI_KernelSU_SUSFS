@@ -34,14 +34,6 @@ runs:
         CONFIG_NETFILTER_XT_SET=y
         EOF
 
-        if [ "${{ inputs.kernel_version }}" = "5.10" ]; then
-          echo "# CONFIG_NF_TABLES is not set" >> "${{ github.workspace }}/wild_gki.fragment"
-        else
-          echo "CONFIG_NF_TABLES=y" >> "${{ github.workspace }}/wild_gki.fragment"
-          echo "CONFIG_NFT_REJECT=y" >> "${{ github.workspace }}/wild_gki.fragment"
-          echo "CONFIG_NFT_LOG=y" >> "${{ github.workspace }}/wild_gki.fragment"
-        fi
-
     - name: Apply IP Tables Extensions
       shell: bash
       working-directory: ${{ github.workspace }}/kernel
