@@ -38,11 +38,9 @@ runs:
         if [ "${{ inputs.kernel_version }}" = "5.10" ]; then
           echo "# CONFIG_NF_TABLES is not set" >> "${{ github.workspace }}/wild_gki.fragment"
         else
-          cat >> "${{ github.workspace }}/wild_gki.fragment" << 'EOF'
-          CONFIG_NF_TABLES=y
-          CONFIG_NFT_REJECT=y
-          CONFIG_NFT_LOG=y
-          EOF
+          echo "CONFIG_NF_TABLES=y" >> "${{ github.workspace }}/wild_gki.fragment"
+          echo "CONFIG_NFT_REJECT=y" >> "${{ github.workspace }}/wild_gki.fragment"
+          echo "CONFIG_NFT_LOG=y" >> "${{ github.workspace }}/wild_gki.fragment"
         fi
 
     - name: Apply IP Tables Extensions
