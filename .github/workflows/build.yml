@@ -92,7 +92,7 @@ jobs:
       id: extract
       uses: ./.github/actions/extract-sublevel-file-name
       with:
-        variant: ${{ matrix.variant }}
+        variant: ${{ inputs.variant }}
 
     - name: Kernel Fixes
       uses: ./.github/actions/kernel-fixes
@@ -136,7 +136,7 @@ jobs:
         android_version: ${{ steps.parse.outputs.android_version }}
 
     - name: Apply Module Check Bypass
-      if: ${{ matrix.variant == 'Bypass' }}
+      if: ${{ inputs.variant == 'Bypass' }}
       uses: ./.github/actions/module-check-bypass
       with:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
@@ -169,7 +169,7 @@ jobs:
     - name: Apply Kernel Branding
       uses: ./.github/actions/apply-kernel-branding
       with:
-        variant: ${{ matrix.variant }}
+        variant: ${{ inputs.variant }}
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
         android_version: ${{ steps.parse.outputs.android_version }}
         sublevel: ${{ steps.extract.outputs.sublevel }}
