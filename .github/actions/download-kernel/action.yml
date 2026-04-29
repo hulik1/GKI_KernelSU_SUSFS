@@ -11,6 +11,9 @@ inputs:
   os_patch_level:
     description: 'OS patch level (e.g., 2024-01)'
     required: true
+  use_repo:
+    description: 'Use repo for downloading kernel source'
+    required: false
 
 outputs:
   deprecated_branch:
@@ -20,26 +23,28 @@ outputs:
 runs:
   using: composite
   steps:
-    # - name: Initialize and Sync Kernel Repository
-    #   id: sync
-    #   shell: bash
-    #   working-directory: ${{ github.workspace }}/kernel
-    #   run: |
-    #     FORMATTED_BRANCH="${{ inputs.android_version }}-${{ inputs.kernel_version }}-${{ inputs.os_patch_level }}"
-    #       repo init -u https://android.googlesource.com/kernel/manifest -b common-${FORMATTED_BRANCH} --depth=1 --partial-clone --clone-filter=blob:limit=10M
-    #       REMOTE_BRANCH=$(git ls-remote https://android.googlesource.com/kernel/common ${FORMATTED_BRANCH})
-    #     DEFAULT_MANIFEST_PATH=.repo/manifests/default.xml
-    #     DEPRECATED=false
-    #     if grep -q deprecated <<< $REMOTE_BRANCH; then
-    #       sed -i "s/\"${FORMATTED_BRANCH}\"/\"deprecated\/${FORMATTED_BRANCH}\"/g" $DEFAULT_MANIFEST_PATH
-    #       echo "⚠ Note: Branch ${FORMATTED_BRANCH} is considered deprecated."
-    #       DEPRECATED=true
-    #     fi
-    #     echo "deprecated=$DEPRECATED" >> $GITHUB_OUTPUT
-    #     repo sync -c -j$(nproc --all) --fail-fast --no-tags --force-sync --no-clone-bundle
+    - name: Initialize and Sync Kernel Repository
+      if: ${{ inputs.use_repo }}
+      id: sync
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel
+      run: |
+        FORMATTED_BRANCH="${{ inputs.android_version }}-${{ inputs.kernel_version }}-${{ inputs.os_patch_level }}"
+          repo init -u https://android.googlesource.com/kernel/manifest -b common-${FORMATTED_BRANCH} --depth=1 --partial-clone --clone-filter=blob:limit=10M
+          REMOTE_BRANCH=$(git ls-remote https://android.googlesource.com/kernel/common ${FORMATTED_BRANCH})
+        DEFAULT_MANIFEST_PATH=.repo/manifests/default.xml
+        DEPRECATED=false
+        if grep -q deprecated <<< $REMOTE_BRANCH; then
+          sed -i "s/\"${FORMATTED_BRANCH}\"/\"deprecated\/${FORMATTED_BRANCH}\"/g" $DEFAULT_MANIFEST_PATH
+          echo "⚠ Note: Branch ${FORMATTED_BRANCH} is considered deprecated."
+          DEPRECATED=true
+        fi
+        echo "deprecated=$DEPRECATED" >> $GITHUB_OUTPUT
+        repo sync -c -j$(nproc --all) --fail-fast --no-tags --force-sync --no-clone-bundle
 
     - name: Download manifest.xml for branch (with deprecated fallback)
       shell: bash
+      if: ${{ !inputs.use_repo }}
       working-directory: ${{ github.workspace }}/kernel
       run: |
         set -e
@@ -62,11 +67,13 @@ runs:
 
     - name: Debug Show manifest.xml
       shell: bash
+      if: ${{ !inputs.use_repo }}
       working-directory: ${{ github.workspace }}/kernel
       run: cat manifest.xml
 
     - name: Fast Parallel Archive Download
       shell: python
+      if: ${{ !inputs.use_repo }}
       working-directory: ${{ github.workspace }}/kernel
       run: |
         import xml.etree.ElementTree as ET

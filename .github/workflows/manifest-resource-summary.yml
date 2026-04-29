@@ -16,11 +16,7 @@ jobs:
       - name: Download and summarize manifests
         run: |
           python3 .github/scripts/manifest_resource_summary.py
-        env:
-          MANIFEST_URLS: |
-            https://android.googlesource.com/kernel/manifest/+/refs/heads/common-android14-6.1-2023-06/default.xml?format=TEXT
-            https://android.googlesource.com/kernel/manifest/+/refs/heads/common-android14-6.1-2023-07/default.xml?format=TEXT
-            https://android.googlesource.com/kernel/manifest/+/refs/heads/common-android14-6.1-2025-09/default.xml?format=TEXT
+        # No env needed; script discovers manifests from kernel config files
 
       - name: Upload summary
         if: always()
