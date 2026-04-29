@@ -31,6 +31,11 @@ on:
         description: "Build Variant (All, Normal, Bypass, Wild)"
         required: false
         type: string
+      use_repo:
+        description: "Use repo for downloading kernel source"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   generate-matrix:
@@ -87,4 +92,5 @@ jobs:
       patches_commit: ${{ inputs.patches_commit }}
       susfs_commit: ${{ inputs.susfs_commit }}
       feature_set: ${{ inputs.feature_set }}
+      use_repo: ${{ inputs.use_repo }}
     secrets: inherit

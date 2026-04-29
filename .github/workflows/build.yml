@@ -27,6 +27,9 @@ on:
       feature_set:
         required: true
         type: string
+      use_repo:
+        required: false
+        type: boolean
 
 jobs:
   build-gki:
@@ -45,7 +48,7 @@ jobs:
         kernel_version: ${{ inputs.kernel_version }}
 
     - name: Free Disk Space
-      if: false
+      if: true
       uses: endersonmenezes/free-disk-space@v3  # Use @main for latest, @v3 for stable
       with:
         remove_android: true
@@ -60,7 +63,7 @@ jobs:
         testing: false
 
     - name: Disk Cleanup by Deleting files
-      if: true
+      if: false
       uses: ./.github/actions/disk-cleanup
 
     - name: Setup more Swap (for LTO)
@@ -83,6 +86,7 @@ jobs:
         android_version: ${{ steps.parse.outputs.android_version }}
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
         os_patch_level: ${{ steps.parse.outputs.os_patch_level }}
+        use_repo: ${{ inputs.use_repo }}
 
     - name: Grep for vm_flags_clear after download
       run: |
