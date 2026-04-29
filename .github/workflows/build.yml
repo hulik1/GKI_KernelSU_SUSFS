@@ -129,7 +129,7 @@ jobs:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
         android_version: ${{ steps.parse.outputs.android_version }}
 
-    - name: Baseband Guard
+    - name: DroidSpaces-OSS Patches
       if: contains(inputs.feature_set, 'DS') || inputs.feature_set == 'FULL'
       uses: ./.github/actions/droidspaces
       with:
