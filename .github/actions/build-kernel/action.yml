@@ -10,8 +10,8 @@ runs:
         set -euo pipefail
         export CCACHE_DIR="$GITHUB_WORKSPACE/kernel/.ccache"
         export PATH="/usr/lib/ccache:$PATH"
-        export CC="ccache gcc"
-        export CXX="ccache g++"
+        export CC="ccache clang"
+        export CXX="ccache clang++"
         export CCACHE_MAXSIZE=1G
         export CCACHE_COMPILERCHECK=content
         export CCACHE_BASEDIR="$GITHUB_WORKSPACE"
