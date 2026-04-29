@@ -217,6 +217,7 @@ jobs:
       uses: ./.github/actions/build-kernel
 
     - name: List cache contents
+      working-directory: ${{ github.workspace }}/kernel
       run: |
         echo "=== .ccache ==="
         du -sh .ccache || true

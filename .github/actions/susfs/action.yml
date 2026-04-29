@@ -168,7 +168,7 @@ runs:
         fi
 
         if [ "${{ inputs.sublevel }}" -le "117" ]; then
-        sed -i '/size_t this_len = min_t(size_t, count, PAGE_SIZE);/r'<(cat <<'EOF'
+        sed -i '/u32 mask = mark->mask & IN_ALL_EVENTS;/r'<(cat <<'EOF'
         #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
         		mnt = real_mount(file->f_path.mnt);
         		if (mnt->mnt_id >= DEFAULT_KSU_MNT_ID &&
@@ -192,7 +192,7 @@ runs:
         			}
         			seq_printf(m, "inotify wd:%x ino:%lx sdev:%x mask:%x ignored_mask:0 ",
         					inode_mark->wd, path.dentry->d_inode->i_ino, path.dentry->d_inode->i_sb->s_dev,
-        					inotify_mark_user_mask(mark));
+        					(mark->mask & IN_ALL_EVENTS));
         			show_mark_fhandle(m, path.dentry->d_inode);
         			seq_putc(m, '\n');
         			path_put(&path);
@@ -240,7 +240,7 @@ runs:
         			}
         			seq_printf(m, "inotify wd:%x ino:%lx sdev:%x mask:%x ignored_mask:0 ",
         					inode_mark->wd, path.dentry->d_inode->i_ino, path.dentry->d_inode->i_sb->s_dev,
-        					inotify_mark_user_mask(mark));
+        					(mark->mask & IN_ALL_EVENTS));
         			show_mark_fhandle(m, path.dentry->d_inode);
         			seq_putc(m, '\n');
         			path_put(&path);
@@ -310,7 +310,7 @@ runs:
         			}
         			seq_printf(m, "inotify wd:%x ino:%lx sdev:%x mask:%x ignored_mask:0 ",
         					inode_mark->wd, path.dentry->d_inode->i_ino, path.dentry->d_inode->i_sb->s_dev,
-        					inotify_mark_user_mask(mark));
+        					(mark->mask & IN_ALL_EVENTS));
         			show_mark_fhandle(m, path.dentry->d_inode);
         			seq_putc(m, '\n');
         			path_put(&path);
