@@ -8,9 +8,14 @@ runs:
       working-directory: ${{ github.workspace }}/kernel
       run: |
         set -euo pipefail
+        export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
+        export PATH="/usr/lib/ccache:$PATH"
+        # For build.sh, force CC/CXX to use ccache
+        export CC="ccache gcc"
+        export CXX="ccache g++"
         if [ -f "build/build.sh" ]; then
-          SKIP_MRPROPER=1 GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh
+          SKIP_MRPROPER=1 GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" BUILD_CONFIG=common/build.config.gki.aarch64 CC="$CC" CXX="$CXX" build/build.sh
         else
           cp "$GITHUB_WORKSPACE/wild_gki.fragment" common/arch/arm64/configs/wild_gki.fragment
-          tools/bazel build --config=release --stamp --notrim --defconfig_fragment=//common:arch/arm64/configs/wild_gki.fragment //common:kernel_aarch64_dist
+          tools/bazel build --config=release --stamp --notrim --use_ccache --defconfig_fragment=//common:arch/arm64/configs/wild_gki.fragment //common:kernel_aarch64_dist
         fi

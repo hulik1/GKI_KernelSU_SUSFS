@@ -13,6 +13,20 @@ runs:
       run: |
         set -euo pipefail
 
+        # Setup ccache for both build.sh and Bazel
+        sudo apt-get update && sudo apt-get install -y ccache
+        export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
+        export CC="ccache gcc"
+        export CXX="ccache g++"
+        echo "CCACHE_DIR=$GITHUB_WORKSPACE/.ccache" >> "$GITHUB_ENV"
+        echo "CC='ccache gcc'" >> "$GITHUB_ENV"
+        echo "CXX='ccache g++'" >> "$GITHUB_ENV"
+        echo "$GITHUB_WORKSPACE/.ccache" > "$GITHUB_PATH"
+
+        # For Bazel (kleaf), set up remote and disk cache if needed
+        echo "BAZEL_CACHE_DIR=$GITHUB_WORKSPACE/.cache/bazel" >> "$GITHUB_ENV"
+        mkdir -p "$GITHUB_WORKSPACE/.cache/bazel"
+
         mkdir -p "$GITHUB_WORKSPACE/kernel"
         mkdir -p "$GITHUB_WORKSPACE/git-repo"
         curl -L https://storage.googleapis.com/git-repo-downloads/repo -o "$GITHUB_WORKSPACE/git-repo/repo"
