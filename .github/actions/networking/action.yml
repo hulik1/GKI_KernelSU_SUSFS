@@ -12,26 +12,12 @@ runs:
   using: "composite"
   steps:
     - name: Patch with BBRv3
-      if: false
+      if: ${{ inputs.kernel_version == '6.1' }}
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
         set -euo pipefail
-        cp -f "${{ github.workspace }}/kernel_patches/bbr/bbrv3-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch" .
-        patch -p1 < bbrv3-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch
-
-    - name: Fix modules.bzl
-      shell: bash
-      if: false
-      working-directory: ${{ github.workspace }}/kernel/common
-      run: |
-        if [ "${{ inputs.kernel_version }}" = "6.1" ]; then
-          mods_file=modules.bzl
-          for m in "net/ipv4/tcp_bic.ko" "net/ipv4/tcp_htcp.ko" "net/ipv4/tcp_westwood.ko"; do
-            grep -q "'$m'" "$mods_file" && continue
-            sed -i "/_ARM64_GKI_MODULES_LIST = \[/,/^]/ s/^]/    \"$m\",\n]/" "$mods_file"
-          done
-        fi
+        curl -L https://raw.githubusercontent.com/ahmed-alnassif/GKI-Duchamp/dev/kernel-patches/bbrv3/bbrv3.patch | patch -p1
 
     - name: Apply Netfilter Base Config
       shell: bash
