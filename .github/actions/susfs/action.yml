@@ -125,7 +125,7 @@ runs:
             a\
                 unsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;\
                 pagemap_entry_t *res = NULL;
-            }' task_mmu.c
+            }' fs/proc/task_mmu.c
             FIX_REJ=1
           fi
         fi
