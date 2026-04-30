@@ -110,6 +110,19 @@ runs:
             sed -i '/^#include <trace\/hooks\/blk.h>$/d' fs/namespace.c
             FIX_REJ=1
           fi
+        elif [ "${{ inputs.kernel_version }}" = "6.6" ]; then
+          if ! grep -q '^#include <linux/hooks/fs.h>$' fs/namespace.c; then
+            sed -i '/^#include <linux\/hooks\/blk.h>$/a #include <linux/hooks/fs.h>' fs/namespace.c
+            FIX_REJ=1
+          fi
+          if ! grep -q '^#include <linux/dma-buf.h>$' fs/proc/base.c; then
+            sed -i '/^#include <linux\/cpufreq_times.h>$/a #include <linux/dma-buf.h>' fs/proc/base.c
+            FIX_REJ=1
+          fi
+          if ! grep -q '^\s*pagemap_entry_t \*res = NULL;$' fs/proc/base.c; then
+            sed -i '/^ *int ret = 0, copied = 0;$/a \ \ \ \ unsigned int nr_subpages = __PAGE_SIZE \/ PAGE_SIZE;\n\ \ \ \ pagemap_entry_t \*res = NULL;' fs/proc/task_mmu.c
+            FIX_REJ=1
+          fi
         fi
 
         patch -p1 < 50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch || true
@@ -118,8 +131,12 @@ runs:
           if [ "${{ inputs.kernel_version }}" = "5.15" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
             sed -i '/^#include <linux\/mnt_idmapping.h>$/d' fs/namespace.c
             sed -i '/^#include <linux\/mnt_idmapping.h>$/d' fs/open.c
-          elif [ "${{ inputs.kernel_version }}" = "6.1" ] && [ "${{ inputs.android_version }}" = "android14" ]; then
+          elif [ "${{ inputs.kernel_version }}" = "6.1" ]; then
             sed -i '/^#include "internal.h"$/a #include <trace/hooks/blk.h>' fs/namespace.c
+          elif [ "${{ inputs.kernel_version }}" = "6.6" ]; then
+            sed -i '/^#include <linux\/hooks\/fs.h>$/d' fs/namespace.c
+            sed -i '/^#include <linux\/dma-buf.h>$/d' fs/proc/base.c
+            sed -i '/^ *int ret = 0, copied = 0;$/ {/^ *unsigned int nr_subpages = __PAGE_SIZE \/ PAGE_SIZE;$/d; /^ *pagemap_entry_t \*res = NULL;$/d;}' fs/proc/task_mmu.c
           fi
         fi
 
