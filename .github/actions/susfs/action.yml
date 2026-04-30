@@ -282,28 +282,6 @@ runs:
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
-        if [ "${{ inputs.sublevel }}" -le "43" ]; then
-        sed -i '/size_t this_len = min_t(size_t, count, PAGE_SIZE);/r'<(cat <<'EOF'
-        #ifdef CONFIG_KSU_SUSFS_SUS_MAP
-            vma = find_vma(mm, addr);
-            if (vma && vma->vm_file) {
-                struct inode *inode = file_inode(vma->vm_file);
-                if (SUSFS_IS_INODE_SUS_MAP(inode)) {
-                    if (write) {
-                        copied = -EFAULT;
-                    } else {
-                        copied = -EIO;
-                    }
-                    *ppos = addr;
-                    mmput(mm);
-                    goto free;
-                }
-            }
-        #endif
-        EOF
-        ) fs/proc/base.c
-        fi
-
         if [ "${{ inputs.sublevel }}" -le "117" ]; then
         sed -i '/u32 mask = mark->mask & IN_ALL_EVENTS;/r'<(cat <<'EOF'
         #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
