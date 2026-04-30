@@ -120,7 +120,12 @@ runs:
             FIX_REJ=1
           fi
           if ! grep -q '^\s*pagemap_entry_t \*res = NULL;$' fs/proc/task_mmu.c; then
-            sed -i '/^ *int ret = 0, copied = 0;$/a \ \ \ \ unsigned int nr_subpages = __PAGE_SIZE \/ PAGE_SIZE;\n\ \ \ \ pagemap_entry_t \*res = NULL;' fs/proc/task_mmu.c
+            sed -i '/int ret.*= 0, copied.*= 0;/{
+            /int ret.*= 0, copied.*= 0;/!d
+            a\
+                unsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;\
+                pagemap_entry_t *res = NULL;
+            }' task_mmu.c
             FIX_REJ=1
           fi
         fi
@@ -136,8 +141,8 @@ runs:
           elif [ "${{ inputs.kernel_version }}" = "6.6" ]; then
             sed -i '/^#include <linux\/hooks\/fs.h>$/d' fs/namespace.c
             sed -i '/^#include <linux\/dma-buf.h>$/d' fs/proc/base.c
-            sed -i '/^ *unsigned int nr_subpages = __PAGE_SIZE \/ PAGE_SIZE;$/d' fs/proc/task_mmu.c
-            sed -i '/^ *pagemap_entry_t \*res = NULL;$/d' fs/proc/task_mmu.c
+            sed -i '/unsigned int nr_subpages.*__PAGE_SIZE.*PAGE_SIZE/d' fs/proc/task_mmu.c
+            sed -i '/pagemap_entry_t.*res.*NULL/d' fs/proc/task_mmu.c
           fi
         fi
 
