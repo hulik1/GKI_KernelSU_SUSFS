@@ -19,7 +19,7 @@ runs:
   steps:
     - name: Apply the SYSVIPC kABI fix
       shell: bash
-      if: false
+      if: true
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
         if [ "${{ inputs.kernel_version }}" == "6.12" ]; then
@@ -32,7 +32,7 @@ runs:
 
     - name: Enable Configs
       shell: bash
-      if: false
+      if: true
       working-directory: ${{ github.workspace }}/kernel
       run: |
         cat >> "${{ github.workspace }}/wild_gki.fragment" << 'EOF'
