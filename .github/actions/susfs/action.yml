@@ -111,8 +111,8 @@ runs:
             FIX_REJ=1
           fi
         elif [ "${{ inputs.kernel_version }}" = "6.6" ]; then
-          if ! grep -q '^#include <linux/hooks/fs.h>$' fs/namespace.c; then
-            sed -i '/^#include <linux\/hooks\/blk.h>$/a #include <linux/hooks/fs.h>' fs/namespace.c
+          if ! grep -q '^#include <trace/hooks/fs.h>$' fs/namespace.c; then
+            sed -i '/^#include <trace\/hooks\/blk.h>$/a #include <trace/hooks/fs.h>' fs/namespace.c
             FIX_REJ=1
           fi
           if ! grep -q '^#include <linux/dma-buf.h>$' fs/proc/base.c; then
@@ -123,8 +123,8 @@ runs:
             sed -i '/int ret.*= 0, copied.*= 0;/{
             /int ret.*= 0, copied.*= 0;/!d
             a\
-                unsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;\
-                pagemap_entry_t *res = NULL;
+                    unsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;\
+                    pagemap_entry_t *res = NULL;
             }' fs/proc/task_mmu.c
             FIX_REJ=1
           fi
@@ -139,7 +139,7 @@ runs:
           elif [ "${{ inputs.kernel_version }}" = "6.1" ]; then
             sed -i '/^#include "internal.h"$/a #include <trace/hooks/blk.h>' fs/namespace.c
           elif [ "${{ inputs.kernel_version }}" = "6.6" ]; then
-            sed -i '/^#include <linux\/hooks\/fs.h>$/d' fs/namespace.c
+            sed -i '/^#include <trace\/hooks\/fs.h>$/d' fs/namespace.c
             sed -i '/^#include <linux\/dma-buf.h>$/d' fs/proc/base.c
             sed -i '/unsigned int nr_subpages.*__PAGE_SIZE.*PAGE_SIZE/d' fs/proc/task_mmu.c
             sed -i '/pagemap_entry_t.*res.*NULL/d' fs/proc/task_mmu.c
