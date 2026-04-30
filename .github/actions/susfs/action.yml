@@ -101,8 +101,8 @@ runs:
             sed -i 's/^int this_len = min_t(int, count, PAGE_SIZE);$/size_t this_len = min_t(size_t, count, PAGE_SIZE);/' fs/proc/base.c
             FIX_REJ=1
           fi
-          if ! grep -q '^#include <linux/mnt_idmapping.h>$' fs/open.c; then
-            sed -i '/^#include <linux\/compat.h>$/a #include <linux/mnt_idmapping.h>' fs/open.c
+          if ! grep -q '#include <linux/mnt_idmapping.h>$' fs/open.c; then
+            sed -i '/#include <linux\/compat.h>$/a #include <linux/mnt_idmapping.h>' fs/open.c
             FIX_REJ=1
           fi
         elif [ "${{ inputs.kernel_version }}" = "5.15" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
@@ -156,8 +156,8 @@ runs:
           if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android12" ]; then
             sed -i 's/^size_t this_len = min_t(size_t, count, PAGE_SIZE);$/int this_len = min_t(int, count, PAGE_SIZE);/' fs/proc/base.c
           elif [ "${{ inputs.kernel_version }}" = "5.15" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
-            sed -i '/^#include <linux\/mnt_idmapping.h>$/d' fs/namespace.c
-            sed -i '/^#include <linux\/mnt_idmapping.h>$/d' fs/open.c
+            sed -i '/#include <linux\/mnt_idmapping.h>$/d' fs/namespace.c
+            sed -i '/#include <linux\/mnt_idmapping.h>$/d' fs/open.c
             sed -i 's/^size_t this_len = min_t(size_t, count, PAGE_SIZE);$/int this_len = min_t(int, count, PAGE_SIZE);/' fs/proc/base.c
           elif [ "${{ inputs.kernel_version }}" = "6.1" ]; then
             sed -i '/^#include "internal.h"$/a #include <trace/hooks/blk.h>' fs/namespace.c
