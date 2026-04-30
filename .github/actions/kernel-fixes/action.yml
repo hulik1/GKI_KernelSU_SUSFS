@@ -17,38 +17,39 @@ inputs:
 runs:
   using: composite
   steps:
-    - shell: bash
+    - shell: bash  
+      if: true
       run: |
         set -euo pipefail
-
-        ANDROID_VERSION="${{ inputs.android_version }}"
-        KERNEL_VERSION="${{ inputs.kernel_version }}"
-        SUBLEVEL="${{ inputs.sublevel }}"
-        OS_PATCH_LEVEL="${{ inputs.os_patch_level }}"
-
-        if { [[ "$ANDROID_VERSION" == "android13" && "$KERNEL_VERSION" == "5.10" && "$SUBLEVEL" -le 186 ]] || \
-             [[ "$ANDROID_VERSION" == "android13" && "$KERNEL_VERSION" == "5.15" && "$SUBLEVEL" -le 119 ]] || \
-             [[ "$ANDROID_VERSION" == "android14" && "$KERNEL_VERSION" == "5.15" && "$SUBLEVEL" -le 110 ]] || \
-             [[ "$ANDROID_VERSION" == "android14" && "$KERNEL_VERSION" == "6.1" && "$SUBLEVEL" -le 43 ]]; }; then
-          GLIBC_VERSION="$(ldd --version 2>/dev/null | head -n 1 | awk '{print $NF}')"
-          if [ "$(printf '%s\n' "2.38" "$GLIBC_VERSION" | sort -V | head -n 1)" = "2.38" ]; then
-            cd "$GITHUB_WORKSPACE/kernel/common"
-            sed -i '/\$(Q)\$(MAKE) -C \$(SUBCMD_SRC) OUTPUT=\$(abspath \$(dir \$@))\/ \$(abspath \$@)/s//$(Q)$(MAKE) -C $(SUBCMD_SRC) EXTRA_CFLAGS="$(CFLAGS)" OUTPUT=$(abspath $(dir $@))\/ $(abspath $@)/' tools/bpf/resolve_btfids/Makefile 2>/dev/null || true
-            if { [[ "$ANDROID_VERSION" == "android13" && "$KERNEL_VERSION" == "5.10" && "$SUBLEVEL" -le 186 ]] || \
-                 [[ "$ANDROID_VERSION" == "android13" && "$KERNEL_VERSION" == "5.15" && "$SUBLEVEL" -le 119 ]] || \
-                 [[ "$ANDROID_VERSION" == "android14" && "$KERNEL_VERSION" == "5.15" && "$SUBLEVEL" -le 110 ]]; }; then
-              sed -i '/char \*buf = NULL;/a int i;' tools/lib/subcmd/parse-options.c 2>/dev/null || true
-              sed -i 's/for (int i = 0; subcommands\[i\]; i++) {/for (i = 0; subcommands[i]; i++) {/' tools/lib/subcmd/parse-options.c 2>/dev/null || true
-              sed -i '/if (subcommands) {/a int i;' tools/lib/subcmd/parse-options.c 2>/dev/null || true
-              sed -i 's/for (int i = 0; subcommands\[i\]; i++)/for (i = 0; subcommands[i]; i++)/' tools/lib/subcmd/parse-options.c 2>/dev/null || true
-            fi
+        GLIBC_VERSION="$(ldd --version 2>/dev/null | head -n 1 | awk '{print $NF}')"
+        echo "[INFO] Detected GLIBC version: $GLIBC_VERSION"
+        if [ "$(printf '%s\n' "2.38" "$GLIBC_VERSION" | sort -V | head -n 1)" = "2.38" ]; then
+          echo "[INFO] GLIBC >= 2.38, applying Makefile fix."
+          cd "$GITHUB_WORKSPACE/kernel/common"
+          sed -i '/\$(Q)\$(MAKE) -C \$(SUBCMD_SRC) OUTPUT=\$(abspath \$(dir \$@))\/ \$(abspath \$@)/s//$(Q)$(MAKE) -C $(SUBCMD_SRC) EXTRA_CFLAGS="$(CFLAGS)" OUTPUT=$(abspath $(dir $@))\/ $(abspath $@)/' tools/bpf/resolve_btfids/Makefile 2>/dev/null || true
+          if [[ "${{ inputs.android_version }}" == "android13" && "${{ inputs.kernel_version }}" == "5.10" && "${{ inputs.sublevel }}" -le 186 ]] || \
+             [[ "${{ inputs.android_version }}" == "android13" && "${{ inputs.kernel_version }}" == "5.15" && "${{ inputs.sublevel }}" -le 119 ]] || \
+             [[ "${{ inputs.android_version }}" == "android14" && "${{ inputs.kernel_version }}" == "5.15" && "${{ inputs.sublevel }}" -le 110 ]]; then
+            echo "[INFO] Applying parse-options.c fixes."
+            sed -i '/char \*buf = NULL;/a int i;' tools/lib/subcmd/parse-options.c 2>/dev/null || true
+            sed -i 's/for (int i = 0; subcommands\[i\]; i++) {/for (i = 0; subcommands[i]; i++) {/' tools/lib/subcmd/parse-options.c 2>/dev/null || true
+            sed -i '/if (subcommands) {/a int i;' tools/lib/subcmd/parse-options.c 2>/dev/null || true
+            sed -i 's/for (int i = 0; subcommands\[i\]; i++)/for (i = 0; subcommands[i]; i++)/' tools/lib/subcmd/parse-options.c 2>/dev/null || true
           fi
+        else
+          echo "[SKIP] GLIBC version < 2.38, skipping Makefile fix."
         fi
+        
 
-        if [ "$ANDROID_VERSION" = "android15" ] && [ "$KERNEL_VERSION" = "6.6" ]; then
+        echo "[INFO] Checking for android15 + kernel 6.6 include fix..."
+        if [ "${{ inputs.android_version }}" = "android15" && "${{ inputs.kernel_version }}" = "6.6" ]; then
+          echo "[MATCH] android15 + 6.6, checking for fs.h include."
           cd "$GITHUB_WORKSPACE/kernel/common"
           if ! grep -qxF '#include <trace/hooks/fs.h>' ./fs/namespace.c; then
+            echo "[INFO] Adding missing #include <trace/hooks/fs.h> to fs/namespace.c."
             sed -i '/#include <trace\/hooks\/blk.h>/a #include <trace\/hooks\/fs.h>' ./fs/namespace.c
+          else
+            echo "[INFO] #include <trace/hooks/fs.h> already present."
           fi
         fi
 
