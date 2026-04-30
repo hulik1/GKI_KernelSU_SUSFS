@@ -17,8 +17,8 @@ inputs:
 runs:
   using: composite
   steps:
-    - shell: bash
-      
+    - shell: bash  
+      if: false
       run: |
         set -euo pipefail
         GLIBC_VERSION="$(ldd --version 2>/dev/null | head -n 1 | awk '{print $NF}')"
