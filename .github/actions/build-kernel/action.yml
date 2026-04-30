@@ -30,7 +30,6 @@ runs:
         echo "✅ ccache environment variables set"
         ccache -p
         if [ -f "build/build.sh" ]; then
-          echo 'PRE_DEFCONFIG_CMDS="KCONFIG_CONFIG=.config ${ROOT_DIR}/${KERNEL_DIR}/scripts/kconfig/merge_config.sh -m -r ${ROOT_DIR}/${KERNEL_DIR}/arch/arm64/configs/gki_defconfig ${GKI_DEFCONFIG_FRAGMENT}"' >> common/build.config.gki.aarch64
           SKIP_MRPROPER=1 LTO=thin SKIP_EXT_MODULES=1 SKIP_CP_KERNEL_HDR=1 GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" BUILD_CONFIG=common/build.config.gki.aarch64 CC="$CC" CXX="$CXX" build/build.sh
         else
           cp "$GITHUB_WORKSPACE/wild_gki.fragment" common/arch/arm64/configs/wild_gki.fragment

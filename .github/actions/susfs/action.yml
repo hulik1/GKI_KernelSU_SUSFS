@@ -96,7 +96,20 @@ runs:
         cp ${{ github.workspace }}/susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch ./
 
         FIX_REJ=0
-        if [ "${{ inputs.kernel_version }}" = "5.15" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
+        if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android12" ]; then
+          if grep -q '^size_t this_len = min_t(size_t, count, PAGE_SIZE);$' fs/proc/base.c; then
+            sed -i 's/^int this_len = min_t(int, count, PAGE_SIZE);$/size_t this_len = min_t(size_t, count, PAGE_SIZE);/' fs/proc/base.c
+            FIX_REJ=1
+          fi
+          if ! grep -q '^#include <linux/mnt_idmapping.h>$' fs/open.c; then
+            sed -i '/^#include <linux\/compat.h>$/a #include <linux/mnt_idmapping.h>' fs/open.c
+            FIX_REJ=1
+          fi
+        elif [ "${{ inputs.kernel_version }}" = "5.15" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
+          if grep -q '^size_t this_len = min_t(size_t, count, PAGE_SIZE);$' fs/proc/base.c; then
+            sed -i 's/^int this_len = min_t(int, count, PAGE_SIZE);$/size_t this_len = min_t(size_t, count, PAGE_SIZE);/' fs/proc/base.c
+            FIX_REJ=1
+          fi
           if ! grep -q '^#include <linux/mnt_idmapping.h>$' fs/namespace.c; then
             sed -i '/^#include <linux\/shmem_fs.h>$/a #include <linux/mnt_idmapping.h>' fs/namespace.c
             FIX_REJ=1
@@ -135,9 +148,12 @@ runs:
         patch -p1 < 50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch || true
 
         if [ "$FIX_REJ" = "1" ]; then
-          if [ "${{ inputs.kernel_version }}" = "5.15" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
+          if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android12" ]; then
+            sed -i 's/^size_t this_len = min_t(size_t, count, PAGE_SIZE);$/int this_len = min_t(int, count, PAGE_SIZE);/' fs/proc/base.c
+          elif [ "${{ inputs.kernel_version }}" = "5.15" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
             sed -i '/^#include <linux\/mnt_idmapping.h>$/d' fs/namespace.c
             sed -i '/^#include <linux\/mnt_idmapping.h>$/d' fs/open.c
+            sed -i 's/^size_t this_len = min_t(size_t, count, PAGE_SIZE);$/int this_len = min_t(int, count, PAGE_SIZE);/' fs/proc/base.c
           elif [ "${{ inputs.kernel_version }}" = "6.1" ]; then
             sed -i '/^#include "internal.h"$/a #include <trace/hooks/blk.h>' fs/namespace.c
           elif [ "${{ inputs.kernel_version }}" = "6.6" ]; then
@@ -170,28 +186,6 @@ runs:
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
-        if [ "${{ inputs.sublevel }}" -le "43" ]; then
-        sed -i '/size_t this_len = min_t(size_t, count, PAGE_SIZE);/r'<(cat <<'EOF'
-        #ifdef CONFIG_KSU_SUSFS_SUS_MAP
-            vma = find_vma(mm, addr);
-            if (vma && vma->vm_file) {
-                struct inode *inode = file_inode(vma->vm_file);
-                if (SUSFS_IS_INODE_SUS_MAP(inode)) {
-                    if (write) {
-                        copied = -EFAULT;
-                    } else {
-                        copied = -EIO;
-                    }
-                    *ppos = addr;
-                    mmput(mm);
-                    goto free;
-                }
-            }
-        #endif
-        EOF
-        ) fs/proc/base.c
-        fi
-
         if [ "${{ inputs.sublevel }}" -le "117" ]; then
         sed -i '/u32 mask = mark->mask & IN_ALL_EVENTS;/r'<(cat <<'EOF'
         #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
