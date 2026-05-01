@@ -99,7 +99,7 @@ runs:
         if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android12" ]; then
           echo "Applying Android 12 5.10 SUSFS fixes"
           if [ "${{ inputs.sublevel }}" -le "43" ]; then
-            sed -i 's/^int this_len = min_t(int, count, PAGE_SIZE);$/size_t this_len = min_t(size_t, count, PAGE_SIZE);/' fs/proc/base.c
+            perl -i -pe 's/(int|size_t)\s+this_len\s*=\s*min_t\s*\(\s*\1\s*,/size_t this_len = min_t(size_t,/;' fs/proc/base.c
           fi
         fi
         if [ "${{ inputs.kernel_version }}" = "5.15" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
@@ -150,8 +150,6 @@ runs:
             FIX_REJ=1
           fi
         fi
-
-        cat fs/proc/task_mmu.c
 
         patch -p1 < 50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch || true
 
