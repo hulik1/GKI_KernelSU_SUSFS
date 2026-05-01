@@ -101,6 +101,9 @@ runs:
           if [ "${{ inputs.sublevel }}" -le "43" ]; then
             perl -i -pe 's/(int|size_t)\s+this_len\s*=\s*min_t\s*\(\s*\1\s*,/size_t this_len = min_t(size_t,/;' fs/proc/base.c
           fi
+          if [ "${{ inputs.sublevel }}" -le "117" ]; then
+            perl -i -0pe 's/^\s*\/\*[\s\S]*?IN_ALL_EVENTS.*?u32 mask = mark->mask & IN_ALL_EVENTS;\s*?\n//m' fs/notify/fdinfo.c
+          fi
         fi
         if [ "${{ inputs.kernel_version }}" = "5.15" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
           echo "Applying Android 13 5.15 SUSFS fixes"
@@ -153,9 +156,15 @@ runs:
 
         patch -p1 < 50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch || true
 
-        if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android12" ] && [ "${{ inputs.sublevel }}" = "43" ]; then
-          sed -i 's/^size_t this_len = min_t(size_t, count, PAGE_SIZE);$/int this_len = min_t(int, count, PAGE_SIZE);/' fs/proc/base.c
+        if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android12" ]; then
+          if [ "${{ inputs.sublevel }}" -le "43" ]; then
+            sed -i 's/^size_t this_len = min_t(size_t, count, PAGE_SIZE);$/int this_len = min_t(int, count, PAGE_SIZE);/' fs/proc/base.c
+          fi
+          if [ "${{ inputs.sublevel }}" -le "117" ]; then
+            perl -i -pe 's/^(\s*if \(inode\) \{)/$1\n        \/\*\n         * IN_ALL_EVENTS represents all of the mask bits\n         * that we expose to userspace.  There is at\n         * least one bit (FS_EVENT_ON_CHILD) which is\n         * used only internally to the kernel.\n         *\/\n        u32 mask = mark->mask & IN_ALL_EVENTS;/m' fs/notify/fdinfo.c
+          fi
         fi
+        
         if [ "${{ inputs.kernel_version }}" = "5.15" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
           sed -i '/#include <linux\/mnt_idmapping.h>$/d' fs/namespace.c
           sed -i '/#include <linux\/mnt_idmapping.h>$/d' fs/open.c
@@ -190,54 +199,6 @@ runs:
 
         if [[ "$SHOW_PAD_FIX" = "1" ]]; then
           sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
-        fi
-
-    - name: Apply Android 12 5.10 Fixes
-      if: inputs.android_version == 'android12' && inputs.kernel_version == '5.10'
-      shell: bash
-      working-directory: ${{ github.workspace }}/kernel/common
-      run: |
-        if [ "${{ inputs.sublevel }}" -le "117" ]; then
-        sed -i '/u32 mask = mark->mask & IN_ALL_EVENTS;/r'<(cat <<'EOF'
-        #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-        		mnt = real_mount(file->f_path.mnt);
-        		if (mnt->mnt_id >= DEFAULT_KSU_MNT_ID &&
-        			likely(susfs_is_current_proc_umounted()))
-        		{
-        			struct path path;
-        			char *pathname = kmalloc(PAGE_SIZE, GFP_KERNEL);
-        			char *dpath;
-        			if (!pathname) {
-        				goto orig_flow;
-        			}
-        			dpath = d_path(&file->f_path, pathname, PAGE_SIZE);
-        			if (!dpath) {
-        				goto out_kfree;
-        			}
-        			if (kern_path(dpath, 0, &path)) {
-        				goto out_kfree;
-        			}
-        			if (!path.dentry->d_inode) {
-        				goto out_path_put;
-        			}
-        			seq_printf(m, "inotify wd:%x ino:%lx sdev:%x mask:%x ignored_mask:0 ",
-        					inode_mark->wd, path.dentry->d_inode->i_ino, path.dentry->d_inode->i_sb->s_dev,
-        					(mark->mask & IN_ALL_EVENTS));
-        			show_mark_fhandle(m, path.dentry->d_inode);
-        			seq_putc(m, '\n');
-        			path_put(&path);
-        			kfree(pathname);
-        			iput(inode);
-        			return;
-        out_path_put:
-        			path_put(&path);
-        out_kfree:
-        			kfree(pathname);
-        		}
-        orig_flow:
-        #endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-        EOF
-        ) fs/notify/fdinfo.c
         fi
 
     - name: Apply Android 13 5.10 Fixes
