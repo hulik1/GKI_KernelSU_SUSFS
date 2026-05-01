@@ -102,7 +102,7 @@ runs:
             perl -i -pe 's/(int|size_t)\s+this_len\s*=\s*min_t\s*\(\s*\1\s*,/size_t this_len = min_t(size_t,/;' fs/proc/base.c
           fi
           if [ "${{ inputs.sublevel }}" -le "117" ]; then
-            perl -i -0pe 's/^\s*\/\*[\s\S]*?IN_ALL_EVENTS.*?u32 mask = mark->mask & IN_ALL_EVENTS;\s*?\n//m' fs/notify/fdinfo.c
+            sed -i '/^\s*\/\*/,/^\s*u32 mask = mark->mask & IN_ALL_EVENTS;$/d' fs/notify/fdinfo.c
           fi
         fi
         if [ "${{ inputs.kernel_version }}" = "5.15" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
@@ -162,6 +162,7 @@ runs:
           fi
           if [ "${{ inputs.sublevel }}" -le "117" ]; then
             perl -i -pe 's/^(\s*if \(inode\) \{)/$1\n        \/\*\n         * IN_ALL_EVENTS represents all of the mask bits\n         * that we expose to userspace.  There is at\n         * least one bit (FS_EVENT_ON_CHILD) which is\n         * used only internally to the kernel.\n         *\/\n        u32 mask = mark->mask & IN_ALL_EVENTS;/m' fs/notify/fdinfo.c
+            perl -i -pe 's/\binotify_mark_user_mask\(mark\)/mark->ignored_mask/g' fs/notify/fdinfo.c
           fi
         fi
         
