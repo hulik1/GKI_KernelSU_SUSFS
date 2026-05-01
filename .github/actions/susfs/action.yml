@@ -97,6 +97,7 @@ runs:
 
         FIX_REJ=0
         if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android12" ]; then
+          echo "Applying Android 12 5.10 SUSFS fixes"
           #if grep -q '^size_t this_len = min_t(size_t, count, PAGE_SIZE);$' fs/proc/base.c; then
           #  sed -i 's/^int this_len = min_t(int, count, PAGE_SIZE);$/size_t this_len = min_t(size_t, count, PAGE_SIZE);/' fs/proc/base.c
           #  FIX_REJ=1
