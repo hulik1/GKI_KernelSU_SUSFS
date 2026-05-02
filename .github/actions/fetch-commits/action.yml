@@ -1,10 +1,5 @@
 name: Fetch Latest Commits
 description: "Fetches the latest commit hashes for KernelSU-Next, AnyKernel3, Kernel Patches, SUSFS, and BBG"
-inputs:
-  ksu_commit:
-    description: "Optional: Specific KernelSU-Next ref/commit to use"
-    required: false
-    default: ""
 outputs:
   ksu_commit:
     description: "KernelSU-Next Commit"
@@ -32,6 +27,25 @@ runs:
       id: commits
       shell: bash
       run: |
+        # ============================================================================
+        # HARDCODE SECTION: KernelSU-Next (KSUN) Commit
+        # ============================================================================
+        # To use a specific KSU commit, uncomment and set the value below:
+        # HARDCODED_KSU_COMMIT="abc123def456"  # e.g., a full commit SHA or ref like "dev"
+        HARDCODED_KSU_COMMIT=""
+        
+        # ============================================================================
+        # HARDCODE SECTION: SUSFS Commits (branch:commit format)
+        # ============================================================================
+        # To use specific SUSFS commits, uncomment and set the values below:
+        # Format: branch1:commit1,branch2:commit2,...
+        # Example: HARDCODED_SUSFS_MAP="gki-android14-5.15:abc123,gki-android14-6.1:def456"
+        HARDCODED_SUSFS_MAP=""
+        
+        # ============================================================================
+        # Helper functions
+        # ============================================================================
+        
         # Helper to get latest commit from remote without cloning full repo
         get_commit() {
           git ls-remote "$1" "$2" | awk '{print $1}'
@@ -49,23 +63,9 @@ runs:
         echo "Fetching latest commits..."
         
         # KernelSU-Next
-        if [ -n "${{ inputs.ksu_commit }}" ]; then
-          input_ref="${{ inputs.ksu_commit }}"
-          resolved_commit="$(get_commit "https://github.com/KernelSU-Next/KernelSU-Next.git" "$input_ref")"
-          if [ -z "$resolved_commit" ]; then
-            resolved_commit="$(get_commit "https://github.com/KernelSU-Next/KernelSU-Next.git" "refs/heads/$input_ref")"
-          fi
-          if [ -z "$resolved_commit" ]; then
-            resolved_commit="$(get_commit "https://github.com/KernelSU-Next/KernelSU-Next.git" "refs/tags/$input_ref")"
-          fi
-          
-          if [ -n "$resolved_commit" ]; then
-            ksu_commit="$resolved_commit"
-          else
-            # If resolution failed, assume input is a commit SHA
-            ksu_commit="$input_ref"
-          fi
-          echo "Using provided KernelSU-Next commit: $ksu_commit"
+        if [ -n "$HARDCODED_KSU_COMMIT" ]; then
+          ksu_commit="$HARDCODED_KSU_COMMIT"
+          echo "Using hardcoded KernelSU-Next commit: $ksu_commit"
         else
           ksu_commit=$(get_commit "https://github.com/KernelSU-Next/KernelSU-Next.git" "refs/heads/dev")
           echo "KernelSU-Next: $ksu_commit"
@@ -93,30 +93,35 @@ runs:
         # We need to construct a JSON object or a simple string map
         # Format: branch1:commit1,branch2:commit2,...
         
-        BRANCHES=(
-          "gki-android12-5.10"
-          "gki-android13-5.10"
-          "gki-android13-5.15"
-          "gki-android14-5.15"
-          "gki-android14-6.1"
-          "gki-android15-6.6"
-          "gki-android16-6.12"
-        )
-        
-        SUSFS_MAP=""
-        for branch in "${BRANCHES[@]}"; do
-          COMMIT=$(get_commit "$SUSFS_REPO" "refs/heads/$branch")
-          if [ -n "$COMMIT" ]; then
-             echo "  $branch: $COMMIT"
-             if [ -z "$SUSFS_MAP" ]; then
-               SUSFS_MAP="$branch:$COMMIT"
-             else
-               SUSFS_MAP="$SUSFS_MAP,$branch:$COMMIT"
-             fi
-          else
-             echo "  $branch: Not found"
-          fi
-        done
+        if [ -n "$HARDCODED_SUSFS_MAP" ]; then
+          echo "Using hardcoded SUSFS commit map: $HARDCODED_SUSFS_MAP"
+          SUSFS_MAP="$HARDCODED_SUSFS_MAP"
+        else
+          BRANCHES=(
+            "gki-android12-5.10"
+            "gki-android13-5.10"
+            "gki-android13-5.15"
+            "gki-android14-5.15"
+            "gki-android14-6.1"
+            "gki-android15-6.6"
+            "gki-android16-6.12"
+          )
+          
+          SUSFS_MAP=""
+          for branch in "${BRANCHES[@]}"; do
+            COMMIT=$(get_commit "$SUSFS_REPO" "refs/heads/$branch")
+            if [ -n "$COMMIT" ]; then
+               echo "  $branch: $COMMIT"
+               if [ -z "$SUSFS_MAP" ]; then
+                 SUSFS_MAP="$branch:$COMMIT"
+               else
+                 SUSFS_MAP="$SUSFS_MAP,$branch:$COMMIT"
+               fi
+            else
+               echo "  $branch: Not found"
+            fi
+          done
+        fi
         
         echo "susfs_commit=$SUSFS_MAP" >> $GITHUB_OUTPUT
         
