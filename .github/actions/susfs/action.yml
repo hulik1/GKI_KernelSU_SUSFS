@@ -216,7 +216,12 @@ runs:
           sed -i '/^#include <linux\/ksh.h>$/a #include <linux/dma-buf.h>' fs/exec.c
           FIX_REJ=1
         fi
-        
+
+    - name: Apply Kernel SUSFS Patches
+      shell: bash
+      if: false
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
         SHOW_PAD_FIX=0
         if [[ "${{ inputs.android_version }}" = "android12" && "${{ inputs.kernel_version }}" = "5.10" && "${{ inputs.sublevel }}" -le 209 ]]; then
           SHOW_PAD_FIX=1
