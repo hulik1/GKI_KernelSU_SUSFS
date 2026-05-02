@@ -104,18 +104,19 @@ runs:
         fi
         if [ "${{ inputs.kernel_version }}" = "5.15" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
           echo "Applying Android 13 5.15 SUSFS fixes"
-          if 
-          if grep -q '^size_t this_len = min_t(size_t, count, PAGE_SIZE);$' fs/proc/base.c; then
-            sed -i 's/^int this_len = min_t(int, count, PAGE_SIZE);$/size_t this_len = min_t(size_t, count, PAGE_SIZE);/' fs/proc/base.c
-            FIX_REJ=1
-          fi
-          if ! grep -q '^#include <linux/mnt_idmapping.h>$' fs/namespace.c; then
-            sed -i '/^#include <linux\/shmem_fs.h>$/a #include <linux/mnt_idmapping.h>' fs/namespace.c
-            FIX_REJ=1
-          fi
-          if ! grep -q '^#include <linux/mnt_idmapping.h>$' fs/open.c; then
-            sed -i '/^#include <linux\/compat.h>$/a #include <linux/mnt_idmapping.h>' fs/open.c
-            FIX_REJ=1
+          if [ "${{ inputs.sublevel }}" -le "43" ]; then
+            if grep -q '^size_t this_len = min_t(size_t, count, PAGE_SIZE);$' fs/proc/base.c; then
+              sed -i 's/^int this_len = min_t(int, count, PAGE_SIZE);$/size_t this_len = min_t(size_t, count, PAGE_SIZE);/' fs/proc/base.c
+              FIX_REJ=1
+            fi
+            if ! grep -q '^#include <linux/mnt_idmapping.h>$' fs/namespace.c; then
+              sed -i '/^#include <linux\/shmem_fs.h>$/a #include <linux/mnt_idmapping.h>' fs/namespace.c
+              FIX_REJ=1
+            fi
+            if ! grep -q '^#include <linux/mnt_idmapping.h>$' fs/open.c; then
+              sed -i '/^#include <linux\/compat.h>$/a #include <linux/mnt_idmapping.h>' fs/open.c
+              FIX_REJ=1
+            fi
           fi
         fi
         if [ "${{ inputs.kernel_version }}" = "6.1" ]; then
@@ -170,9 +171,11 @@ runs:
           fi
         fi
         if [ "${{ inputs.kernel_version }}" = "5.15" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
-          sed -i '/#include <linux\/mnt_idmapping.h>$/d' fs/namespace.c
-          sed -i '/#include <linux\/mnt_idmapping.h>$/d' fs/open.c
-          sed -i 's/^size_t this_len = min_t(size_t, count, PAGE_SIZE);$/int this_len = min_t(int, count, PAGE_SIZE);/' fs/proc/base.c
+          if [ "${{ inputs.sublevel }}" -le "43" ]; then
+            sed -i '/#include <linux\/mnt_idmapping.h>$/d' fs/namespace.c
+            sed -i '/#include <linux\/mnt_idmapping.h>$/d' fs/open.c
+            sed -i 's/^size_t this_len = min_t(size_t, count, PAGE_SIZE);$/int this_len = min_t(int, count, PAGE_SIZE);/' fs/proc/base.c
+          fi
         fi
         if [ "${{ inputs.kernel_version }}" = "6.1" ]; then
           sed -i '/^#include "internal.h"$/a #include <trace/hooks/blk.h>' fs/namespace.c
