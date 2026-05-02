@@ -84,7 +84,11 @@ runs:
         cp "${{ github.workspace }}/susfs4ksu/kernel_patches/include/linux/"* "${{ github.workspace }}/kernel/common/include/linux/"
         cp ${{ github.workspace }}/susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch ./
 
-
+    - name: Apply Kernel SUSFS Patches
+      shell: bash
+      if: false
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
         if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android12" ]; then
           echo "Applying Android 12 5.10 SUSFS fixes"
           if [ "${{ inputs.sublevel }}" -le "43" ]; then
@@ -156,8 +160,17 @@ runs:
           fi
         fi
 
+    - name: Apply Kernel SUSFS Patches
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
         patch -p1 < 50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch || true
 
+    - name: Apply Kernel SUSFS Patches
+      shell: bash
+      if: false
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
         if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android12" ]; then
           if [ "${{ inputs.sublevel }}" -le "43" ]; then
             sed -i 's/^size_t this_len = min_t(size_t, count, PAGE_SIZE);$/int this_len = min_t(int, count, PAGE_SIZE);/' fs/proc/base.c
