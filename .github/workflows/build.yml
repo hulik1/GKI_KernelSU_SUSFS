@@ -12,18 +12,6 @@ on:
       variant:
         required: false
         type: string
-      ksu_commit:
-        required: false
-        type: string
-      anykernel_commit:
-        required: false
-        type: string
-      patches_commit:
-        required: false
-        type: string
-      susfs_commit:
-        required: false
-        type: string
       feature_set:
         required: true
         type: string
@@ -72,9 +60,6 @@ jobs:
       uses: ./.github/actions/setup-build-environment
       env:
         BOOT_SIGN_KEY: ${{ secrets.BOOT_SIGN_KEY }}
-      with:
-        patches_commit: ${{ inputs.patches_commit }}
-        anykernel_commit: ${{ inputs.anykernel_commit }}
           
     - name: Download Kernel Repository
       uses: ./.github/actions/download-kernel
@@ -105,8 +90,6 @@ jobs:
     - name: Setup KernelSU-Next
       if: contains(inputs.feature_set, 'KSUN') || inputs.feature_set == 'FULL'
       uses: ./.github/actions/kernelsu
-      with:
-        ksu_commit: ${{ inputs.ksu_commit }}
 
     - name: SUSFS
       if: contains(inputs.feature_set, 'SUSFS') || inputs.feature_set == 'FULL'
@@ -116,7 +99,6 @@ jobs:
         kernel_version: ${{ steps.parse.outputs.kernel_version }}
         os_patch_level: ${{ steps.parse.outputs.os_patch_level }}
         sublevel: ${{ steps.extract.outputs.sublevel }}
-        susfs_commit: ${{ inputs.susfs_commit }}
 
     - name: Baseband Guard
       if: contains(inputs.feature_set, 'BBG') || inputs.feature_set == 'FULL'

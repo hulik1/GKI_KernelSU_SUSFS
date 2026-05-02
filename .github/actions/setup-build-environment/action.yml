@@ -1,10 +1,5 @@
 name: 'Setup Build Environment'
 description: 'Clones dependencies and exports mkbootimg/avbtool paths'
-inputs:
-  patches_commit:
-    required: false
-  anykernel_commit:
-    required: false
 
 runs:
   using: composite
@@ -33,25 +28,11 @@ runs:
         chmod +x "$GITHUB_WORKSPACE/git-repo/repo"
         echo "$GITHUB_WORKSPACE/git-repo" >> "$GITHUB_PATH"
 
-        if [ -n "${{ inputs.patches_commit }}" ]; then
-          if [ -d "$GITHUB_WORKSPACE/kernel_patches" ]; then rm -rf "$GITHUB_WORKSPACE/kernel_patches"; fi
-          git clone https://github.com/WildKernels/kernel_patches.git "$GITHUB_WORKSPACE/kernel_patches"
-          cd "$GITHUB_WORKSPACE/kernel_patches"
-          git checkout "${{ inputs.patches_commit }}"
-          cd "$GITHUB_WORKSPACE"
-        else
-          git clone https://github.com/WildKernels/kernel_patches.git "$GITHUB_WORKSPACE/kernel_patches"
-        fi
+        if [ -d "$GITHUB_WORKSPACE/kernel_patches" ]; then rm -rf "$GITHUB_WORKSPACE/kernel_patches"; fi
+        git clone https://github.com/WildKernels/kernel_patches.git "$GITHUB_WORKSPACE/kernel_patches"
 
-        if [ -n "${{ inputs.anykernel_commit }}" ]; then
-          if [ -d "$GITHUB_WORKSPACE/AnyKernel3" ]; then rm -rf "$GITHUB_WORKSPACE/AnyKernel3"; fi
-          git clone https://github.com/WildKernels/AnyKernel3.git "$GITHUB_WORKSPACE/AnyKernel3"
-          cd "$GITHUB_WORKSPACE/AnyKernel3"
-          git checkout "${{ inputs.anykernel_commit }}"
-          cd "$GITHUB_WORKSPACE"
-        elif [ ! -d "$GITHUB_WORKSPACE/AnyKernel3" ]; then
-          git clone https://github.com/WildKernels/AnyKernel3.git -b gki-2.0 "$GITHUB_WORKSPACE/AnyKernel3"
-        fi
+        if [ -d "$GITHUB_WORKSPACE/AnyKernel3" ]; then rm -rf "$GITHUB_WORKSPACE/AnyKernel3"; fi
+        git clone https://github.com/WildKernels/AnyKernel3.git -b gki-2.0 "$GITHUB_WORKSPACE/AnyKernel3"
 
         AOSP_MIRROR=https://android.googlesource.com
         BRANCH=main-kernel-2025

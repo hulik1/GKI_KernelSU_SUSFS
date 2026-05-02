@@ -13,9 +13,6 @@ inputs:
   sublevel:
     description: 'Kernel sublevel'
     required: true
-  susfs_commit:
-    description: 'Commit map (branch:commit,branch:commit...)'
-    required: false
 
 runs:
   using: composite
@@ -24,42 +21,34 @@ runs:
       shell: bash
       run: |
         SUSFS_BRANCH="gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}"
-        SUSFS_REPO="https://gitlab.com/simonpunk/susfs4ksu.git"
-        
+        SUSFS_REPO="https://gitlab.com/simonpunk/susfs4ksu.git"        
         echo "Preparing SUSFS for branch: $SUSFS_BRANCH"
-        
-        # Parse commit map to find the commit for this branch
-        COMMIT_MAP="${{ inputs.susfs_commit }}"
-        TARGET_COMMIT=""
-        
-        if [ -n "$COMMIT_MAP" ]; then
-          # Split by comma
-          IFS=',' read -ra ENTRIES <<< "$COMMIT_MAP"
-          for entry in "${ENTRIES[@]}"; do
-            # Split by colon
-            IFS=':' read -r branch commit <<< "$entry"
-            if [ "$branch" == "$SUSFS_BRANCH" ]; then
-              TARGET_COMMIT="$commit"
-              break
-            fi
-          done
+        echo "Cloning latest from $SUSFS_BRANCH..."
+        git clone "$SUSFS_REPO" -b "$SUSFS_BRANCH" --depth=1 susfs4ksu
+
+        if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android12" ]; then
+          SUSFS_COMMIT="e2b0f05ccca5f8fdfc33991c036672235ce48f05"
         fi
-        
-        if [ -n "$TARGET_COMMIT" ]; then
-          echo "Found specific commit for $SUSFS_BRANCH: $TARGET_COMMIT"
-          git clone "$SUSFS_REPO" -b "$SUSFS_BRANCH" susfs4ksu
-          cd susfs4ksu
-          git checkout "$TARGET_COMMIT"
-          cd ..
-        else
-          echo "No specific commit found for $SUSFS_BRANCH, cloning latest..."
-          git clone "$SUSFS_REPO" -b "$SUSFS_BRANCH" --depth=1 susfs4ksu
+        if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
+          SUSFS_COMMIT="97234f8e35cdc3b8ea22d05c98ab9829f6421d67"
         fi
-        
-        SUSFS_VERSION="v2.1.0"
-        echo "SUSFS_VERSION=$SUSFS_VERSION" >> $GITHUB_ENV
-        echo "SUSFS_BRANCH=$SUSFS_BRANCH" >> $GITHUB_ENV
-        echo "SUSFS_COMMIT=$TARGET_COMMIT" >> $GITHUB_ENV
+        if [ "${{ inputs.kernel_version }}" = "5.15" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
+          SUSFS_COMMIT="bf9bf0091bcd4d0072d845ea62484f3011f8d5a8"
+        fi
+        if [ "${{ inputs.kernel_version }}" = "5.15" ] && [ "${{ inputs.android_version }}" = "android14" ]; then
+          SUSFS_COMMIT="667368cf274311a62971671035738b154be1c062"
+        fi
+        if [ "${{ inputs.kernel_version }}" = "6.1" ]; then
+          SUSFS_COMMIT="e1c57040136760a57969fc6b1378cc936a257561"
+        fi
+        if [ "${{ inputs.kernel_version }}" = "6.6" ]; then
+          SUSFS_COMMIT="5009b9edee98fbe66b1a3cb22c603690d81b7817"
+        fi
+        if [ "${{ inputs.kernel_version }}" = "6.12" ]; then
+          SUSFS_COMMIT="5c34dec2c3b69af1d72ac4a89b179741fc602a79"
+        fi
+        cd $GITHUB_WORKSPACE/susfs4ksu
+        git checkout "$SUSFS_COMMIT"
 
     - name: Enable KernelSU SUSFS Config
       shell: bash
@@ -106,13 +95,13 @@ runs:
             perl -i -pe 's/\bmask,\s*mark->ignored_mask\)/inotify_mark_user_mask(mark)/g' fs/notify/fdinfo.c
           fi
         fi
-        if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
-          echo "Applying Android 13 5.10 SUSFS fixes"
-          if [ "${{ inputs.sublevel }}" -le "117" ]; then
-            sed -i '/^\s*\/\*/,/^\s*u32 mask = mark->mask & IN_ALL_EVENTS;$/d' fs/notify/fdinfo.c
-            perl -i -pe 's/\bmask,\s*mark->ignored_mask\)/inotify_mark_user_mask(mark)/g' fs/notify/fdinfo.c
-          fi
-        fi
+        #if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
+        #  echo "Applying Android 13 5.10 SUSFS fixes"
+        #  if [ "${{ inputs.sublevel }}" -le "117" ]; then
+        #    sed -i '/^\s*\/\*/,/^\s*u32 mask = mark->mask & IN_ALL_EVENTS;$/d' fs/notify/fdinfo.c
+        #    perl -i -pe 's/\bmask,\s*mark->ignored_mask\)/inotify_mark_user_mask(mark)/g' fs/notify/fdinfo.c
+        #  fi
+        #fi
         if [ "${{ inputs.kernel_version }}" = "5.15" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
           echo "Applying Android 13 5.15 SUSFS fixes"
           if grep -q '^size_t this_len = min_t(size_t, count, PAGE_SIZE);$' fs/proc/base.c; then
@@ -173,12 +162,12 @@ runs:
             perl -i -pe 's/\binotify_mark_user_mask\(mark\)/mask, mark->ignored_mask)/g' fs/notify/fdinfo.c
           fi
         fi
-        if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
-          if [ "${{ inputs.sublevel }}" -le "107" ]; then
-            perl -i -pe 's/^(\s*if \(inode\) \{)/$1\n        \/\*\n         * IN_ALL_EVENTS represents all of the mask bits\n         * that we expose to userspace.  There is at\n         * least one bit (FS_EVENT_ON_CHILD) which is\n         * used only internally to the kernel.\n         *\/\n        u32 mask = mark->mask & IN_ALL_EVENTS;/m' fs/notify/fdinfo.c
-            perl -i -pe 's/\binotify_mark_user_mask\(mark\)/mask, mark->ignored_mask)/g' fs/notify/fdinfo.c
-          fi
-        fi
+        #if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
+        #  if [ "${{ inputs.sublevel }}" -le "107" ]; then
+        #    perl -i -pe 's/^(\s*if \(inode\) \{)/$1\n        \/\*\n         * IN_ALL_EVENTS represents all of the mask bits\n         * that we expose to userspace.  There is at\n         * least one bit (FS_EVENT_ON_CHILD) which is\n         * used only internally to the kernel.\n         *\/\n        u32 mask = mark->mask & IN_ALL_EVENTS;/m' fs/notify/fdinfo.c
+        #    perl -i -pe 's/\binotify_mark_user_mask\(mark\)/mask, mark->ignored_mask)/g' fs/notify/fdinfo.c
+        #  fi
+        #fi
         if [ "${{ inputs.kernel_version }}" = "5.15" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
           sed -i '/#include <linux\/mnt_idmapping.h>$/d' fs/namespace.c
           sed -i '/#include <linux\/mnt_idmapping.h>$/d' fs/open.c
