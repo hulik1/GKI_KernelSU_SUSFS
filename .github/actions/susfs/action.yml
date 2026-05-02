@@ -219,7 +219,7 @@ runs:
 
     - name: Apply Kernel SUSFS Patches
       shell: bash
-      if: false
+      if: true
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
         SHOW_PAD_FIX=0
