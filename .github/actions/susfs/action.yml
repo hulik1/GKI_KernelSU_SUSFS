@@ -24,7 +24,7 @@ runs:
         SUSFS_REPO="https://gitlab.com/simonpunk/susfs4ksu.git"        
         echo "Preparing SUSFS for branch: $SUSFS_BRANCH"
         echo "Cloning latest from $SUSFS_BRANCH..."
-        git clone "$SUSFS_REPO" -b "$SUSFS_BRANCH" --depth=1 susfs4ksu
+        git clone "$SUSFS_REPO" -b "$SUSFS_BRANCH" susfs4ksu
 
         if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android12" ]; then
           SUSFS_COMMIT="e2b0f05ccca5f8fdfc33991c036672235ce48f05"
