@@ -188,13 +188,22 @@ jobs:
 
 
     - name: Restore build caches (ccache, Bazel)
-      uses: actions/cache@v4
+      uses: ./action-source/.github/actions/cache/restore
       with:
-        path: |
-          kernel/.ccache
-          kernel/bazel-*
-          kernel/.cache/bazel
-        key: buildcache-${{ inputs.kernel_version }}
+        cache_path: ${{ github.workspace }}/.ccache
+        cache_key: buildcache-${{ inputs.kernel_version }}
+        cache_bucket: "ccache-cache"
+        compression_level: 9
+        restore-keys: |
+          buildcache-
+
+    - name: Restore build caches (ccache, Bazel)
+      uses: ./action-source/.github/actions/cache/restore
+      with:
+        cache_path: ${{ github.workspace }}/.ld_cache
+        cache_key: buildcache-${{ inputs.kernel_version }}
+        cache_bucket: "lto-cache"
+        compression_level: 9
         restore-keys: |
           buildcache-
 
@@ -205,7 +214,7 @@ jobs:
       uses: ./.github/actions/build-kernel
 
     - name: List cache contents
-      working-directory: ${{ github.workspace }}/kernel
+      working-directory: ${{ github.workspace }}
       run: |
         echo "=== .ccache ==="
         du -sh .ccache || true
@@ -213,6 +222,22 @@ jobs:
         echo "=== .cache/bazel ==="
         du -sh .cache/bazel || true
         ls -l .cache/bazel || true
+
+    - name: Save ccache cache
+      uses: ./action-source/.github/actions/cache/save
+      with:
+        cache_path: ${{ github.workspace }}/.ccache
+        cache_key: buildcache-${{ inputs.kernel_version }}
+        cache_bucket: "ccache-cache"
+        compression_level: 9
+
+    - name: Save LTO LD cache
+      uses: ./action-source/.github/actions/cache/save
+      with:
+        cache_path: ${{ github.workspace }}/.ld_cache
+        cache_key: buildcache-${{ inputs.kernel_version }}
+        cache_bucket: "lto-cache"
+        compression_level: 9
 
     - name: Create Bootimgs Folder and Build Boot Images
       uses: ./.github/actions/build-boot-images
