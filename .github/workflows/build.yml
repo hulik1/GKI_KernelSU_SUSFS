@@ -263,8 +263,8 @@ jobs:
         else
           echo "No compiler activity detected (no ccache accesses)."
         fi
-        post_ld_size=$(du -sh "$GITHUB_WORKSPACE/.ld_cache" 2>/dev/null | awk '{print $1}' || echo "0B")
-        post_ld_files=$(find "$GITHUB_WORKSPACE/.ld_cache" -type f 2>/dev/null | wc -l || true)
+        post_ld_size=$(du -sh "$GITHUB_WORKSPACE/kernel/.ld_cache" 2>/dev/null | awk '{print $1}' || echo "0B")
+        post_ld_files=$(find "$GITHUB_WORKSPACE/kernel/.ld_cache" -type f 2>/dev/null | wc -l || true)
         echo "ld_cache size before: ${{ steps.pre-cache-stats.outputs.pre_ld_size }}, after: $post_ld_size"
         echo "ld_cache files before: ${{ steps.pre-cache-stats.outputs.pre_ld_files }}, after: $post_ld_files"
 

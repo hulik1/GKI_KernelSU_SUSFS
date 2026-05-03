@@ -10,11 +10,31 @@ runs:
         set -euo pipefail
         # Install ccache with ECS by cctv18
         echo "Install ccache with ECS"
-        curl -LfsS --retry 5 --retry-delay 5 --retry-all-errors --connect-timeout 30 --tcp-fastopen -H "User-Agent: Mozilla/5.0" "https://github.com/WildKernels/kernel_patches/raw/refs/heads/main/ccache/ccache-x86-64" -o ccache
-        sudo cp -f ./ccache /usr/bin/ccache
+        curl -LfsS --retry 5 --retry-delay 5 --retry-all-errors --connect-timeout 30 --tcp-fastopen -H "User-Agent: Mozilla/5.0" "https://github.com/WildKernels/kernel_patches/raw/refs/heads/main/ccache/ccache-x86-64" -o ccache || { echo "❌ Failed to download ccache"; exit 1; }
+        sudo cp -f ./ccache /usr/bin/ccache || { echo "❌ Failed to install ccache"; exit 1; }
         sudo chmod +x /usr/bin/ccache
         rm -f ./ccache
-        echo "/usr/lib/ccache" >> $GITHUB_PATH
+        
+        # Verify ccache is actually installed and works
+        if ! /usr/bin/ccache --version > /dev/null 2>&1; then
+          echo "❌ ccache installation failed or binary is corrupted"
+          exit 1
+        fi
+        echo "✅ ccache binary verified: $(/usr/bin/ccache --version | head -1)"
+        
+        # Add ccache to PATH with priority
+        export PATH="/usr/bin:$PATH"
+        
+        # Create ccache symlinks for better compatibility with build systems
+        # This ensures ccache is used even if CC/CXX variables aren't respected
+        mkdir -p /tmp/ccache-bin
+        ln -sf /usr/bin/ccache /tmp/ccache-bin/clang
+        ln -sf /usr/bin/ccache /tmp/ccache-bin/clang++
+        ln -sf /usr/bin/ccache /tmp/ccache-bin/gcc
+        ln -sf /usr/bin/ccache /tmp/ccache-bin/g++
+        export PATH="/tmp/ccache-bin:$PATH"
+        echo "✅ ccache symlinks created in /tmp/ccache-bin"
+        
         export CCACHE_DIR="$GITHUB_WORKSPACE/kernel/.ccache"
         export LDCACHE_DIR="$GITHUB_WORKSPACE/kernel/.ld_cache"
         export CC="ccache clang"
@@ -30,10 +50,10 @@ runs:
         export CCACHE_DIRECT=true
         export CCACHE_FILE_CLONE=true
         export CCACHE_INODE_CACHE=true
-        CCACHE_IS_KERNEL_COMPILING=true
+        export CCACHE_IS_KERNEL_COMPILING=true
         export CCACHE_UMASK=002
         export CCACHE_SLOPPINESS="file_macro,time_macros,include_file_mtime,include_file_ctime,pch_defines,system_headers,locale"
-        if ccache --help 2>&1 | grep -q 'depend_mode'; then
+        if /usr/bin/ccache --help 2>&1 | grep -q 'depend_mode'; then
           export CCACHE_DEPEND=true
         fi
         echo "✅ ccache environment variables set"
@@ -41,21 +61,34 @@ runs:
         echo "   CCACHE_DIR: $CCACHE_DIR"
         echo "   LDCACHE_DIR: $LDCACHE_DIR"
         mkdir -p "$CCACHE_DIR" "$LDCACHE_DIR"
-        ccache -p
+        /usr/bin/ccache -p
+        
+        # Verify ccache will be used
+        echo "Testing ccache invocation..."
+        export PATH="/usr/bin:$PATH"
+        if ! which ccache > /dev/null; then
+          echo "❌ ccache not in PATH!"
+          exit 1
+        fi
+        echo "✅ ccache is in PATH: $(which ccache)"
 
         if [ -f "build/build.sh" ]; then
           echo "🔨 Building with legacy build.sh (LTO caching to $LDCACHE_DIR)"
           mkdir -p "$LDCACHE_DIR"
+          # Monitor ccache during build
+          /usr/bin/ccache -z  # Reset stats
           SKIP_MRPROPER=1 LTO=thin SKIP_EXT_MODULES=1 SKIP_CP_KERNEL_HDR=1 GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" BUILD_CONFIG=common/build.config.gki.aarch64 CC="$CC" CXX="$CXX" LDCACHE_DIR="$LDCACHE_DIR" build/build.sh
+          echo "📊 ccache stats after build:"
+          /usr/bin/ccache -s || true
         else
           echo "🔨 Building with Bazel/kleaf (LTO caching to $LDCACHE_DIR)"
           mkdir -p "$LDCACHE_DIR"
           cp "$GITHUB_WORKSPACE/wild_gki.fragment" common/arch/arm64/configs/wild_gki.fragment
+          /usr/bin/ccache -z  # Reset stats
           tools/bazel build --config=release --notrim --defconfig_fragment=//common:arch/arm64/configs/wild_gki.fragment --disk_cache=$LDCACHE_DIR --cache_dir=$GITHUB_WORKSPACE/kernel/.cache/bazel //common:kernel_aarch64
+          echo "📊 ccache stats after build:"
+          /usr/bin/ccache -s || true
         fi
-        
-        echo "Clear Temporary cache files..."
-        ccache -c
         
         echo "📊 Cache sizes after build:"
         echo "   CCACHE usage:"
