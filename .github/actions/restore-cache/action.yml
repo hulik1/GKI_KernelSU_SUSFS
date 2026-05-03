@@ -25,10 +25,22 @@ inputs:
     type: number
     default: 6
 
+outputs:
+  cache-hit:
+    description: 'Returns "true" if cache was found and restored, "false" otherwise'
+    value: ${{ steps.restore.outputs.cache-hit }}
+  cache-key:
+    description: 'The key that matched (primary or fallback)'
+    value: ${{ steps.restore.outputs.cache-key }}
+  cache-size:
+    description: 'Size of restored cache in human-readable format'
+    value: ${{ steps.restore.outputs.cache-size }}
+
 runs:
   using: 'composite'
   steps:
     - name: Detect and Download Cache
+      id: restore
       shell: bash
       working-directory: ${{ github.workspace }}
       env:
@@ -158,10 +170,19 @@ runs:
             fi
             echo "✅ Restore complete."
             echo "::endgroup::"
+            
+            # Output cache hit information
+            CACHE_SIZE=$(du -sh "${{ inputs.cache_path }}" 2>/dev/null | awk '{print $1}' || echo "unknown")
+            echo "cache-hit=true" >> $GITHUB_OUTPUT
+            echo "cache-key=$KEY" >> $GITHUB_OUTPUT
+            echo "cache-size=$CACHE_SIZE" >> $GITHUB_OUTPUT
             break
           done <<< "$SEARCH_LIST"
           
           if [ "$FOUND" = "false" ]; then
               echo "⚠️ No cache matches found. Proceeding with fresh run."
+              echo "cache-hit=false" >> $GITHUB_OUTPUT
+              echo "cache-key=none" >> $GITHUB_OUTPUT
+              echo "cache-size=0B" >> $GITHUB_OUTPUT
           fi
         fi
