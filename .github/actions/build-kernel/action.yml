@@ -29,20 +29,20 @@ runs:
         export HOSTCC="clang"
         export HOSTCXX="clang++"
         export CCACHE_MAXSIZE=10G
-        export CCACHE_COMPILERCHECK=content
-        export CCACHE_BASEDIR="$GITHUB_WORKSPACE/kernel"
-        export CCACHE_NOHASHDIR=true
-        export CCACHE_COMPRESSION=true
-        export CCACHE_COMPRESSION_LEVEL=3
-        export CCACHE_DIRECT=true
-        export CCACHE_FILE_CLONE=true
-        export CCACHE_INODE_CACHE=true
-        export CCACHE_IS_KERNEL_COMPILING=true
-        export CCACHE_UMASK=002
-        export CCACHE_SLOPPINESS="file_macro,time_macros,include_file_mtime,include_file_ctime,pch_defines,system_headers,locale"
-        if /usr/bin/ccache --help 2>&1 | grep -q 'depend_mode'; then
-          export CCACHE_DEPEND=true
-        fi
+        #export CCACHE_COMPILERCHECK=content
+        #export CCACHE_BASEDIR="$GITHUB_WORKSPACE/kernel"
+        #export CCACHE_NOHASHDIR=true
+        #export CCACHE_COMPRESSION=true
+        #export CCACHE_COMPRESSION_LEVEL=3
+        #export CCACHE_DIRECT=true
+        #export CCACHE_FILE_CLONE=true
+        #export CCACHE_INODE_CACHE=true
+        #export CCACHE_IS_KERNEL_COMPILING=true
+        #export CCACHE_UMASK=002
+        #export CCACHE_SLOPPINESS="file_macro,time_macros,include_file_mtime,include_file_ctime,pch_defines,system_headers,locale"
+        #if /usr/bin/ccache --help 2>&1 | grep -q 'depend_mode'; then
+        #  export CCACHE_DEPEND=true
+        #fi
         echo "✅ ccache environment variables set"
         echo "   CC: $CC"
         echo "   CXX: $CXX"
