@@ -95,7 +95,7 @@ runs:
         fi
         if [ "${{ inputs.sublevel }}" -le "117" ]; then
           echo "Applying fdinfo.c Android 12 5.10 Fake Patch"
-          sed -i '/^\s*\/\*/,/^\s*u32 mask = mark->mask & IN_ALL_EVENTS;$/d' fs/notify/fdinfo.c
+          sed -i '/\/\*$/,/^\s*u32 mask = mark->mask & IN_ALL_EVENTS;$/d' fs/notify/fdinfo.c
           perl -i -pe 's/\bmask,\s*mark->ignored_mask/inotify_mark_user_mask(mark)/g' fs/notify/fdinfo.c
         fi
 
@@ -180,7 +180,7 @@ runs:
         fi
         if [ "${{ inputs.sublevel }}" -le "117" ]; then
           echo "Reverting fdinfo.c Android 12 5.10 Fake Patch"
-          perl -i -pe 's/^(\s*if \(inode\) \{)/$1\n        \/\*\n         * IN_ALL_EVENTS represents all of the mask bits\n         * that we expose to userspace.  There is at\n         * least one bit (FS_EVENT_ON_CHILD) which is\n         * used only internally to the kernel.\n         *\/\n        u32 mask = mark->mask & IN_ALL_EVENTS;/m' fs/notify/fdinfo.c
+          perl -i -pe 's/^(\s+if \(inode\) \{)/$1\n\t\t\/\*\n\t\t * IN_ALL_EVENTS represents all of the mask bits\n\t\t * that we expose to userspace.  There is at\n\t\t * least one bit (FS_EVENT_ON_CHILD) which is\n\t\t * used only internally to the kernel.\n\t\t *\/\n\t\tu32 mask = mark->mask & IN_ALL_EVENTS;/m' fs/notify/fdinfo.c
           perl -i -pe 's/\binotify_mark_user_mask\(mark\)/mask, mark->ignored_mask/g' fs/notify/fdinfo.c
         fi
 
