@@ -12,7 +12,7 @@ runs:
         export PATH="/usr/lib/ccache:$PATH"
         export CC="ccache clang"
         export CXX="ccache clang++"
-        export CCACHE_MAXSIZE=1G
+        export CCACHE_MAXSIZE=10G
         export CCACHE_COMPILERCHECK=content
         export CCACHE_BASEDIR="$GITHUB_WORKSPACE"
         export CCACHE_NOHASHDIR=true
