@@ -188,7 +188,7 @@ jobs:
 
 
     - name: Restore build caches (ccache, Bazel)
-      uses: ./action-source/.github/actions/cache/restore
+      uses: ./.github/actions/restore-cache
       with:
         cache_path: ${{ github.workspace }}/.ccache
         cache_key: buildcache-${{ inputs.kernel_version }}
@@ -198,7 +198,7 @@ jobs:
           buildcache-
 
     - name: Restore build caches (ccache, Bazel)
-      uses: ./action-source/.github/actions/cache/restore
+      uses: ./.github/actions/restore-cache
       with:
         cache_path: ${{ github.workspace }}/.ld_cache
         cache_key: buildcache-${{ inputs.kernel_version }}
@@ -224,7 +224,7 @@ jobs:
         ls -l .cache/bazel || true
 
     - name: Save ccache cache
-      uses: ./action-source/.github/actions/cache/save
+      uses: ./.github/actions/save-cache
       with:
         cache_path: ${{ github.workspace }}/.ccache
         cache_key: buildcache-${{ inputs.kernel_version }}
@@ -232,7 +232,7 @@ jobs:
         compression_level: 9
 
     - name: Save LTO LD cache
-      uses: ./action-source/.github/actions/cache/save
+      uses: ./.github/actions/save-cache
       with:
         cache_path: ${{ github.workspace }}/.ld_cache
         cache_key: buildcache-${{ inputs.kernel_version }}
