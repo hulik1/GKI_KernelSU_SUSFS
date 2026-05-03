@@ -22,25 +22,21 @@ runs:
         fi
         echo "✅ ccache binary verified: $(/usr/bin/ccache --version | head -1)"
         
-        # Add ccache to PATH with priority
-        export PATH="/usr/bin:$PATH"
-        
-        # Create ccache symlinks for better compatibility with build systems
-        # This ensures ccache is used even if CC/CXX variables aren't respected
+        # Create wrapper paths so build.sh cannot bypass ccache by rewriting CC/CXX.
         mkdir -p /tmp/ccache-bin
         ln -sf /usr/bin/ccache /tmp/ccache-bin/clang
         ln -sf /usr/bin/ccache /tmp/ccache-bin/clang++
         ln -sf /usr/bin/ccache /tmp/ccache-bin/gcc
         ln -sf /usr/bin/ccache /tmp/ccache-bin/g++
-        export PATH="/tmp/ccache-bin:$PATH"
-        echo "✅ ccache symlinks created in /tmp/ccache-bin"
+        export PATH="/tmp/ccache-bin:/usr/bin:$PATH"
+        echo "✅ ccache wrappers created in /tmp/ccache-bin"
         
         export CCACHE_DIR="$GITHUB_WORKSPACE/kernel/.ccache"
         export LDCACHE_DIR="$GITHUB_WORKSPACE/kernel/.ld_cache"
-        export CC="ccache clang"
-        export CXX="ccache clang++"
-        export HOSTCC="ccache clang"
-        export HOSTCXX="ccache clang++"
+        export CC="/tmp/ccache-bin/clang"
+        export CXX="/tmp/ccache-bin/clang++"
+        export HOSTCC="/tmp/ccache-bin/clang"
+        export HOSTCXX="/tmp/ccache-bin/clang++"
         export CCACHE_MAXSIZE=10G
         export CCACHE_COMPILERCHECK=content
         export CCACHE_BASEDIR="$GITHUB_WORKSPACE/kernel"
@@ -57,20 +53,19 @@ runs:
           export CCACHE_DEPEND=true
         fi
         echo "✅ ccache environment variables set"
+        echo "   CC: $CC"
+        echo "   CXX: $CXX"
         echo "📁 Cache directories:"
         echo "   CCACHE_DIR: $CCACHE_DIR"
         echo "   LDCACHE_DIR: $LDCACHE_DIR"
         mkdir -p "$CCACHE_DIR" "$LDCACHE_DIR"
         /usr/bin/ccache -p
-        
-        # Verify ccache will be used
         echo "Testing ccache invocation..."
-        export PATH="/usr/bin:$PATH"
-        if ! which ccache > /dev/null; then
-          echo "❌ ccache not in PATH!"
+        if ! command -v clang > /dev/null; then
+          echo "❌ clang not found in PATH"
           exit 1
         fi
-        echo "✅ ccache is in PATH: $(which ccache)"
+        echo "✅ clang resolves to: $(command -v clang)"
 
         if [ -f "build/build.sh" ]; then
           echo "🔨 Building with legacy build.sh (LTO caching to $LDCACHE_DIR)"

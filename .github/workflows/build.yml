@@ -272,11 +272,11 @@ jobs:
       working-directory: ${{ github.workspace }}
       run: |
         echo "=== .ccache ==="
-        du -sh .ccache || true
-        ls -l .ccache || true
+        du -sh kernel/.ccache || true
+        ls -l kernel/.ccache || true
         echo "=== .cache/bazel ==="
-        du -sh .cache/bazel || true
-        ls -l .cache/bazel || true
+        du -sh kernel/.cache/bazel || true
+        ls -l kernel/.cache/bazel || true
 
     - name: Save ccache cache
       uses: ./.github/actions/save-cache
