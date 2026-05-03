@@ -57,7 +57,7 @@ runs:
           mkdir -p "$LDCACHE_DIR"
           # Monitor ccache during build
           /usr/bin/ccache -z  # Reset stats
-          SKIP_MRPROPER=1 LTO=thin SKIP_VENDOR_BOOT=1 SKIP_EXT_MODULES=1 SKIP_CP_KERNEL_HDR=1 GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" BUILD_CONFIG=common/build.config.gki.aarch64 CC="$CC" CXX="$CXX" LDCACHE_DIR="$LDCACHE_DIR" build/build.sh
+          SKIP_MRPROPER=1 LTO=thin SKIP_VENDOR_BOOT=1 SKIP_EXT_MODULES=1 SKIP_CP_KERNEL_HDR=1 GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" BUILD_CONFIG=common/build.config.gki.aarch64 CC="ccache clang" CXX="ccache clang++" build/build.sh
           echo "📊 ccache stats after build:"
           /usr/bin/ccache -s || true
         else
