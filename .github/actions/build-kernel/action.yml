@@ -51,12 +51,6 @@ runs:
         echo "   LDCACHE_DIR: $LDCACHE_DIR"
         mkdir -p "$CCACHE_DIR" "$LDCACHE_DIR"
         /usr/bin/ccache -p
-        echo "Testing ccache invocation..."
-        if ! command -v clang > /dev/null; then
-          echo "❌ clang not found in PATH"
-          exit 1
-        fi
-        echo "✅ clang resolves to: $(command -v clang)"
 
         if [ -f "build/build.sh" ]; then
           echo "🔨 Building with legacy build.sh (LTO caching to $LDCACHE_DIR)"
