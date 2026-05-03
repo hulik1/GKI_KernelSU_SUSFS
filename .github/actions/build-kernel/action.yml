@@ -15,15 +15,15 @@ runs:
         sudo chmod +x /usr/bin/ccache
         rm -f ./ccache
         echo "/usr/lib/ccache" >> $GITHUB_PATH
-        export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
-        export LDCACHE_DIR="$GITHUB_WORKSPACE/.ld_cache"
+        export CCACHE_DIR="$GITHUB_WORKSPACE/kernel/.ccache"
+        export LDCACHE_DIR="$GITHUB_WORKSPACE/kernel/.ld_cache"
         export CC="ccache clang"
         export CXX="ccache clang++"
         export HOSTCC="ccache clang"
         export HOSTCXX="ccache clang++"
         export CCACHE_MAXSIZE=10G
         export CCACHE_COMPILERCHECK=content
-        export CCACHE_BASEDIR="$GITHUB_WORKSPACE"
+        export CCACHE_BASEDIR="$GITHUB_WORKSPACE/kernel"
         export CCACHE_NOHASHDIR=true
         export CCACHE_COMPRESSION=true
         export CCACHE_COMPRESSION_LEVEL=3

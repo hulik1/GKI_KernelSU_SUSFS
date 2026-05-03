@@ -192,7 +192,7 @@ jobs:
       id: restore-ccache
       uses: ./.github/actions/restore-cache
       with:
-        cache_path: ${{ github.workspace }}/.ccache
+        cache_path: ${{ github.workspace }}/kernel/.ccache
         cache_key: buildcache-${{ inputs.kernel_version }}
         cache_bucket: "ccache-cache"
         compression_level: 9
@@ -211,7 +211,7 @@ jobs:
       id: restore-ldcache
       uses: ./.github/actions/restore-cache
       with:
-        cache_path: ${{ github.workspace }}/.ld_cache
+        cache_path: ${{ github.workspace }}/kernel/.ld_cache
         cache_key: buildcache-${{ inputs.kernel_version }}
         cache_bucket: "lto-cache"
         compression_level: 9
@@ -235,8 +235,8 @@ jobs:
         pre_misses=$(echo "$stats" | awk '/cache miss/ {m+=$NF} END{print (m+0)}')
         echo "pre_hits=$pre_hits" >> $GITHUB_OUTPUT
         echo "pre_misses=$pre_misses" >> $GITHUB_OUTPUT
-        pre_ld_size=$(du -sh "$GITHUB_WORKSPACE/.ld_cache" 2>/dev/null | awk '{print $1}' || echo "0B")
-        pre_ld_files=$(find "$GITHUB_WORKSPACE/.ld_cache" -type f 2>/dev/null | wc -l || true)
+        pre_ld_size=$(du -sh "$GITHUB_WORKSPACE/kernel/.ld_cache" 2>/dev/null | awk '{print $1}' || echo "0B")
+        pre_ld_files=$(find "$GITHUB_WORKSPACE/kernel/.ld_cache" -type f 2>/dev/null | wc -l || true)
         echo "pre_ld_size=$pre_ld_size" >> $GITHUB_OUTPUT
         echo "pre_ld_files=$pre_ld_files" >> $GITHUB_OUTPUT
 
@@ -282,7 +282,7 @@ jobs:
     - name: Save ccache cache
       uses: ./.github/actions/save-cache
       with:
-        cache_path: ${{ github.workspace }}/.ccache
+        cache_path: ${{ github.workspace }}/kernel/.ccache
         cache_key: buildcache-${{ inputs.kernel_version }}
         cache_bucket: "ccache-cache"
         compression_level: 9
@@ -291,7 +291,7 @@ jobs:
     - name: Save LTO LD cache
       uses: ./.github/actions/save-cache
       with:
-        cache_path: ${{ github.workspace }}/.ld_cache
+        cache_path: ${{ github.workspace }}/kernel/.ld_cache
         cache_key: buildcache-${{ inputs.kernel_version }}
         cache_bucket: "lto-cache"
         compression_level: 9
