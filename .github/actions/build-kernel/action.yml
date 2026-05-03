@@ -22,27 +22,10 @@ runs:
         fi
         echo "✅ ccache binary verified: $(/usr/bin/ccache --version | head -1)"
         
-        # Replace compiler binaries with ccache to force usage regardless of how build system invokes them
-        # Rename real compilers first
-        sudo mv /usr/bin/clang /usr/bin/clang.real
-        sudo mv /usr/bin/clang++ /usr/bin/clang++.real
-        sudo mv /usr/bin/gcc /usr/bin/gcc.real
-        sudo mv /usr/bin/g++ /usr/bin/g++.real
-        
-        # Create ccache wrapper scripts that call the real compiler through ccache
-        for compiler in clang clang++ gcc g++; do
-          sudo tee /usr/bin/$compiler > /dev/null <<'EOF'
-#!/bin/bash
-exec /usr/bin/ccache /usr/bin/${0##*/}.real "$@"
-EOF
-          sudo chmod +x /usr/bin/$compiler
-        done
-        echo "✅ Compilers replaced with ccache wrappers"
-        
         export CCACHE_DIR="$GITHUB_WORKSPACE/kernel/.ccache"
         export LDCACHE_DIR="$GITHUB_WORKSPACE/kernel/.ld_cache"
-        export CC="clang"
-        export CXX="clang++"
+        export CC="ccache clang"
+        export CXX="ccache clang++"
         export HOSTCC="clang"
         export HOSTCXX="clang++"
         export CCACHE_MAXSIZE=10G
@@ -74,7 +57,6 @@ EOF
           exit 1
         fi
         echo "✅ clang resolves to: $(command -v clang)"
-        echo "   Verified as: $(file $(command -v clang))"
 
         if [ -f "build/build.sh" ]; then
           echo "🔨 Building with legacy build.sh (LTO caching to $LDCACHE_DIR)"
