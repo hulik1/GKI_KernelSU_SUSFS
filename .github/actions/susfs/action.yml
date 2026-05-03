@@ -84,23 +84,26 @@ runs:
         cp "${{ github.workspace }}/susfs4ksu/kernel_patches/include/linux/"* "${{ github.workspace }}/kernel/common/include/linux/"
         cp ${{ github.workspace }}/susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch ./
 
+    - name: Apply Android 12 5.10 Fake Patches
+      shell: bash
+      if: inputs.kernel_version == '5.10' && inputs.android_version == 'android12'
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
+        if [ "${{ inputs.sublevel }}" -le "43" ]; then
+          echo "Applying base.c Android 12 5.10 Fake Patch"
+          perl -i -pe 's/(int|size_t)\s+this_len\s*=\s*min_t\s*\(\s*\1\s*,/size_t this_len = min_t(size_t,/;' fs/proc/base.c
+        fi
+        if [ "${{ inputs.sublevel }}" -le "117" ]; then
+          echo "Applying fdinfo.c Android 12 5.10 Fake Patch"
+          sed -i '/^\s*\/\*/,/^\s*u32 mask = mark->mask & IN_ALL_EVENTS;$/d' fs/notify/fdinfo.c
+          perl -i -pe 's/\bmask,\s*mark->ignored_mask/inotify_mark_user_mask(mark)/g' fs/notify/fdinfo.c
+        fi
+
     - name: Apply Kernel SUSFS Patches
       shell: bash
       if: false
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
-        if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android12" ]; then
-          echo "Applying Android 12 5.10 SUSFS fixes"
-          if [ "${{ inputs.sublevel }}" -le "43" ]; then
-            perl -i -pe 's/(int|size_t)\s+this_len\s*=\s*min_t\s*\(\s*\1\s*,/size_t this_len = min_t(size_t,/;' fs/proc/base.c
-          fi
-          if [ "${{ inputs.sublevel }}" -le "117" ]; then
-            sed -i '/^\s*\/\*/,/^\s*u32 mask = mark->mask & IN_ALL_EVENTS;$/d' fs/notify/fdinfo.c
-            perl -i -pe 's/\bmask,\s*mark->ignored_mask/inotify_mark_user_mask(mark)/g' fs/notify/fdinfo.c
-          fi
-        fi
-
-
         if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
           echo "Applying Android 13 5.10 SUSFS fixes"
           if [ "${{ inputs.sublevel }}" -le "107" ]; then
@@ -166,21 +169,26 @@ runs:
       run: |
         patch -p1 < 50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch || true
 
+    - name: Revert Android 12 5.10 Fake Patches
+      shell: bash
+      if: inputs.kernel_version == '5.10' && inputs.android_version == 'android12'
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
+        if [ "${{ inputs.sublevel }}" -le "43" ]; then
+          echo "Reverting base.c Android 12 5.10 Fake Patch"
+          sed -i 's/^size_t this_len = min_t(size_t, count, PAGE_SIZE);$/int this_len = min_t(int, count, PAGE_SIZE);/' fs/proc/base.c
+        fi
+        if [ "${{ inputs.sublevel }}" -le "117" ]; then
+          echo "Reverting fdinfo.c Android 12 5.10 Fake Patch"
+          perl -i -pe 's/^(\s*if \(inode\) \{)/$1\n        \/\*\n         * IN_ALL_EVENTS represents all of the mask bits\n         * that we expose to userspace.  There is at\n         * least one bit (FS_EVENT_ON_CHILD) which is\n         * used only internally to the kernel.\n         *\/\n        u32 mask = mark->mask & IN_ALL_EVENTS;/m' fs/notify/fdinfo.c
+          perl -i -pe 's/\binotify_mark_user_mask\(mark\)/mask, mark->ignored_mask/g' fs/notify/fdinfo.c
+        fi
+
     - name: Apply Kernel SUSFS Patches
       shell: bash
       if: false
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
-        if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android12" ]; then
-          if [ "${{ inputs.sublevel }}" -le "43" ]; then
-            sed -i 's/^size_t this_len = min_t(size_t, count, PAGE_SIZE);$/int this_len = min_t(int, count, PAGE_SIZE);/' fs/proc/base.c
-          fi
-          if [ "${{ inputs.sublevel }}" -le "117" ]; then
-            perl -i -pe 's/^(\s*if \(inode\) \{)/$1\n        \/\*\n         * IN_ALL_EVENTS represents all of the mask bits\n         * that we expose to userspace.  There is at\n         * least one bit (FS_EVENT_ON_CHILD) which is\n         * used only internally to the kernel.\n         *\/\n        u32 mask = mark->mask & IN_ALL_EVENTS;/m' fs/notify/fdinfo.c
-            perl -i -pe 's/\binotify_mark_user_mask\(mark\)/mask, mark->ignored_mask/g' fs/notify/fdinfo.c
-          fi
-        fi
-
 
         if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
           if [ "${{ inputs.sublevel }}" -le "107" ]; then
