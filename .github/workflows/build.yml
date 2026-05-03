@@ -52,6 +52,7 @@ jobs:
 
     - name: Setup more Swap (for LTO)
       uses: thejerrybao/setup-swap-space@v1   # or pierotofy/set-swap-space
+      if: false
       with:
         swap-size-gb: 25          # 10-24 GB is common for heavy LTO
         # swap-space-path: /mnt/swapfile   # optional
