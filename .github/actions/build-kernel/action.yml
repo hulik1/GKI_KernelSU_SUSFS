@@ -16,7 +16,7 @@ runs:
         rm -f ./ccache
         echo "/usr/lib/ccache" >> $GITHUB_PATH
         export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
-        export LDCACHE_DIR="${{ github.workspace }}/.ld_cache"
+        export LDCACHE_DIR="$GITHUB_WORKSPACE/.ld_cache"
         export CC="ccache clang"
         export CXX="ccache clang++"
         export HOSTCC="ccache clang"
@@ -37,17 +37,31 @@ runs:
           export CCACHE_DEPEND=true
         fi
         echo "✅ ccache environment variables set"
+        echo "📁 Cache directories:"
+        echo "   CCACHE_DIR: $CCACHE_DIR"
+        echo "   LDCACHE_DIR: $LDCACHE_DIR"
+        mkdir -p "$CCACHE_DIR" "$LDCACHE_DIR"
         ccache -p
 
         if [ -f "build/build.sh" ]; then
-          SKIP_MRPROPER=1 LTO=thin SKIP_EXT_MODULES=1 SKIP_CP_KERNEL_HDR=1 GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" BUILD_CONFIG=common/build.config.gki.aarch64 CC="$CC" CXX="$CXX" build/build.sh
+          echo "🔨 Building with legacy build.sh (LTO caching to $LDCACHE_DIR)"
+          mkdir -p "$LDCACHE_DIR"
+          SKIP_MRPROPER=1 LTO=thin SKIP_EXT_MODULES=1 SKIP_CP_KERNEL_HDR=1 GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" BUILD_CONFIG=common/build.config.gki.aarch64 CC="$CC" CXX="$CXX" LDCACHE_DIR="$LDCACHE_DIR" build/build.sh
         else
+          echo "🔨 Building with Bazel/kleaf (LTO caching to $LDCACHE_DIR)"
+          mkdir -p "$LDCACHE_DIR"
           cp "$GITHUB_WORKSPACE/wild_gki.fragment" common/arch/arm64/configs/wild_gki.fragment
-          tools/bazel build --config=release --notrim --defconfig_fragment=//common:arch/arm64/configs/wild_gki.fragment --cache_dir=$GITHUB_WORKSPACE/kernel/.cache/bazel //common:kernel_aarch64
+          tools/bazel build --config=release --notrim --defconfig_fragment=//common:arch/arm64/configs/wild_gki.fragment --disk_cache=$LDCACHE_DIR --cache_dir=$GITHUB_WORKSPACE/kernel/.cache/bazel //common:kernel_aarch64
         fi
         
         echo "Clear Temporary cache files..."
         ccache -c
+        
+        echo "📊 Cache sizes after build:"
+        echo "   CCACHE usage:"
+        du -sh "$CCACHE_DIR" || echo "   (no ccache directory)"
+        echo "   LDCACHE usage:"
+        du -sh "$LDCACHE_DIR" || echo "   (no ldcache directory)"
         
         echo "Perform cache eviction!"
         # 3h = 10800s using seconds to support older ccache

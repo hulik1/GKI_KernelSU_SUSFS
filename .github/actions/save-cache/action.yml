@@ -30,7 +30,7 @@ runs:
     - name: Archive, Split, and Upload Cache
       shell: bash
       env:
-        GH_TOKEN: ${{ inputs.github_token }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
         TARGET_REPO: "${{ github.repository }}"
       run: |
         # Archive, Split, and Upload Cache
