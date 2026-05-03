@@ -100,76 +100,86 @@ runs:
           perl -i -pe 's/ignored_mask:%x/ignored_mask:0/g' fs/notify/fdinfo.c
         fi
 
-    - name: Apply Kernel SUSFS Patches
+    - name: Apply Android 13 5.10 Fake Patches
       shell: bash
-      if: false
+      if: inputs.kernel_version == '5.10' && inputs.android_version == 'android13'
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
-        if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
-          echo "Applying Android 13 5.10 SUSFS fixes"
-          if [ "${{ inputs.sublevel }}" -le "107" ]; then
-            sed -i '/^\s*\/\*/,/^\s*u32 mask = mark->mask & IN_ALL_EVENTS;$/d' fs/notify/fdinfo.c
-            perl -i -pe 's/\bmask,\s*mark->ignored_mask/inotify_mark_user_mask(mark)/g' fs/notify/fdinfo.c
-          fi
+        echo "Applying Android 13 5.10 SUSFS fixes"
+        if [ "${{ inputs.sublevel }}" -le "107" ]; then
+          echo "Applying fdinfo.c Android 13 5.10 Fake Patch"
+          sed -i '/^[[:space:]]*\/\*$/,/^[[:space:]]*u32 mask = mark->mask & IN_ALL_EVENTS;$/d' fs/notify/fdinfo.c
+          perl -i -pe 's/\bmask,\s*mark->ignored_mask/inotify_mark_user_mask(mark)/g' fs/notify/fdinfo.c
+          perl -i -pe 's/ignored_mask:%x/ignored_mask:0/g' fs/notify/fdinfo.c
         fi
 
-
-        if [ "${{ inputs.kernel_version }}" = "5.15" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
-          echo "Applying Android 13 5.15 SUSFS fixes"
-          if [ "${{ inputs.sublevel }}" -le "43" ]; then
-            sed -i 's/^int this_len = min_t(int, count, PAGE_SIZE);$/size_t this_len = min_t(size_t, count, PAGE_SIZE);/' fs/proc/base.c
-            sed -i '/^#include <linux\/shmem_fs.h>$/a #include <linux/mnt_idmapping.h>' fs/namespace.c
-            sed -i '/^#include <linux\/compat.h>$/a #include <linux/mnt_idmapping.h>' fs/open.c
-            sed -i '/^\s*\/\*/,/^\s*u32 mask = mark->mask & IN_ALL_EVENTS;$/d' fs/notify/fdinfo.c
-            perl -i -pe 's/\bmask,\s*mark->ignored_mask/inotify_mark_user_mask(mark)/g' fs/notify/fdinfo.c
-          fi
+    - name: Apply Android 13 5.15 Fake Patches
+      shell: bash
+      if: inputs.kernel_version == '5.15' && inputs.android_version == 'android13'
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
+        echo "Applying Android 13 5.15 SUSFS fixes"
+        if [ "${{ inputs.sublevel }}" -le "41" ]; then
+          echo "Applying fdinfo.c Android 13 5.15 Fake Patch"
+          sed -i '/^[[:space:]]*\/\*$/,/^[[:space:]]*u32 mask = mark->mask & IN_ALL_EVENTS;$/d' fs/notify/fdinfo.c
+          perl -i -pe 's/\bmask,\s*mark->ignored_mask/inotify_mark_user_mask(mark)/g' fs/notify/fdinfo.c
+          perl -i -pe 's/ignored_mask:%x/ignored_mask:0/g' fs/notify/fdinfo.c
         fi
 
-
-        if [ "${{ inputs.kernel_version }}" = "6.1" ]; then
-          if grep -q '^#include <trace/hooks/blk.h>$' fs/namespace.c; then
-            sed -i '/^#include <trace\/hooks\/blk.h>$/d' fs/namespace.c
-            FIX_REJ=1
-          fi
+    - name: Apply Android 14 6.1 Fake Patches
+      shell: bash
+      if: inputs.kernel_version == '6.1' && inputs.android_version == 'android14'
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
+        if [ "${{ inputs.sublevel }}" -ge "141" ]; then
+          echo "Applying base.c Android 14 6.1 Fake Patch"
+          sed -i '/^#include <linux\/cpufreq_times.h>$/a #include <linux/dma-buf.h>' fs/proc/base.c
+        fi
+        if [ "${{ inputs.sublevel }}" -ge "157" ]; then
+          echo "Applying namespace.c Android 14 6.1 Fake Patch"
+          sed -i '/^#include <trace\/hooks\/blk.h>$/d' fs/namespace.c
         fi
 
-
-        if [ "${{ inputs.kernel_version }}" = "6.6" ]; then
-          echo "Applying 6.6 SUSFS fixes"
-          if ! grep -q '^#include <trace/hooks/fs.h>$' fs/namespace.c; then
-            sed -i '/^#include <trace\/hooks\/blk.h>$/a #include <trace/hooks/fs.h>' fs/namespace.c
-            FIX_REJ=1
-          fi
-          if ! grep -q '^#include <linux/dma-buf.h>$' fs/proc/base.c; then
-            sed -i '/^#include <linux\/cpufreq_times.h>$/a #include <linux/dma-buf.h>' fs/proc/base.c
-            FIX_REJ=1
-          fi
-          if ! grep -q '^\s*pagemap_entry_t \*res = NULL;$' fs/proc/task_mmu.c; then
-            sed -i '/int ret.*= 0, copied.*= 0;/{
-            /int ret.*= 0, copied.*= 0;/!d
-            a\
-                unsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;\
-                pagemap_entry_t *res = NULL;
-            }' fs/proc/task_mmu.c
-            FIX_REJ=1
-          fi
+    - name: Apply Android 15 6.6 Fake Patches
+      shell: bash
+      if: inputs.kernel_version == '6.6' && inputs.android_version == 'android15'
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
+        echo "Applying 6.6 SUSFS fixes"
+        if [ "${{ inputs.sublevel }}" -le "46" ]; then
+          echo "Applying namespace.c Android 15 6.6 Fake Patch"
+          sed -i '/^#include <trace\/hooks\/blk.h>$/a #include <trace/hooks/fs.h>' fs/namespace.c
+        fi
+        if [ "${{ inputs.sublevel }}" -le "58" ]; then
+          echo "Applying task_mmu.c Android 15 6.6 Fake Patch"
+          sed -i '/int ret.*= 0, copied.*= 0;/{
+          /int ret.*= 0, copied.*= 0;/!d
+          a\
+              unsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;\
+              pagemap_entry_t *res = NULL;
+          }' fs/proc/task_mmu.c
+        fi
+        if [ "${{ inputs.sublevel }}" -le "92" ]; then
+          echo "Applying base.c Android 15 6.6 Fake Patch"
+          sed -i '/^#include <linux\/cpufreq_times.h>$/a #include <linux/dma-buf.h>' fs/proc/base.c
         fi
 
-
-        if [ "${{ inputs.kernel_version }}" = "6.12" ]; then
-          echo "Applying 6.12 SUSFS fixes"
-          if grep -q '^#include <linux/dma-buf.h>$' fs/exec.c; then
-            sed -i '/^#include <linux\/dma-buf.h>$/d' fs/exec.c
-            FIX_REJ=1
-          fi
+    - name: Apply Android 16 6.12 Fake Patches
+      shell: bash
+      if: inputs.kernel_version == '6.12' && inputs.android_version == 'android16'
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
+        echo "Applying 6.12 SUSFS fixes"
+        if [ "${{ inputs.sublevel }}" -le "77" ]; then
+          echo "Applying exec.c Android 16 6.12 Fake Patch"
+          sed -i '/^#include <linux\/dma-buf.h>$/d' fs/exec.c
         fi
 
     - name: Apply Kernel SUSFS Patches
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
-        patch -p1 < 50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch
-        ### || true
+        patch -p1 < 50_add_susfs_in_gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}.patch || true
 
     - name: Revert Android 12 5.10 Fake Patches
       shell: bash
@@ -187,45 +197,79 @@ runs:
           perl -i -pe 's/ignored_mask:0/ignored_mask:%x/g' fs/notify/fdinfo.c
         fi
 
-    - name: Apply Kernel SUSFS Patches
+    - name: Revert Android 13 5.10 Fake Patches
       shell: bash
-      if: false
+      if: inputs.kernel_version == '5.10' && inputs.android_version == 'android13'
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
-
-        if [ "${{ inputs.kernel_version }}" = "5.10" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
-          if [ "${{ inputs.sublevel }}" -le "107" ]; then
-            perl -i -pe 's/^(\s*if \(inode\) \{)/$1\n        \/\*\n         * IN_ALL_EVENTS represents all of the mask bits\n         * that we expose to userspace.  There is at\n         * least one bit (FS_EVENT_ON_CHILD) which is\n         * used only internally to the kernel.\n         *\/\n        u32 mask = mark->mask & IN_ALL_EVENTS;/m' fs/notify/fdinfo.c
-            perl -i -pe 's/\binotify_mark_user_mask\(mark\)/mask, mark->ignored_mask/g' fs/notify/fdinfo.c
-          fi
+        if [ "${{ inputs.sublevel }}" -le "107" ]; then
+          echo "Reverting fdinfo.c Android 13 5.10 Fake Patch"
+          perl -i -pe 's/^(\s+if \(inode\) \{)/$1\n\t\t\/\*\n\t\t * IN_ALL_EVENTS represents all of the mask bits\n\t\t * that we expose to userspace.  There is at\n\t\t * least one bit (FS_EVENT_ON_CHILD) which is\n\t\t * used only internally to the kernel.\n\t\t *\/\n\t\tu32 mask = mark->mask & IN_ALL_EVENTS;/m' fs/notify/fdinfo.c
+          perl -i -pe 's/\binotify_mark_user_mask\(mark\)/mask, mark->ignored_mask/g' fs/notify/fdinfo.c
+          perl -i -pe 's/ignored_mask:0/ignored_mask:%x/g' fs/notify/fdinfo.c
         fi
 
-
-        if [ "${{ inputs.kernel_version }}" = "5.15" ] && [ "${{ inputs.android_version }}" = "android13" ]; then
-          if [ "${{ inputs.sublevel }}" -le "43" ]; then
-            sed -i '/#include <linux\/mnt_idmapping.h>$/d' fs/namespace.c
-            sed -i '/#include <linux\/mnt_idmapping.h>$/d' fs/open.c
-            sed -i 's/^size_t this_len = min_t(size_t, count, PAGE_SIZE);$/int this_len = min_t(int, count, PAGE_SIZE);/' fs/proc/base.c
-            perl -i -pe 's/^(\s*if \(inode\) \{)/$1\n        \/\*\n         * IN_ALL_EVENTS represents all of the mask bits\n         * that we expose to userspace.  There is at\n         * least one bit (FS_EVENT_ON_CHILD) which is\n         * used only internally to the kernel.\n         *\/\n        u32 mask = mark->mask & IN_ALL_EVENTS;/m' fs/notify/fdinfo.c
-            perl -i -pe 's/\binotify_mark_user_mask\(mark\)/mask, mark->ignored_mask/g' fs/notify/fdinfo.c
-          fi
+    - name: Revert Android 13 5.15 Fake Patches
+      shell: bash
+      if: inputs.kernel_version == '5.15' && inputs.android_version == 'android13'
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
+        if [ "${{ inputs.sublevel }}" -le "41" ]; then
+          echo "Reverting base.c Android 13 5.15 Fake Patch"
+          sed -i 's/^size_t this_len = min_t(size_t, count, PAGE_SIZE);$/int this_len = min_t(int, count, PAGE_SIZE);/' fs/proc/base.c
+          echo "Reverting namespace.c Android 13 5.15 Fake Patch"
+          sed -i '/#include <linux\/mnt_idmapping.h>$/d' fs/namespace.c
+          echo "Reverting open.c Android 13 5.15 Fake Patch"
+          sed -i '/#include <linux\/mnt_idmapping.h>$/d' fs/open.c
+          echo "Reverting fdinfo.c Android 13 5.15 Fake Patch"
+          perl -i -pe 's/^(\s+if \(inode\) \{)/$1\n\t\t\/\*\n\t\t * IN_ALL_EVENTS represents all of the mask bits\n\t\t * that we expose to userspace.  There is at\n\t\t * least one bit (FS_EVENT_ON_CHILD) which is\n\t\t * used only internally to the kernel.\n\t\t *\/\n\t\tu32 mask = mark->mask & IN_ALL_EVENTS;/m' fs/notify/fdinfo.c
+          perl -i -pe 's/\binotify_mark_user_mask\(mark\)/mask, mark->ignored_mask/g' fs/notify/fdinfo.c
+          perl -i -pe 's/ignored_mask:0/ignored_mask:%x/g' fs/notify/fdinfo.c
         fi
 
-
-        if [ "${{ inputs.kernel_version }}" = "6.1" ]; then
+    - name: Revert Android 14 6.1 Fake Patches
+      shell: bash
+      if: inputs.kernel_version == '6.1' && inputs.android_version == 'android14'
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
+        if [ "${{ inputs.sublevel }}" -ge "141" ]; then
+          echo "Reverting base.c Android 14 6.1 Fake Patch"
+          sed -i '/^#include <linux\/dma-buf.h>$/d' fs/proc/base.c
+        fi
+        if [ "${{ inputs.sublevel }}" -ge "157" ]; then
+          echo "Reverting namespace.c Android 14 6.1 Fake Patch"
           sed -i '/^#include "internal.h"$/a #include <trace/hooks/blk.h>' fs/namespace.c
         fi
-        
-        if [ "${{ inputs.kernel_version }}" = "6.6" ]; then
+
+    - name: Revert Android 15 6.6 Fake Patches
+      shell: bash
+      if: inputs.kernel_version == '6.6' && inputs.android_version == 'android15'
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
+        echo "Reverting 6.6 Fake Patches"
+        if [ "${{ inputs.sublevel }}" -le "46" ]; then
+          echo "Reverting namespace.c Android 15 6.6 Fake Patch"
           sed -i '/^#include <trace\/hooks\/fs.h>$/d' fs/namespace.c
-          sed -i '/^#include <linux\/dma-buf.h>$/d' fs/proc/base.c
+        fi
+        if [ "${{ inputs.sublevel }}" -le "58" ]; then
+          echo "Reverting task_mmu.c Android 15 6.6 Fake Patch"
           sed -i '/unsigned int nr_subpages.*__PAGE_SIZE.*PAGE_SIZE/d' fs/proc/task_mmu.c
           sed -i '/pagemap_entry_t.*res.*NULL/d' fs/proc/task_mmu.c
         fi
+        if [ "${{ inputs.sublevel }}" -le "92" ]; then
+          echo "Reverting base.c Android 15 6.6 Fake Patch"
+          sed -i '/^#include <linux\/dma-buf.h>$/d' fs/proc/base.c
+        fi
 
-        if [ "${{ inputs.kernel_version }}" = "6.12" ]; then
+    - name: Revert Android 16 6.12 Fake Patches
+      shell: bash
+      if: inputs.kernel_version == '6.12' && inputs.android_version == 'android16'
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
+        echo "Reverting 6.12 Fake Patches"
+        if [ "${{ inputs.sublevel }}" -le "77" ]; then
+          echo "Reverting exec.c Android 16 6.12 Fake Patch"
           sed -i '/^#include <linux\/ksh.h>$/a #include <linux/dma-buf.h>' fs/exec.c
-          FIX_REJ=1
         fi
 
     - name: Apply Kernel SUSFS Patches
