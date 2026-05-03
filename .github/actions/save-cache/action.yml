@@ -19,6 +19,10 @@ inputs:
     required: false
     type: number
     default: 6
+  github_token:
+    description: 'GitHub token for release upload authentication'
+    required: true
+    type: string
 
 runs:
   using: 'composite'
@@ -26,7 +30,7 @@ runs:
     - name: Archive, Split, and Upload Cache
       shell: bash
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ inputs.github_token }}
         TARGET_REPO: "${{ github.repository }}"
       run: |
         # Archive, Split, and Upload Cache

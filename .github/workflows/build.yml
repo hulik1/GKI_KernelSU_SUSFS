@@ -230,6 +230,7 @@ jobs:
         cache_key: buildcache-${{ inputs.kernel_version }}
         cache_bucket: "ccache-cache"
         compression_level: 9
+        github_token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Save LTO LD cache
       uses: ./.github/actions/save-cache
@@ -238,6 +239,7 @@ jobs:
         cache_key: buildcache-${{ inputs.kernel_version }}
         cache_bucket: "lto-cache"
         compression_level: 9
+        github_token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Create Bootimgs Folder and Build Boot Images
       uses: ./.github/actions/build-boot-images
