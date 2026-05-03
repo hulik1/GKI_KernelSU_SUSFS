@@ -120,6 +120,12 @@ runs:
       run: |
         echo "Applying Android 13 5.15 SUSFS fixes"
         if [ "${{ inputs.sublevel }}" -le "41" ]; then
+          #echo "Applying base.c Android 13 5.15 Fake Patch"
+          #sed -i 's/^int this_len = min_t(int, count, PAGE_SIZE);$/size_t this_len = min_t(size_t, count, PAGE_SIZE);/' fs/proc/base.c
+          echo "Applying namespace.c Android 13 5.15 SUSFS fixes"
+          sed -i '/^#include <linux\/shmem_fs.h>$/a #include <linux/mnt_idmapping.h>' fs/namespace.c
+          echo "Applying open.c Android 13 5.15 Fake Patch"
+          sed -i '/^#include <linux\/compat.h>$/a #include <linux/mnt_idmapping.h>' fs/open.c
           echo "Applying fdinfo.c Android 13 5.15 Fake Patch"
           sed -i '/^[[:space:]]*\/\*$/,/^[[:space:]]*u32 mask = mark->mask & IN_ALL_EVENTS;$/d' fs/notify/fdinfo.c
           perl -i -pe 's/\bmask,\s*mark->ignored_mask/inotify_mark_user_mask(mark)/g' fs/notify/fdinfo.c
@@ -215,8 +221,8 @@ runs:
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
         if [ "${{ inputs.sublevel }}" -le "41" ]; then
-          echo "Reverting base.c Android 13 5.15 Fake Patch"
-          sed -i 's/^size_t this_len = min_t(size_t, count, PAGE_SIZE);$/int this_len = min_t(int, count, PAGE_SIZE);/' fs/proc/base.c
+          #echo "Reverting base.c Android 13 5.15 Fake Patch"
+          #sed -i 's/^size_t this_len = min_t(size_t, count, PAGE_SIZE);$/int this_len = min_t(int, count, PAGE_SIZE);/' fs/proc/base.c
           echo "Reverting namespace.c Android 13 5.15 Fake Patch"
           sed -i '/#include <linux\/mnt_idmapping.h>$/d' fs/namespace.c
           echo "Reverting open.c Android 13 5.15 Fake Patch"
