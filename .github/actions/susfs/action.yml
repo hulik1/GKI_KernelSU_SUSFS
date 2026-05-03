@@ -95,7 +95,7 @@ runs:
         fi
         if [ "${{ inputs.sublevel }}" -le "117" ]; then
           echo "Applying fdinfo.c Android 12 5.10 Fake Patch"
-          sed -i '/\/\*$/,/^\s*u32 mask = mark->mask & IN_ALL_EVENTS;$/d' fs/notify/fdinfo.c
+          sed -i '/^[[:space:]]*\/\*$/,/^[[:space:]]*u32 mask = mark->mask & IN_ALL_EVENTS;$/d' fs/notify/fdinfo.c
           perl -i -pe 's/\bmask,\s*mark->ignored_mask/inotify_mark_user_mask(mark)/g' fs/notify/fdinfo.c
         fi
 
