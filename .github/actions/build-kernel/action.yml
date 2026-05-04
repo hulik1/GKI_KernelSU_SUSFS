@@ -41,10 +41,15 @@ runs:
         echo "CC=$CC" >> $GITHUB_ENV
         export CXX="ccache clang++"
         echo "CXX=$CXX" >> $GITHUB_ENV
-        export HOSTCC="clang"
+        export HOSTCC="ccache clang"
         echo "HOSTCC=$HOSTCC" >> $GITHUB_ENV
-        export HOSTCXX="clang++"
+        export HOSTCXX="ccache clang++"
         echo "HOSTCXX=$HOSTCXX" >> $GITHUB_ENV
+        export "LD=$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
+        echo "LD=$LD" >> $GITHUB_ENV
+        export HOSTLD="$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
+        echo "HOSTLD=$HOSTLD" >> $GITHUB_ENV
+
         #export CCACHE_MAXSIZE=10G
         #export CCACHE_COMPILERCHECK=content
         #export CCACHE_BASEDIR="$GITHUB_WORKSPACE/kernel"
@@ -85,9 +90,13 @@ runs:
           SKIP_CP_KERNEL_HDR=1 \
           GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" \
           BUILD_CONFIG=common/build.config.gki.aarch64 \
-          CC="ccache clang" \
-          CXX="ccache clang++" \
-          build/build.sh -j"$(nproc)
+          LD="$LD" \
+          HOSTLD="$HOSTLD" \
+          CC="$CC" \
+          HOSTCC="$HOSTCC" \
+          CXX="$CXX" \
+          HOSTCXX="$HOSTCXX" \
+          build/build.sh -j"$(nproc)"
         else
           cp "$GITHUB_WORKSPACE/wild_gki.fragment" common/arch/arm64/configs/wild_gki.fragment
           tools/bazel build --config=release --notrim --defconfig_fragment=//common:arch/arm64/configs/wild_gki.fragment --disk_cache=$LDCACHE_DIR --cache_dir=$GITHUB_WORKSPACE/kernel/.cache/bazel //common:kernel_aarch64
