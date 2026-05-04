@@ -4,79 +4,69 @@ description: 'Builds kernel using legacy build.sh or Bazel (kleaf)'
 runs:
   using: composite
   steps:
-    - shell: bash
+    - name: 'Setup ccache and Build Environment'
+      shell: bash
       working-directory: ${{ github.workspace }}
       run: |
         set -euo pipefail
-        # Install ccache with ECS by cctv18
-        echo "Install ccache with ECS"
+        
+        # Download and install ccache
+        echo "Installing ccache..."
         curl -LfsS --retry 5 --retry-delay 5 --retry-all-errors --connect-timeout 30 --tcp-fastopen -H "User-Agent: Mozilla/5.0" "https://github.com/WildKernels/kernel_patches/raw/refs/heads/main/ccache/ccache-x86-64" -o ccache || { echo "❌ Failed to download ccache"; exit 1; }
         sudo cp -f ./ccache /usr/bin/ccache || { echo "❌ Failed to install ccache"; exit 1; }
         sudo chmod +x /usr/bin/ccache
         rm -f ./ccache
         
-        # Verify ccache is actually installed and works
+        # Verify ccache
         if ! /usr/bin/ccache --version > /dev/null 2>&1; then
           echo "❌ ccache installation failed or binary is corrupted"
           exit 1
         fi
         echo "✅ ccache binary verified: $(/usr/bin/ccache --version | head -1)"
-
-    - name: 'Setup Cache Environment'
-      shell: bash
-      working-directory: ${{ github.workspace }}/kernel/common
-      run: |
-        set -euo pipefail
+        
+        # Setup cache directories
         export CCACHE_DIR="$GITHUB_WORKSPACE/kernel/common/.ccache"
-        echo "CCACHE_DIR=$CCACHE_DIR" >> $GITHUB_ENV
         export LDCACHE_DIR="$GITHUB_WORKSPACE/kernel/common/.ld_cache"
-        echo "LDCACHE_DIR=$LDCACHE_DIR" >> $GITHUB_ENV
-
+        mkdir -p "$CCACHE_DIR" "$LDCACHE_DIR"
+        
+        # Create LD wrapper for thin-LTO caching
         cat > "$GITHUB_WORKSPACE/kernel/common/ld-wrapper" << 'EOF'
         #!/bin/bash
         ld.lld "$@" --thinlto-cache-dir="$LDCACHE_DIR" --thinlto-jobs="$(nproc --all)"
         EOF
         chmod +x "$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
 
-        export CC="ccache clang"
-        echo "CC=$CC" >> $GITHUB_ENV
-        export CXX="ccache clang++"
-        echo "CXX=$CXX" >> $GITHUB_ENV
-        export HOSTCC="ccache clang"
-        echo "HOSTCC=$HOSTCC" >> $GITHUB_ENV
-        export HOSTCXX="ccache clang++"
-        echo "HOSTCXX=$HOSTCXX" >> $GITHUB_ENV
-        export "LD=$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
-        echo "LD=$LD" >> $GITHUB_ENV
-        export HOSTLD="$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
-        echo "HOSTLD=$HOSTLD" >> $GITHUB_ENV
-
-        #export CCACHE_MAXSIZE=10G
-        #export CCACHE_COMPILERCHECK=content
-        #export CCACHE_BASEDIR="$GITHUB_WORKSPACE/kernel"
-        #export CCACHE_NOHASHDIR=true
-        #export CCACHE_COMPRESSION=true
-        #export CCACHE_COMPRESSION_LEVEL=3
-        #export CCACHE_DIRECT=true
-        #export CCACHE_FILE_CLONE=true
-        #export CCACHE_INODE_CACHE=true
-        #export CCACHE_IS_KERNEL_COMPILING=true
-        #export CCACHE_UMASK=002
-        #export CCACHE_SLOPPINESS="file_macro,time_macros,include_file_mtime,include_file_ctime,pch_defines,system_headers,locale"
-        #if /usr/bin/ccache --help 2>&1 | grep -q 'depend_mode'; then
-        #  export CCACHE_DEPEND=true
-        #fi
-        echo "✅ ccache environment variables set"
-        #echo "   CC: $CC"
-        #echo "   CXX: $CXX"
-        echo "📁 Cache directories:"
-        echo "   CCACHE_DIR: $CCACHE_DIR"
-        echo "   LDCACHE_DIR: $LDCACHE_DIR"
-        mkdir -p "$CCACHE_DIR" "$LDCACHE_DIR"
+        # Setup ccache compiler wrappers in PATH (masquerade method)
+        # This intercepts compiler invocations regardless of how the build system calls them
+        mkdir -p "$GITHUB_WORKSPACE/ccache-bin"
+        cp /usr/bin/ccache "$GITHUB_WORKSPACE/ccache-bin/clang"
+        cp /usr/bin/ccache "$GITHUB_WORKSPACE/ccache-bin/clang++"
+        cp /usr/bin/ccache "$GITHUB_WORKSPACE/ccache-bin/gcc"
+        cp /usr/bin/ccache "$GITHUB_WORKSPACE/ccache-bin/g++"
+        cp /usr/bin/ccache "$GITHUB_WORKSPACE/ccache-bin/ld.lld"
+        chmod +x "$GITHUB_WORKSPACE/ccache-bin"/*
+        
+        # Export environment variables for subsequent steps
+        echo "CCACHE_DIR=$CCACHE_DIR" >> $GITHUB_ENV
+        echo "LDCACHE_DIR=$LDCACHE_DIR" >> $GITHUB_ENV
+        echo "PATH=$GITHUB_WORKSPACE/ccache-bin:$PATH" >> $GITHUB_ENV
+        echo "CC=clang" >> $GITHUB_ENV
+        echo "CXX=clang++" >> $GITHUB_ENV
+        echo "HOSTCC=clang" >> $GITHUB_ENV
+        echo "HOSTCXX=clang++" >> $GITHUB_ENV
+        echo "LD=$GITHUB_WORKSPACE/kernel/common/ld-wrapper" >> $GITHUB_ENV
+        echo "HOSTLD=$GITHUB_WORKSPACE/kernel/common/ld-wrapper" >> $GITHUB_ENV
+        
+        # Initialize ccache
         ccache -M 100G
         ccache -p
         ccache -s
         ccache -z
+        
+        echo "✅ Build environment ready"
+        echo "   CCACHE_DIR: $CCACHE_DIR"
+        echo "   LDCACHE_DIR: $LDCACHE_DIR"
+        echo "   Compiler wrappers: $GITHUB_WORKSPACE/ccache-bin"
 
     - name: 'Build Kernel'
       shell: bash
@@ -91,12 +81,6 @@ runs:
           SKIP_CP_KERNEL_HDR=1 \
           GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" \
           BUILD_CONFIG=common/build.config.gki.aarch64 \
-          LD="$LD" \
-          HOSTLD="$HOSTLD" \
-          CC="$CC" \
-          HOSTCC="$HOSTCC" \
-          CXX="$CXX" \
-          HOSTCXX="$HOSTCXX" \
           build/build.sh -j"$(nproc)"
         else
           cp "$GITHUB_WORKSPACE/wild_gki.fragment" common/arch/arm64/configs/wild_gki.fragment
