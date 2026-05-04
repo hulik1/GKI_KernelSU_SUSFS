@@ -59,10 +59,10 @@ runs:
         echo "HOSTCC=$HOSTCC" >> $GITHUB_ENV
         export HOSTCXX="/usr/bin/ccache clang++"
         echo "HOSTCXX=$HOSTCXX" >> $GITHUB_ENV
-        export LD="$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
-        echo "LD=$LD" >> $GITHUB_ENV
-        export HOSTLD="$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
-        echo "HOSTLD=$HOSTLD" >> $GITHUB_ENV
+        #export LD="$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
+        #echo "LD=$LD" >> $GITHUB_ENV
+        #export HOSTLD="$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
+        #echo "HOSTLD=$HOSTLD" >> $GITHUB_ENV
         #echo "CLANG_PREBUILT_BIN=$GITHUB_WORKSPACE/ccache-bin" >> $GITHUB_ENV
 
 
@@ -107,7 +107,7 @@ runs:
         echo "✅ Build environment ready"
         echo "   CCACHE_DIR: $CCACHE_DIR"
         echo "   LDCACHE_DIR: $LDCACHE_DIR"
-        echo "   Compiler wrappers: $GITHUB_WORKSPACE/ccache-bin"
+        #echo "   Compiler wrappers: $GITHUB_WORKSPACE/ccache-bin"
 
     - name: 'Build Kernel'
       shell: bash
@@ -123,10 +123,8 @@ runs:
           GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" \
           BUILD_CONFIG=common/build.config.gki.aarch64 \
           CCACHE_DIR="$CCACHE_DIR" \
-          LD="$LD" \
+          #LD="$LD" \
           LDCACHE_DIR="$LDCACHE_DIR" \
-          #CLANG_PREBUILT_BIN="$CLANG_PREBUILT_BIN" \
-          #PATH="$PATH" \
           build/build.sh -j"$(nproc)"
         else
           cp "$GITHUB_WORKSPACE/wild_gki.fragment" common/arch/arm64/configs/wild_gki.fragment
