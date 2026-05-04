@@ -125,8 +125,8 @@ runs:
           CCACHE_DIR="$CCACHE_DIR" \
           LD="$LD" \
           LDCACHE_DIR="$LDCACHE_DIR" \
-          CLANG_PREBUILT_BIN="$CLANG_PREBUILT_BIN" \
-          PATH="$PATH" \
+          #CLANG_PREBUILT_BIN="$CLANG_PREBUILT_BIN" \
+          #PATH="$PATH" \
           build/build.sh -j"$(nproc)"
         else
           cp "$GITHUB_WORKSPACE/wild_gki.fragment" common/arch/arm64/configs/wild_gki.fragment
