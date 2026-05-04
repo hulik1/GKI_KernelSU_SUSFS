@@ -196,6 +196,25 @@ jobs:
         else
           echo "❌ ccache MISS - Fresh build"
         fi
+    
+    - name: Restore build caches (bazel)
+      id: restore-bazel-cache
+      uses: ./.github/actions/restore-cache
+      with:
+        cache_path: /home/runner/.cache/bazel
+        cache_key: buildcache-${{ inputs.kernel_version }}
+        cache_bucket: "bazel-cache"
+        compression_level: 9
+        restore_keys: |
+          buildcache-
+    
+    - name: Check bazel cache hit
+      run: |
+        if [ "${{ steps.restore-restore-bazel-cache.outputs.cache-hit }}" = "true" ]; then
+          echo "✅ bazel cache HIT - Key: ${{ steps.restore-restore-bazel-cache.outputs.cache-key }} - Size: ${{ steps.restore-restore-bazel-cache.outputs.cache-size }}"
+        else
+          echo "❌ bazel cache MISS - Fresh build"
+        fi
 
     - name: Restore build caches (LTO/ld_cache)
       id: restore-ldcache
@@ -253,17 +272,16 @@ jobs:
         # Setup cache directories
         export CCACHE_DIR="/home/runner/.ccache"
         echo "CCACHE_DIR=$CCACHE_DIR" >> $GITHUB_ENV
-        #export LDCACHE_DIR="/home/runner/.ld_cache"
-        #echo "LDCACHE_DIR=$LDCACHE_DIR" >> $GITHUB_ENV
-        mkdir -p "$CCACHE_DIR" 
-        #"$LDCACHE_DIR"
+        export LDCACHE_DIR="/home/runner/.ld_cache"
+        echo "LDCACHE_DIR=$LDCACHE_DIR" >> $GITHUB_ENV
+        mkdir -p "$CCACHE_DIR" "$LDCACHE_DIR"
         
-        ## Create LD wrapper for thin-LTO caching
-        #cat > "$GITHUB_WORKSPACE/kernel/common/ld-wrapper" << 'EOF'
-        ##!/bin/bash
-        #ld.lld "$@" --thinlto-cache-dir="$LDCACHE_DIR" --thinlto-jobs="$(nproc --all)"
-        #EOF
-        #chmod +x "$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
+        # Create LD wrapper for thin-LTO caching
+        cat > "$GITHUB_WORKSPACE/kernel/common/ld-wrapper" << 'EOF'
+        #!/bin/bash
+        ld.lld "$@" --thinlto-cache-dir="$LDCACHE_DIR" --thinlto-jobs="$(nproc --all)"
+        EOF
+        chmod +x "$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
 
         # Setup ccache compiler wrappers in PATH (masquerade method)
         # This intercepts compiler invocations regardless of how the build system calls them
@@ -286,10 +304,10 @@ jobs:
         echo "HOSTCC=$HOSTCC" >> $GITHUB_ENV
         export HOSTCXX="/usr/bin/ccache clang++"
         echo "HOSTCXX=$HOSTCXX" >> $GITHUB_ENV
-        #export LD="$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
-        #echo "LD=$LD" >> $GITHUB_ENV
-        #export HOSTLD="$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
-        #echo "HOSTLD=$HOSTLD" >> $GITHUB_ENV
+        export LD="$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
+        echo "LD=$LD" >> $GITHUB_ENV
+        export HOSTLD="$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
+        echo "HOSTLD=$HOSTLD" >> $GITHUB_ENV
         #echo "CLANG_PREBUILT_BIN=$GITHUB_WORKSPACE/ccache-bin" >> $GITHUB_ENV
 
         export CCACHE_MAXSIZE="12G"
@@ -343,14 +361,13 @@ jobs:
 
     - name: 'Report Cache Sizes'
       shell: bash
-      working-directory: ${{ github.workspace }}/kernel/common
       run: |
         set -euo pipefail
         echo "📊 Cache sizes after build:"
         echo "   CCACHE usage:"
         du -sh "$CCACHE_DIR" || echo "   (no ccache directory)"
-        #echo "   LDCACHE usage:"
-        #du -sh "$LDCACHE_DIR" || echo "   (no ldcache directory)"
+        echo "   LDCACHE usage:"
+        du -sh "$LDCACHE_DIR" || echo "   (no ldcache directory)"
         
         echo "Perform cache eviction!"
         # 3h = 10800s using seconds to support older ccache
@@ -395,6 +412,15 @@ jobs:
         cache_path: /home/runner/.ccache
         cache_key: buildcache-${{ inputs.kernel_version }}
         cache_bucket: "ccache-cache"
+        compression_level: 9
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Save bazel cache
+      uses: ./.github/actions/save-cache
+      with:
+        cache_path: /home/runner/.cache/bazel
+        cache_key: buildcache-${{ inputs.kernel_version }}
+        cache_bucket: "bazel-cache"
         compression_level: 9
         github_token: ${{ secrets.GITHUB_TOKEN }}
 
