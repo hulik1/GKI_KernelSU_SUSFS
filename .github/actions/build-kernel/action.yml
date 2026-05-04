@@ -54,12 +54,12 @@ runs:
         
         export CC="/usr/bin/ccache clang"
         echo "CC=$CC" >> $GITHUB_ENV
-        #export CXX="/usr/bin/ccache clang++"
-        #echo "CXX=$CXX" >> $GITHUB_ENV
-        #export HOSTCC="/usr/bin/ccache clang"
-        #echo "HOSTCC=$HOSTCC" >> $GITHUB_ENV
-        #export HOSTCXX="/usr/bin/ccache clang++"
-        #echo "HOSTCXX=$HOSTCXX" >> $GITHUB_ENV
+        export CXX="/usr/bin/ccache clang++"
+        echo "CXX=$CXX" >> $GITHUB_ENV
+        export HOSTCC="/usr/bin/ccache clang"
+        echo "HOSTCC=$HOSTCC" >> $GITHUB_ENV
+        export HOSTCXX="/usr/bin/ccache clang++"
+        echo "HOSTCXX=$HOSTCXX" >> $GITHUB_ENV
         #export LD="$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
         #echo "LD=$LD" >> $GITHUB_ENV
         #export HOSTLD="$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
