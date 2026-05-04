@@ -26,7 +26,9 @@ runs:
         
         # Setup cache directories
         export CCACHE_DIR="/home/runner/.ccache"
+        echo "CCACHE_DIR=$CCACHE_DIR" >> $GITHUB_ENV
         export LDCACHE_DIR="/home/runner/.ld_cache"
+        echo "LDCACHE_DIR=$LDCACHE_DIR" >> $GITHUB_ENV
         mkdir -p "$CCACHE_DIR" "$LDCACHE_DIR"
         
         # Create LD wrapper for thin-LTO caching
@@ -47,30 +49,54 @@ runs:
         #chmod +x "$GITHUB_WORKSPACE/ccache-bin"/*
         
         # Export environment variables for subsequent steps
-        echo "CCACHE_DIR=$CCACHE_DIR" >> $GITHUB_ENV
-        echo "LDCACHE_DIR=$LDCACHE_DIR" >> $GITHUB_ENV
         #echo "PATH=$GITHUB_WORKSPACE/ccache-bin:$PATH" >> $GITHUB_ENV
+        
+        export CC="/usr/bin/ccache clang"
         echo "CC=/usr/bin/ccache clang" >> $GITHUB_ENV
+        export CXX="/usr/bin/ccache clang++"
         echo "CXX=/usr/bin/ccache clang++" >> $GITHUB_ENV
+        export HOSTCC="/usr/bin/ccache clang"
         echo "HOSTCC=/usr/bin/ccache clang" >> $GITHUB_ENV
+        export HOSTCXX="/usr/bin/ccache clang++"
         echo "HOSTCXX=/usr/bin/ccache clang++" >> $GITHUB_ENV
+        export LD="$GITHUB_WORKSPACE/kernel/ld-wrapper"
         echo "LD=$GITHUB_WORKSPACE/kernel/ld-wrapper" >> $GITHUB_ENV
+
         #echo "HOSTLD=$GITHUB_WORKSPACE/kernel/ld-wrapper" >> $GITHUB_ENV
         #echo "CLANG_PREBUILT_BIN=$GITHUB_WORKSPACE/ccache-bin" >> $GITHUB_ENV
 
+
+        export CCACHE_MAXSIZE="12G"
         echo CCACHE_MAXSIZE="12G" >> $GITHUB_ENV
+        export CCACHE_COMPILERCHECK="content"
         echo CCACHE_COMPILERCHECK="content" >> $GITHUB_ENV
+        export CCACHE_BASEDIR="${GITHUB_WORKSPACE}"
         echo CCACHE_BASEDIR="${GITHUB_WORKSPACE}" >> $GITHUB_ENV
+        export CCACHE_NOHASHDIR="true"
         echo CCACHE_NOHASHDIR="true" >> $GITHUB_ENV
+        export CCACHE_IGNOREOPTIONS="--sysroot*"
         echo CCACHE_IGNOREOPTIONS="--sysroot*" >> $GITHUB_ENV
+        export CCACHE_COMPRESSION="true"
         echo CCACHE_COMPRESSION="true" >> $GITHUB_ENV
+        export CCACHE_COMPRESSLEVEL="3"
         echo CCACHE_COMPRESSION_LEVEL="3" >> $GITHUB_ENV
+        export CCACHE_DIRECT="true"
         echo CCACHE_DIRECT="true" >> $GITHUB_ENV
+        export CCACHE_FILE_CLONE="true"
         echo CCACHE_FILE_CLONE="true" >> $GITHUB_ENV
+        export CCACHE_INODE_CACHE="true"
         echo CCACHE_INODE_CACHE="true" >> $GITHUB_ENV
+        export CCACHE_IS_KERNEL_COMPILING="true"
         echo CCACHE_IS_KERNEL_COMPILING="true" >> $GITHUB_ENV
+        export CCACHE_UMASK="002"
         echo CCACHE_UMASK="002" >> $GITHUB_ENV
+        export CCACHE_SLOPPINESS="file_macro,time_macros,include_file_mtime,include_file_ctime,pch_defines,system_headers,locale"
         echo CCACHE_SLOPPINESS="file_macro,time_macros,include_file_mtime,include_file_ctime,pch_defines,system_headers,locale" >> $GITHUB_ENV
+        
+        if ccache --help 2>&1 | grep -q 'depend_mode'; then
+          export CCACHE_DEPEND=true
+          echo "CCACHE_DEPEND=true" >> "$GITHUB_ENV"
+        fi
         
         # Initialize ccache
         #ccache -M 100G
