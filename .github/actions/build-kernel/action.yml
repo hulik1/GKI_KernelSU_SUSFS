@@ -5,7 +5,7 @@ runs:
   using: composite
   steps:
     - shell: bash
-      working-directory: ${{ github.workspace }}/kernel
+      working-directory: ${{ github.workspace }}
       run: |
         set -euo pipefail
         # Install ccache with ECS by cctv18
@@ -21,14 +21,31 @@ runs:
           exit 1
         fi
         echo "✅ ccache binary verified: $(/usr/bin/ccache --version | head -1)"
-        
-        export CCACHE_DIR="$GITHUB_WORKSPACE/kernel/.ccache"
-        export LDCACHE_DIR="$GITHUB_WORKSPACE/kernel/.ld_cache"
+
+    - name: 'Setup Cache Environment'
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
+        set -euo pipefail
+        export CCACHE_DIR="$GITHUB_WORKSPACE/kernel/common/.ccache"
+        echo "CCACHE_DIR=$CCACHE_DIR" >> $GITHUB_ENV
+        export LDCACHE_DIR="$GITHUB_WORKSPACE/kernel/common/.ld_cache"
+        echo "LDCACHE_DIR=$LDCACHE_DIR" >> $GITHUB_ENV
+
+        cat > "$GITHUB_WORKSPACE/kernel/common/ld-wrapper" << 'EOF'
+        #!/bin/bash
+        ld.lld "$@" --thinlto-cache-dir="$LDCACHE_DIR" --thinlto-jobs="$(nproc --all)"
+        EOF
+
         export CC="ccache clang"
+        echo "CC=$CC" >> $GITHUB_ENV
         export CXX="ccache clang++"
+        echo "CXX=$CXX" >> $GITHUB_ENV
         export HOSTCC="clang"
+        echo "HOSTCC=$HOSTCC" >> $GITHUB_ENV
         export HOSTCXX="clang++"
-        export CCACHE_MAXSIZE=10G
+        echo "HOSTCXX=$HOSTCXX" >> $GITHUB_ENV
+        #export CCACHE_MAXSIZE=10G
         #export CCACHE_COMPILERCHECK=content
         #export CCACHE_BASEDIR="$GITHUB_WORKSPACE/kernel"
         #export CCACHE_NOHASHDIR=true
@@ -44,32 +61,43 @@ runs:
         #  export CCACHE_DEPEND=true
         #fi
         echo "✅ ccache environment variables set"
-        echo "   CC: $CC"
-        echo "   CXX: $CXX"
+        #echo "   CC: $CC"
+        #echo "   CXX: $CXX"
         echo "📁 Cache directories:"
         echo "   CCACHE_DIR: $CCACHE_DIR"
         echo "   LDCACHE_DIR: $LDCACHE_DIR"
         mkdir -p "$CCACHE_DIR" "$LDCACHE_DIR"
-        /usr/bin/ccache -p
+        ccache -M 100G
+        ccache -p
+        ccache -s
+        ccache -z
 
+    - name: 'Build Kernel'
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
+        set -euo pipefail
         if [ -f "build/build.sh" ]; then
-          echo "🔨 Building with legacy build.sh (LTO caching to $LDCACHE_DIR)"
-          mkdir -p "$LDCACHE_DIR"
-          # Monitor ccache during build
-          /usr/bin/ccache -z  # Reset stats
-          SKIP_MRPROPER=1 LTO=thin SKIP_VENDOR_BOOT=1 SKIP_EXT_MODULES=1 SKIP_CP_KERNEL_HDR=1 GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" BUILD_CONFIG=common/build.config.gki.aarch64 CC="ccache clang" CXX="ccache clang++" build/build.sh
-          echo "📊 ccache stats after build:"
-          /usr/bin/ccache -s || true
+          SKIP_MRPROPER=1 \
+          LTO=thin \
+          SKIP_VENDOR_BOOT=1 \
+          SKIP_EXT_MODULES=1 \
+          SKIP_CP_KERNEL_HDR=1 \
+          GKI_DEFCONFIG_FRAGMENT="$GITHUB_WORKSPACE/wild_gki.fragment" \
+          BUILD_CONFIG=common/build.config.gki.aarch64 \
+          CC="ccache clang" \
+          CXX="ccache clang++" \
+          build/build.sh -j"$(nproc)
         else
-          echo "🔨 Building with Bazel/kleaf (LTO caching to $LDCACHE_DIR)"
-          mkdir -p "$LDCACHE_DIR"
           cp "$GITHUB_WORKSPACE/wild_gki.fragment" common/arch/arm64/configs/wild_gki.fragment
-          /usr/bin/ccache -z  # Reset stats
           tools/bazel build --config=release --notrim --defconfig_fragment=//common:arch/arm64/configs/wild_gki.fragment --disk_cache=$LDCACHE_DIR --cache_dir=$GITHUB_WORKSPACE/kernel/.cache/bazel //common:kernel_aarch64
-          echo "📊 ccache stats after build:"
-          /usr/bin/ccache -s || true
         fi
         
+    - name: 'Report Cache Sizes'
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
+        set -euo pipefail
         echo "📊 Cache sizes after build:"
         echo "   CCACHE usage:"
         du -sh "$CCACHE_DIR" || echo "   (no ccache directory)"
