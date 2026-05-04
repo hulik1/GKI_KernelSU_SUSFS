@@ -32,11 +32,11 @@ runs:
         mkdir -p "$CCACHE_DIR" "$LDCACHE_DIR"
         
         # Create LD wrapper for thin-LTO caching
-        cat > "$GITHUB_WORKSPACE/kernel/ld-wrapper" << 'EOF'
+        cat > "$GITHUB_WORKSPACE/kernel/common/ld-wrapper" << 'EOF'
         #!/bin/bash
         ld.lld "$@" --thinlto-cache-dir="$LDCACHE_DIR" --thinlto-jobs="$(nproc --all)"
         EOF
-        chmod +x "$GITHUB_WORKSPACE/kernel/ld-wrapper"
+        chmod +x "$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
 
         # Setup ccache compiler wrappers in PATH (masquerade method)
         # This intercepts compiler invocations regardless of how the build system calls them
@@ -52,17 +52,17 @@ runs:
         #echo "PATH=$GITHUB_WORKSPACE/ccache-bin:$PATH" >> $GITHUB_ENV
         
         export CC="/usr/bin/ccache clang"
-        echo "CC=/usr/bin/ccache clang" >> $GITHUB_ENV
+        echo "CC=$CC" >> $GITHUB_ENV
         export CXX="/usr/bin/ccache clang++"
-        echo "CXX=/usr/bin/ccache clang++" >> $GITHUB_ENV
+        echo "CXX=$CXX" >> $GITHUB_ENV
         export HOSTCC="/usr/bin/ccache clang"
-        echo "HOSTCC=/usr/bin/ccache clang" >> $GITHUB_ENV
+        echo "HOSTCC=$HOSTCC" >> $GITHUB_ENV
         export HOSTCXX="/usr/bin/ccache clang++"
-        echo "HOSTCXX=/usr/bin/ccache clang++" >> $GITHUB_ENV
-        export LD="$GITHUB_WORKSPACE/kernel/ld-wrapper"
-        echo "LD=$GITHUB_WORKSPACE/kernel/ld-wrapper" >> $GITHUB_ENV
-
-        #echo "HOSTLD=$GITHUB_WORKSPACE/kernel/ld-wrapper" >> $GITHUB_ENV
+        echo "HOSTCXX=$HOSTCXX" >> $GITHUB_ENV
+        export LD="$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
+        echo "LD=$LD" >> $GITHUB_ENV
+        export HOSTLD="$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
+        echo "HOSTLD=$HOSTLD" >> $GITHUB_ENV
         #echo "CLANG_PREBUILT_BIN=$GITHUB_WORKSPACE/ccache-bin" >> $GITHUB_ENV
 
 
