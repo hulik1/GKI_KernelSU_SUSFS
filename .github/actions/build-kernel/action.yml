@@ -36,6 +36,7 @@ runs:
         #!/bin/bash
         ld.lld "$@" --thinlto-cache-dir="$LDCACHE_DIR" --thinlto-jobs="$(nproc --all)"
         EOF
+        chmod +x "$GITHUB_WORKSPACE/kernel/common/ld-wrapper"
 
         export CC="ccache clang"
         echo "CC=$CC" >> $GITHUB_ENV
