@@ -56,7 +56,7 @@ on:
       use_repo:
         description: "Use repo for downloading kernel source"
         type: boolean
-        default: false
+        default: true
 
 jobs:
   build-a12-5-10:
