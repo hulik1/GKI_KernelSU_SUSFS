@@ -79,7 +79,7 @@ runs:
 
     - name: 'Build Kernel'
       shell: bash
-      working-directory: ${{ github.workspace }}/kernel/common
+      working-directory: ${{ github.workspace }}/kernel
       run: |
         set -euo pipefail
         if [ -f "build/build.sh" ]; then
