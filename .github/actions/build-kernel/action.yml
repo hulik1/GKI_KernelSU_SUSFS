@@ -56,6 +56,7 @@ runs:
         echo "HOSTCXX=clang++" >> $GITHUB_ENV
         echo "LD=$GITHUB_WORKSPACE/kernel/common/ld-wrapper" >> $GITHUB_ENV
         echo "HOSTLD=$GITHUB_WORKSPACE/kernel/common/ld-wrapper" >> $GITHUB_ENV
+        echo "CLANG_PREBUILT_BIN=$GITHUB_WORKSPACE/ccache-bin" >> $GITHUB_ENV
         
         # Initialize ccache
         ccache -M 100G
@@ -73,6 +74,25 @@ runs:
       working-directory: ${{ github.workspace }}/kernel
       run: |
         set -euo pipefail
+        echo "🔍 Debug: Current environment"
+        echo "   PATH: $PATH"
+        echo "   CC: ${CC:-unset}"
+        echo "   CXX: ${CXX:-unset}"
+        echo "   CLANG_PREBUILT_BIN: ${CLANG_PREBUILT_BIN:-unset}"
+        echo "   CCACHE_DIR: ${CCACHE_DIR:-unset}"
+        echo "   ccache-bin exists: $([ -d $GITHUB_WORKSPACE/ccache-bin ] && echo 'YES' || echo 'NO')"
+        echo "   ccache-bin/clang: $([ -f $GITHUB_WORKSPACE/ccache-bin/clang ] && echo 'YES' || echo 'NO')"
+        echo "   which clang: $(which clang || echo 'NOT IN PATH')"
+        echo ""
+        
+        # Source the build config to see what values it uses
+        echo "🔍 Debug: Checking build.config values (before build)..."
+        if [ -f "common/build.config.gki.aarch64" ]; then
+          echo "   Found build.config.gki.aarch64:"
+          grep -i "CLANG_PREBUILT_BIN\|CC\|CXX" common/build.config.gki.aarch64 | head -20 || echo "   (no compiler config found)"
+        fi
+        echo ""
+        
         if [ -f "build/build.sh" ]; then
           SKIP_MRPROPER=1 \
           LTO=thin \
