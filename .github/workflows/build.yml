@@ -204,8 +204,34 @@ jobs:
         kernel_version: ${{ inputs.kernel_version }}
         sublevel: ${{ steps.extract.outputs.sublevel }}
 
-    - name: Restore build caches (ccache, bazel, bazel-disk, lto)
+    - name: Restore build caches (ccache, lto)
       id: restore-caches
+      if: |
+        inputs.version == 'android12-5.10' ||
+        inputs.version == 'android13-5.10' ||
+        inputs.version == 'android13-5.15'
+      uses: ./.github/actions/cache-restore
+      with:
+        cache_paths: |
+          /home/runner/.ccache
+          /home/runner/.ld_cache
+        cache_keys: |
+          buildcache-${{ inputs.kernel_version }}
+          buildcache-${{ inputs.kernel_version }}
+        cache_buckets: |
+          ccache-cache
+          lto-cache
+        compression_level: 9
+        restore_keys: |
+          buildcache-
+
+    - name: Restore build caches (ccache, bazel, lto)
+      id: restore-caches-bazel
+      if: |
+        inputs.version == 'android14-5.15' ||
+        inputs.version == 'android14-6.1' ||
+        inputs.version == 'android15-6.6' ||
+        inputs.version == 'android16-6.12'
       uses: ./.github/actions/cache-restore
       with:
         cache_paths: |
@@ -226,10 +252,13 @@ jobs:
 
     - name: Check cache hit
       run: |
-        if [ "${{ steps.restore-caches.outputs.cache-hit }}" = "true" ]; then
+        CACHE_HIT="${{ steps.restore-caches.outputs.cache-hit || steps.restore-caches-bazel.outputs.cache-hit }}"
+        if [ "$CACHE_HIT" = "true" ]; then
           echo "✅ Cache HIT"
-          IFS=',' read -ra KEYS <<< "${{ steps.restore-caches.outputs.cache-key }}"
-          IFS=',' read -ra SIZES <<< "${{ steps.restore-caches.outputs.cache-size }}"
+          CACHE_OUTPUT="${{ steps.restore-caches.outputs.cache-key || steps.restore-caches-bazel.outputs.cache-key }}"
+          SIZE_OUTPUT="${{ steps.restore-caches.outputs.cache-size || steps.restore-caches-bazel.outputs.cache-size }}"
+          IFS=',' read -ra KEYS <<< "$CACHE_OUTPUT"
+          IFS=',' read -ra SIZES <<< "$SIZE_OUTPUT"
           
           for i in "${!KEYS[@]}"; do
             echo "   [${i}] ${KEYS[$i]} (${SIZES[$i]})"
@@ -254,7 +283,31 @@ jobs:
       with:
         clear_stats: false
 
-    - name: Save build caches (ccache, bazel, bazel-disk, lto)
+    - name: Save build caches (ccache, lto)
+      if: |
+        inputs.version == 'android12-5.10' ||
+        inputs.version == 'android13-5.10' ||
+        inputs.version == 'android13-5.15'
+      uses: ./.github/actions/cache-save
+      with:
+        cache_paths: |
+          /home/runner/.ccache
+          /home/runner/.ld_cache
+        cache_keys: |
+          buildcache-${{ inputs.kernel_version }}
+          buildcache-${{ inputs.kernel_version }}
+        cache_buckets: |
+          ccache-cache
+          lto-cache
+        compression_level: 9
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Save build caches (ccache, bazel, lto)
+      if: |
+        inputs.version == 'android14-5.15' ||
+        inputs.version == 'android14-6.1' ||
+        inputs.version == 'android15-6.6' ||
+        inputs.version == 'android16-6.12'
       uses: ./.github/actions/cache-save
       with:
         cache_paths: |
@@ -280,24 +333,14 @@ jobs:
         os_patch_level: ${{ inputs.os_patch_level }}
         file_name: ${{ steps.extract.outputs.file_name }}
 
-    - name: Upload Boot Image (boot.img)
+    - name: Upload Boot Images
       uses: actions/upload-artifact@v7
       with:
-        path: ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot.img
-        if-no-files-found: error
-        archive: false
-
-    - name: Upload Boot Image (boot-gz.img)
-      uses: actions/upload-artifact@v7
-      with:
-        path: ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot-gz.img
-        if-no-files-found: error
-        archive: false
-
-    - name: Upload Boot Image (boot-lz4.img)
-      uses: actions/upload-artifact@v7
-      with:
-        path: ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot-lz4.img
+        name: ${{ steps.extract.outputs.file_name }}-BootImages
+        path: |
+          ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot.img
+          ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot-gz.img
+          ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot-lz4.img
         if-no-files-found: error
         archive: false
 
