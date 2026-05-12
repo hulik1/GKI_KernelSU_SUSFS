@@ -327,14 +327,27 @@ jobs:
         os_patch_level: ${{ inputs.os_patch_level }}
         file_name: ${{ steps.extract.outputs.file_name }}
 
-    - name: Upload Boot Images
+    - name: Upload Boot Image (.img)
       uses: actions/upload-artifact@v7
       with:
-        name: ${{ steps.extract.outputs.file_name }}-BootImages
-        path: |
-          ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot.img
-          ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot-gz.img
-          ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot-lz4.img
+        name: ${{ steps.extract.outputs.file_name }}-boot.img
+        path: ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot.img
+        if-no-files-found: error
+        archive: false
+
+    - name: Upload Boot Image (.img.gz)
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ steps.extract.outputs.file_name }}-boot-gz.img
+        path: ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot-gz.img
+        if-no-files-found: error
+        archive: false
+
+    - name: Upload Boot Image (.img.lz4)
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ steps.extract.outputs.file_name }}-boot-lz4.img
+        path: ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot-lz4.img
         if-no-files-found: error
         archive: false
 
