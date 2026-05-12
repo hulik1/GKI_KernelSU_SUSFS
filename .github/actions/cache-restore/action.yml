@@ -61,6 +61,8 @@ runs:
       env:
         TARGET_REPO: "${{ github.repository }}"
       run: |
+        set -euo pipefail
+
         # Validate and parse inputs
         PATHS_INPUT="${{ inputs.cache_paths }}"
         KEYS_INPUT="${{ inputs.cache_keys }}"
@@ -114,7 +116,7 @@ runs:
           BASE_URL="https://github.com/${TARGET_REPO}/releases/download/$TAG_NAME"
           ASSETS_URL="https://github.com/${TARGET_REPO}/releases/expanded_assets/$TAG_NAME"
           
-          echo "::group:: [$((idx+1))/$${#PATHS_ARRAY[@]}] Cache: $CACHE_BUCKET - Fetching Asset List"
+          echo "::group:: [$((idx+1))/${#PATHS_ARRAY[@]}] Cache: $CACHE_BUCKET - Fetching Asset List"
           HTTP_RESPONSE=$(curl -sL -A "Mozilla/5.0" -w "%{http_code}" "$ASSETS_URL" -o assets.html || echo "404")
           
           if [ "$HTTP_RESPONSE" -eq 200 ]; then
@@ -139,7 +141,7 @@ runs:
           FOUND=false
           while read -r KEY; do
             [ -z "$KEY" ] && continue
-            echo "::group:: [$((idx+1))/$${#PATHS_ARRAY[@]}] Searching Prefix: $KEY"
+            echo "::group:: [$((idx+1))/${#PATHS_ARRAY[@]}] Searching Prefix: $KEY"
             
             MATCH=$(echo "$ALL_ASSETS" | grep "^cache-$KEY" | sort -r | head -n 1 || true)
             
@@ -159,7 +161,7 @@ runs:
             echo "✅ Hit! Restoring $BASE_FILENAME$EXT"
             echo "::endgroup::"
             
-            echo "::group:: [$((idx+1))/$${#PATHS_ARRAY[@]}] Downloading Cache"
+            echo "::group:: [$((idx+1))/${#PATHS_ARRAY[@]}] Downloading Cache"
             
             download_asset() {
               local filename="$1"
@@ -169,11 +171,28 @@ runs:
               
               while [ $attempt -le $max_retries ]; do
                 echo "  Attempt $attempt: Downloading $filename..."
-                
-                if timeout 10m aria2c "${ARIA2_OPTS[@]}" --retry-wait=10 --max-tries=10 -o "$filename" "$url"; then
-                  return 0
+                # Prefer gh release download (reliable and atomic) when available
+                rm -f "$filename"
+                if command -v gh >/dev/null 2>&1; then
+                  if timeout 10m gh release download "$TAG_NAME" --repo "$TARGET_REPO" --pattern "$filename" -D . >/dev/null 2>&1; then
+                    # gh writes the file with the same name into the current directory
+                    if [ -s "$filename" ]; then
+                      return 0
+                    fi
+                  fi
                 fi
-                
+
+                # Fallback to aria2c
+                if timeout 10m aria2c "${ARIA2_OPTS[@]}" --retry-wait=10 --max-tries=10 -o "$filename" "$url"; then
+                  # ensure file is non-empty
+                  if [ -s "$filename" ]; then
+                    return 0
+                  else
+                    echo "  ⚠️ Downloaded file is empty. Retrying..."
+                    rm -f "$filename"
+                  fi
+                fi
+
                 echo "  ⚠️ Download failed or timed out. Retrying in 5s..."
                 sleep 5
                 attempt=$((attempt + 1))
@@ -199,20 +218,122 @@ runs:
             fi
             echo "::endgroup::"
             
-            echo "::group:: [$((idx+1))/$${#PATHS_ARRAY[@]}] Extracting Cache"
+            echo "::group:: [$((idx+1))/${#PATHS_ARRAY[@]}] Extracting Cache"
             mkdir -p "$CACHE_PATH"
             FINAL_ARCHIVE="$BASE_FILENAME$EXT"
             EXTRACT_DIR="$(dirname "$CACHE_PATH")"
             
             if [ "$IS_SPLIT" = "true" ]; then
-              PARTS=$(ls "$FINAL_ARCHIVE.part"* | sort)
-              if [ "$COMPRESSED" = "true" ]; then
-                # Extract quietly (no verbose listing)
-                cat $PARTS | tar -I "zstd -d -T0" -xf - -C "$EXTRACT_DIR"
-              else
-                cat $PARTS | tar -xf - -C "$EXTRACT_DIR"
+              mapfile -t PARTS_ARRAY < <(printf '%s\n' "$FINAL_ARCHIVE".part* | sort)
+              if [ ${#PARTS_ARRAY[@]} -eq 0 ] || [ ! -e "${PARTS_ARRAY[0]}" ]; then
+                echo "::error::Split archive parts not found for $FINAL_ARCHIVE"
+                exit 1
               fi
-              rm -f $PARTS
+              for part_file in "${PARTS_ARRAY[@]}"; do
+                if [ ! -s "$part_file" ]; then
+                  echo "::error::Split archive part is missing or empty: $part_file"
+                  exit 1
+                fi
+              done
+
+              # Create a concatenated archive file but keep parts until extraction succeeds
+              cat "${PARTS_ARRAY[@]}" > "$FINAL_ARCHIVE"
+
+              # Attempt to fetch checksum asset (FILENAME.sha256) and verify before extracting
+              CHECKSUM_FILE="$FINAL_ARCHIVE.sha256"
+              EXPECTED_SUM=""
+              if command -v gh >/dev/null 2>&1; then
+                if gh release view "$TAG_NAME" --repo "$TARGET_REPO" >/dev/null 2>&1; then
+                  if gh release download "$TAG_NAME" --repo "$TARGET_REPO" --pattern "$CHECKSUM_FILE" -D . >/dev/null 2>&1; then
+                    if [ -s "$CHECKSUM_FILE" ]; then
+                      EXPECTED_SUM=$(awk '{print $1}' "$CHECKSUM_FILE" || true)
+                      echo "Found checksum for $FINAL_ARCHIVE: $EXPECTED_SUM"
+                    fi
+                  fi
+                fi
+              fi
+
+              MAX_EXTRACT_ATTEMPTS=3
+              attempt=1
+              extracted=false
+              while [ $attempt -le $MAX_EXTRACT_ATTEMPTS ]; do
+                echo "Attempting extraction (attempt $attempt/$MAX_EXTRACT_ATTEMPTS)"
+
+                # If we have an expected checksum, verify it
+                if [ -n "$EXPECTED_SUM" ]; then
+                  if command -v sha256sum >/dev/null 2>&1; then
+                    ACTUAL_SUM=$(sha256sum "$FINAL_ARCHIVE" | awk '{print $1}') || ACTUAL_SUM=""
+                  else
+                    ACTUAL_SUM=$(openssl dgst -sha256 "$FINAL_ARCHIVE" | awk '{print $2}') || ACTUAL_SUM=""
+                  fi
+                  echo "  actual=$ACTUAL_SUM expected=$EXPECTED_SUM"
+                  if [ -n "$ACTUAL_SUM" ] && [ "$ACTUAL_SUM" != "$EXPECTED_SUM" ]; then
+                    echo "  ⚠️ Checksum mismatch (will re-download parts)"
+                    extracted=false
+                  else
+                    echo "  Checksum OK or not provided, proceeding to extract"
+                    extracted=true
+                  fi
+                else
+                  echo "  No checksum available, proceeding to extraction"
+                  extracted=true
+                fi
+
+                if [ "$extracted" = "true" ]; then
+                  if [ "$COMPRESSED" = "true" ]; then
+                    if tar -I "zstd -d -T0" -xf "$FINAL_ARCHIVE" -C "$EXTRACT_DIR"; then
+                      extracted=true
+                      break
+                    else
+                      extracted=false
+                    fi
+                  else
+                    if tar -xf "$FINAL_ARCHIVE" -C "$EXTRACT_DIR"; then
+                      extracted=true
+                      break
+                    else
+                      extracted=false
+                    fi
+                  fi
+                fi
+
+                echo "Extraction failed (possible truncated download or checksum mismatch)."
+                if [ $attempt -lt $MAX_EXTRACT_ATTEMPTS ]; then
+                  echo "Re-downloading split parts and retrying..."
+                  # remove concatenated before re-download
+                  rm -f "$FINAL_ARCHIVE"
+                  for part_file in "${PARTS_ARRAY[@]}"; do
+                    echo "  Re-downloading $part_file"
+                    rm -f "$part_file"
+                    if ! download_asset "$part_file" "$BASE_URL/$part_file"; then
+                      echo "::error::Failed to re-download $part_file"
+                      exit 1
+                    fi
+                  done
+                  # rebuild concatenated archive
+                  cat "${PARTS_ARRAY[@]}" > "$FINAL_ARCHIVE"
+                  # re-fetch checksum if available
+                  if command -v gh >/dev/null 2>&1; then
+                    rm -f "$CHECKSUM_FILE"
+                    gh release download "$TAG_NAME" --repo "$TARGET_REPO" --pattern "$CHECKSUM_FILE" -D . >/dev/null 2>&1 || true
+                    if [ -s "$CHECKSUM_FILE" ]; then
+                      EXPECTED_SUM=$(awk '{print $1}' "$CHECKSUM_FILE" || true)
+                    else
+                      EXPECTED_SUM=""
+                    fi
+                  fi
+                fi
+                attempt=$((attempt+1))
+              done
+
+              if [ "$extracted" = "false" ]; then
+                echo "::error::Extraction failed after $MAX_EXTRACT_ATTEMPTS attempts. Aborting."
+                exit 1
+              fi
+
+              # cleanup parts and final archive after successful extraction
+              rm -f "${PARTS_ARRAY[@]}"
+              rm -f "$FINAL_ARCHIVE"
             else
               if [ "$COMPRESSED" = "true" ]; then
                 tar -I "zstd -d -T0" -xf "$FINAL_ARCHIVE" -C "$EXTRACT_DIR"
