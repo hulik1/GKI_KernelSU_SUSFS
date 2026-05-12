@@ -225,7 +225,7 @@ jobs:
         restore_keys: |
           buildcache-
 
-    - name: Restore build caches (ccache, bazel, lto)
+    - name: Restore build caches (bazel, lto)
       id: restore-caches-bazel
       if: |
         inputs.version == 'android14-5.15' ||
@@ -235,15 +235,12 @@ jobs:
       uses: ./.github/actions/cache-restore
       with:
         cache_paths: |
-          /home/runner/.ccache
           /home/runner/.cache/bazel
           /home/runner/.ld_cache
         cache_keys: |
           buildcache-${{ inputs.kernel_version }}
           buildcache-${{ inputs.kernel_version }}
-          buildcache-${{ inputs.kernel_version }}
         cache_buckets: |
-          ccache-cache
           bazel-cache
           lto-cache
         compression_level: 9
@@ -302,7 +299,7 @@ jobs:
         compression_level: 9
         github_token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Save build caches (ccache, bazel, lto)
+    - name: Save build caches (bazel, lto)
       if: |
         inputs.version == 'android14-5.15' ||
         inputs.version == 'android14-6.1' ||
@@ -311,15 +308,12 @@ jobs:
       uses: ./.github/actions/cache-save
       with:
         cache_paths: |
-          /home/runner/.ccache
           /home/runner/.cache/bazel
           /home/runner/.ld_cache
         cache_keys: |
           buildcache-${{ inputs.kernel_version }}
           buildcache-${{ inputs.kernel_version }}
-          buildcache-${{ inputs.kernel_version }}
         cache_buckets: |
-          ccache-cache
           bazel-cache
           lto-cache
         compression_level: 9
