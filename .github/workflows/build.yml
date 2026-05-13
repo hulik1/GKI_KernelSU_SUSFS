@@ -204,29 +204,40 @@ jobs:
         kernel_version: ${{ inputs.kernel_version }}
         sublevel: ${{ steps.extract.outputs.sublevel }}
 
-    - name: Restore build caches (ccache, lto)
-      id: restore-caches
+    - name: Restore ccache
+      id: restore-ccache
       if: |
         inputs.version == 'android12-5.10' ||
         inputs.version == 'android13-5.10' ||
         inputs.version == 'android13-5.15'
       uses: ./.github/actions/cache-restore
       with:
-        cache_paths: |
-          /home/runner/.ccache
-          /home/runner/.ld_cache
-        cache_keys: |
-          buildcache-${{ inputs.kernel_version }}
-          buildcache-${{ inputs.kernel_version }}
-        cache_buckets: |
-          ccache-cache
-          lto-cache
+        cache_path: /home/runner/.ccache
+        cache_key: ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-${{ inputs.os_patch_level }}
+        cache_bucket: ccache-cache
         compression_level: 9
         restore_keys: |
-          buildcache-
+          ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-
+          ${{ inputs.android_version }}-${{ inputs.kernel_version }}-
 
-    - name: Restore build caches (bazel, lto)
-      id: restore-caches-bazel
+    - name: Restore lto-cache (ccache versions)
+      id: restore-lto-ccache
+      if: |
+        inputs.version == 'android12-5.10' ||
+        inputs.version == 'android13-5.10' ||
+        inputs.version == 'android13-5.15'
+      uses: ./.github/actions/cache-restore
+      with:
+        cache_path: /home/runner/.ld_cache
+        cache_key: ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-${{ inputs.os_patch_level }}
+        cache_bucket: lto-cache
+        compression_level: 9
+        restore_keys: |
+          ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-
+          ${{ inputs.android_version }}-${{ inputs.kernel_version }}-
+
+    - name: Restore bazel-cache
+      id: restore-bazel
       if: |
         inputs.version == 'android14-5.15' ||
         inputs.version == 'android14-6.1' ||
@@ -234,35 +245,41 @@ jobs:
         inputs.version == 'android16-6.12'
       uses: ./.github/actions/cache-restore
       with:
-        cache_paths: |
-          /home/runner/.cache/bazel
-          /home/runner/.ld_cache
-        cache_keys: |
-          buildcache-${{ inputs.kernel_version }}
-          buildcache-${{ inputs.kernel_version }}
-        cache_buckets: |
-          bazel-cache
-          lto-cache
+        cache_path: /home/runner/.cache/bazel
+        cache_key: ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-${{ inputs.os_patch_level }}
+        cache_bucket: bazel-cache
         compression_level: 9
         restore_keys: |
-          buildcache-
+          ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-
+          ${{ inputs.android_version }}-${{ inputs.kernel_version }}-
+
+    - name: Restore lto-cache (bazel versions)
+      id: restore-lto-bazel
+      if: |
+        inputs.version == 'android14-5.15' ||
+        inputs.version == 'android14-6.1' ||
+        inputs.version == 'android15-6.6' ||
+        inputs.version == 'android16-6.12'
+      uses: ./.github/actions/cache-restore
+      with:
+        cache_path: /home/runner/.ld_cache
+        cache_key: ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-${{ inputs.os_patch_level }}
+        cache_bucket: lto-cache
+        compression_level: 9
+        restore_keys: |
+          ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-
+          ${{ inputs.android_version }}-${{ inputs.kernel_version }}-
 
     - name: Check cache hit
       run: |
-        CACHE_HIT="${{ steps.restore-caches.outputs.cache-hit || steps.restore-caches-bazel.outputs.cache-hit }}"
-        if [ "$CACHE_HIT" = "true" ]; then
-          echo "✅ Cache HIT"
-          CACHE_OUTPUT="${{ steps.restore-caches.outputs.cache-key || steps.restore-caches-bazel.outputs.cache-key }}"
-          SIZE_OUTPUT="${{ steps.restore-caches.outputs.cache-size || steps.restore-caches-bazel.outputs.cache-size }}"
-          IFS=',' read -ra KEYS <<< "$CACHE_OUTPUT"
-          IFS=',' read -ra SIZES <<< "$SIZE_OUTPUT"
-          
-          for i in "${!KEYS[@]}"; do
-            echo "   [${i}] ${KEYS[$i]} (${SIZES[$i]})"
-          done
-        else
-          echo "❌ No caches found - Fresh build"
-        fi
+        echo "Cache restore status:"        CCACHE_HIT="${{ steps.restore-ccache.outputs.cache-hit || 'skipped' }}"
+        LTO_CCACHE_HIT="${{ steps.restore-lto-ccache.outputs.cache-hit || 'skipped' }}"
+        BAZEL_HIT="${{ steps.restore-bazel.outputs.cache-hit || 'skipped' }}"
+        LTO_BAZEL_HIT="${{ steps.restore-lto-bazel.outputs.cache-hit || 'skipped' }}"
+        echo "  ccache: $CCACHE_HIT"
+        echo "  lto (ccache versions): $LTO_CCACHE_HIT"
+        echo "  bazel: $BAZEL_HIT"
+        echo "  lto (bazel versions): $LTO_BAZEL_HIT"
 
     - name: Get Cache Stats
       uses: ./.github/actions/cache-stats
@@ -280,26 +297,33 @@ jobs:
       with:
         clear_stats: false
 
-    - name: Save build caches (ccache, lto)
+    - name: Save ccache
       if: |
         inputs.version == 'android12-5.10' ||
         inputs.version == 'android13-5.10' ||
         inputs.version == 'android13-5.15'
       uses: ./.github/actions/cache-save
       with:
-        cache_paths: |
-          /home/runner/.ccache
-          /home/runner/.ld_cache
-        cache_keys: |
-          buildcache-${{ inputs.kernel_version }}
-          buildcache-${{ inputs.kernel_version }}
-        cache_buckets: |
-          ccache-cache
-          lto-cache
+        cache_path: /home/runner/.ccache
+        cache_key: ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-${{ inputs.os_patch_level }}
+        cache_bucket: ccache-cache
         compression_level: 9
         github_token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Save build caches (bazel, lto)
+    - name: Save lto-cache (ccache versions)
+      if: |
+        inputs.version == 'android12-5.10' ||
+        inputs.version == 'android13-5.10' ||
+        inputs.version == 'android13-5.15'
+      uses: ./.github/actions/cache-save
+      with:
+        cache_path: /home/runner/.ld_cache
+        cache_key: ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-${{ inputs.os_patch_level }}
+        cache_bucket: lto-cache
+        compression_level: 9
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Save bazel-cache
       if: |
         inputs.version == 'android14-5.15' ||
         inputs.version == 'android14-6.1' ||
@@ -307,15 +331,23 @@ jobs:
         inputs.version == 'android16-6.12'
       uses: ./.github/actions/cache-save
       with:
-        cache_paths: |
-          /home/runner/.cache/bazel
-          /home/runner/.ld_cache
-        cache_keys: |
-          buildcache-${{ inputs.kernel_version }}
-          buildcache-${{ inputs.kernel_version }}
-        cache_buckets: |
-          bazel-cache
-          lto-cache
+        cache_path: /home/runner/.cache/bazel
+        cache_key: ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-${{ inputs.os_patch_level }}
+        cache_bucket: bazel-cache
+        compression_level: 9
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Save lto-cache (bazel versions)
+      if: |
+        inputs.version == 'android14-5.15' ||
+        inputs.version == 'android14-6.1' ||
+        inputs.version == 'android15-6.6' ||
+        inputs.version == 'android16-6.12'
+      uses: ./.github/actions/cache-save
+      with:
+        cache_path: /home/runner/.ld_cache
+        cache_key: ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-${{ inputs.os_patch_level }}
+        cache_bucket: lto-cache
         compression_level: 9
         github_token: ${{ secrets.GITHUB_TOKEN }}
 

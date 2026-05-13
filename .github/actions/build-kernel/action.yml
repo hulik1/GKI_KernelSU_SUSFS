@@ -9,6 +9,21 @@ runs:
     working-directory: ${{ github.workspace }}/kernel
     run: |
       set -euo pipefail
+
+      # Override expensive GKI build.sh artifact defaults we do not need in CI.
+      GKI_BUILD_CONFIG_FRAGMENT_PATH="${{ github.workspace }}/gki_build_overrides.fragment"
+      cat > "${GKI_BUILD_CONFIG_FRAGMENT_PATH}" <<'EOF'
+      BUILD_GKI_ARTIFACTS=
+      BUILD_GKI_CERTIFICATION_TOOLS=0
+      BUILD_SYSTEM_DLKM=0
+
+      # Skip heavy packaging steps we don't need in CI
+      SKIP_VENDOR_BOOT=1
+      SKIP_EXT_MODULES=1
+      SKIP_CP_KERNEL_HDR=1
+      SKIP_MRPROPER=1
+      EOF
+
       if [ -f "build/build.sh" ]; then
         SKIP_VENDOR_BOOT=1 \
         SKIP_EXT_MODULES=1 \
@@ -16,6 +31,7 @@ runs:
         SKIP_MRPROPER=1 \
         LTO=thin \
         GKI_DEFCONFIG_FRAGMENT="${{ github.workspace }}/wild_gki.fragment" \
+        GKI_BUILD_CONFIG_FRAGMENT="${GKI_BUILD_CONFIG_FRAGMENT_PATH}" \
         BUILD_CONFIG=common/build.config.gki.aarch64 \
         build/build.sh -j"$(nproc)" \
         CC="$CC" \
