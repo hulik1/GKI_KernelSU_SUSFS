@@ -61,6 +61,8 @@ runs:
       working-directory: ${{ github.workspace }}/kernel
       run: |
         cat >> "${{ github.workspace }}/wild_gki.fragment" << 'EOF'
+        CONFIG_ANDROID_KABI_RESERVE=y
+        CONFIG_ANDROID_VENDOR_OEM_DATA=y
         CONFIG_SYSVIPC=y
         CONFIG_POSIX_MQUEUE=y
         CONFIG_IPC_NS=y
@@ -68,9 +70,8 @@ runs:
         CONFIG_DEVTMPFS=y
         EOF
 
-    - name: Fix 5.10
-      shell: bash
-      if: inputs.version == 'android12-5.10'
-      working-directory: ${{ github.workspace }}/kernel
-      run: |
-        sed -i '/#ifdef CONFIG_PID_NS/,/#else/s/static inline struct pid_namespace \*get_pid_ns(struct pid_namespace \*ns)/extern struct pid_namespace *get_pid_ns(struct pid_namespace *ns);/' common/include/linux/pid_namespace.h
+        if [ "${{ inputs.version }}" = "android16-6.12" ]; then
+          cat >> "${{ github.workspace }}/wild_gki.fragment" << 'EOF'
+        # CONFIG_ANDROID_BINDER_IPC_RUST is not set
+        EOF
+        fi

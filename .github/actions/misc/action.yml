@@ -40,7 +40,7 @@ runs:
 
     - name: Add RUST build configs
       shell: bash
-      if: ${{ inputs.version == 'android16-6.12' && inputs.sublevel <= '38' }}
+      if: ${{ inputs.version == 'android16-6.12' && inputs.sublevel >= '38' && false }}
       run: |
         set -euo pipefail
         echo "Add Build based configs"
@@ -48,14 +48,3 @@ runs:
         # CONFIG_ANDROID_BINDER_IPC_RUST is not set
         CONFIG_ANDROID_BINDER_IPC_RUST_DUMMY=m
         EOF
-
-    - name: Add boot time build configs
-      shell: bash
-      if: ${{ inputs.variant == 'boot-time' }}
-      working-directory: ${{ github.workspace }}/kernel/common
-      run: |
-        set -euo pipefail
-        cat fs/proc/uptime.c
-        sed -i 's/ktime_get_boottime_ts64(&uptime);/uptime.tv_sec = 668 * 3600;/' fs/proc/uptime.c
-        sed -i 's/timens_add_boottime(&uptime);/uptime.tv_nsec = 0;/' fs/proc/uptime.c
-        cat fs/proc/uptime.c
