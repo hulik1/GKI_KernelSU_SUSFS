@@ -76,6 +76,14 @@ jobs:
         os_patch_level: ${{ inputs.os_patch_level }}
         use_repo: ${{ inputs.use_repo }}
 
+    - name: Set Build Timestamp from Kernel Commit
+      shell: bash
+      run: |
+        SOURCE_DATE_EPOCH=$(git -C "${{ github.workspace }}/kernel/common" log -1 --format=%ct 2>/dev/null || date -u +%s)
+        echo "SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH" >> $GITHUB_ENV
+        echo "KBUILD_BUILD_TIMESTAMP=$(date -u -d @${SOURCE_DATE_EPOCH} '+%a %b %d %H:%M:%S UTC %Y')" >> $GITHUB_ENV
+        echo "Build timestamp set to: $(date -u -d @${SOURCE_DATE_EPOCH} '+%Y-%m-%d %H:%M:%S UTC')"
+
     - name: Extract Sublevel and Set File Name
       id: extract
       uses: ./.github/actions/extract-sublevel-file-name
@@ -142,11 +150,11 @@ jobs:
       with:
         kernel_version: ${{ inputs.kernel_version }}
 
-    - name: Apply Device-Specific Patches
-      uses: ./.github/actions/apply-device-patches
-      with:
-        version: ${{ inputs.version }}
-        kernel_version: ${{ inputs.kernel_version }}
+    # - name: Apply Device-Specific Patches
+    #   uses: ./.github/actions/apply-device-patches
+    #   with:
+    #     version: ${{ inputs.version }}
+    #     kernel_version: ${{ inputs.kernel_version }}
 
     - name: Apply ABI Compare Bypass
       if: false

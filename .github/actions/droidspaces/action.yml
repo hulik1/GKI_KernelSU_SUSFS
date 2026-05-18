@@ -56,13 +56,21 @@ runs:
           patch -p1 < 002.5.10_or_lower_use_android_abi_padding_for_posix_mqueue.patch
         fi
 
+    - name: Export IPC symbols for module linkage
+      shell: bash
+      if: 
+      working-directory: ${{ github.workspace }}/kernel
+      run: |
+        echo >> "${{ github.workspace }}/kernel/common/ipc/namespace.c"
+        echo 'EXPORT_SYMBOL_GPL(put_ipc_ns);' >> "${{ github.workspace }}/kernel/common/ipc/namespace.c"
+        echo >> "${{ github.workspace }}/kernel/common/ipc/msgutil.c"
+        echo 'EXPORT_SYMBOL_GPL(init_ipc_ns);' >> "${{ github.workspace }}/kernel/common/ipc/msgutil.c"
+
     - name: Enable Configs
       shell: bash
       working-directory: ${{ github.workspace }}/kernel
       run: |
         cat >> "${{ github.workspace }}/wild_gki.fragment" << 'EOF'
-        CONFIG_ANDROID_KABI_RESERVE=y
-        CONFIG_ANDROID_VENDOR_OEM_DATA=y
         CONFIG_SYSVIPC=y
         CONFIG_POSIX_MQUEUE=y
         CONFIG_IPC_NS=y
@@ -70,8 +78,3 @@ runs:
         CONFIG_DEVTMPFS=y
         EOF
 
-        if [ "${{ inputs.version }}" = "android16-6.12" ]; then
-          cat >> "${{ github.workspace }}/wild_gki.fragment" << 'EOF'
-        # CONFIG_ANDROID_BINDER_IPC_RUST is not set
-        EOF
-        fi

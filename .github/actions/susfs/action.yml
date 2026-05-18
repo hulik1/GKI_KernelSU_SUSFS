@@ -59,8 +59,8 @@ runs:
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/KernelSU-Next
       run: |
-        cp ${{ github.workspace }}/kernel_patches/wild/ksun-4c9737a-susfs-v2.1.0-a14-6.1-ef16cbce.patch ./
-        patch -p1 < ksun-4c9737a-susfs-v2.1.0-a14-6.1-ef16cbce.patch
+        cp ${{ github.workspace }}/kernel_patches/wild/ksun-5a4a718-susfs-f7ae19ef-gki-android14-6.1.patch ./
+        patch -p1 < ksun-5a4a718-susfs-f7ae19ef-gki-android14-6.1.patch
 
     - name: Apply Kernel SUSFS Patches
       shell: bash
@@ -143,19 +143,17 @@ runs:
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
         echo "Applying 6.6 SUSFS fixes"
-        #if [ "${{ inputs.sublevel }}" -le "46" ]; then
-        #  echo "Applying namespace.c Android 15 6.6 Fake Patch"
-        #  sed -i '/^#include <trace\/hooks\/blk.h>$/a #include <trace/hooks/fs.h>' fs/namespace.c
-        #fi
-        if [ "${{ inputs.sublevel }}" -le "58" ]; then
-          echo "Applying task_mmu.c Android 15 6.6 Fake Patch"
-          sed -i "/int ret.*= 0, copied.*= 0;/a \\	unsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;" fs/proc/task_mmu.c
-          sed -i "/unsigned int nr_subpages = __PAGE_SIZE \\/ PAGE_SIZE;/a \\	pagemap_entry_t *res = NULL;" fs/proc/task_mmu.c
+        if [ "${{ inputs.sublevel }}" -le "30" ]; then
+          echo "Applying taskmmu.c Android 15 6.6 Fake Patch"
+          sed -i '/smap_gather_stats(vma, &mss, last_vma_end);/a\last_vma_end = vma->vm_end;' fs/proc/task_mmu.c
         fi
-        cat fs/proc/task_mmu.c
         if [ "${{ inputs.sublevel }}" -le "92" ]; then
           echo "Applying base.c Android 15 6.6 Fake Patch"
           sed -i '/^#include <linux\/cpufreq_times.h>$/a #include <linux/dma-buf.h>' fs/proc/base.c
+        fi
+        if [ "${{ inputs.sublevel }}" -le "57" ]; then
+          echo "Applying base.c Android 15 6.6 Fake Patch"
+          sed -i '/^#include <linux\/sched\/sysctl.h>$/a #include <linux/zswap.h>' mm/memory.c
         fi
 
     - name: Apply Android 16 6.12 Fake Patches
@@ -250,14 +248,13 @@ runs:
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
         echo "Reverting 6.6 Fake Patches"
-        if [ "${{ inputs.sublevel }}" -le "58" ]; then
-          echo "Reverting task_mmu.c Android 15 6.6 Fake Patch"
-          sed -i '/unsigned int nr_subpages.*__PAGE_SIZE.*PAGE_SIZE/d' fs/proc/task_mmu.c
-          sed -i '/pagemap_entry_t.*res.*NULL/d' fs/proc/task_mmu.c
-        fi
         if [ "${{ inputs.sublevel }}" -le "92" ]; then
           echo "Reverting base.c Android 15 6.6 Fake Patch"
           sed -i '/^#include <linux\/dma-buf.h>$/d' fs/proc/base.c
+        fi
+        if [ "${{ inputs.sublevel }}" -le "57" ]; then
+          echo "Reverting memory.c Android 15 6.6 Fake Patch"
+          sed -i '/^#include <linux\/zswap.h>$/d' mm/memory.c
         fi
 
     - name: Revert Android 16 6.12 Fake Patches
