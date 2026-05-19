@@ -212,8 +212,7 @@ jobs:
 
     env:
       GH_TOKEN: ${{ github.token }}
-      RELEASE_NAME: "GKI Kernels With KernelSU-Next & SUSFS v2.1.0"
-      RELEASE_BODY: ""
+      RELEASE_CONFIG: .github/config/release.json
     outputs:
       new_tag: ${{ steps.tag.outputs.new_tag }}
     steps:
@@ -291,106 +290,71 @@ jobs:
         echo "NEW_TAG=${NEW_TAG}" >> $GITHUB_ENV
         echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
 
+    - name: Load Release Config
+      id: release_meta
+      run: |
+        set -euo pipefail
+
+        release_title=$(python3 -c 'import json,sys;from pathlib import Path;data=json.loads(Path(sys.argv[1]).read_text());print(data["release"]["title"])' "$RELEASE_CONFIG")
+        echo "release_title=$release_title" >> "$GITHUB_OUTPUT"
+
+    - name: Extract KernelSU Version Info
+      id: ksu_version
+      env:
+        RELEASE_CONFIG_PATH: ${{ env.RELEASE_CONFIG }}
+      run: |
+        set -euo pipefail
+
+        # Extract KernelSU commit and branch from release config
+        KSUN_COMMIT=$(python3 -c 'import json,sys;from pathlib import Path;data=json.loads(Path(sys.argv[1]).read_text());print(data["components"]["kernelsu"]["commit"])' "$RELEASE_CONFIG_PATH")
+        KSUN_BRANCH=$(python3 -c 'import json,sys;from pathlib import Path;data=json.loads(Path(sys.argv[1]).read_text());print(data["components"]["kernelsu"]["branch"])' "$RELEASE_CONFIG_PATH")
+
+        # Clone KernelSU-Next on the specified branch
+        echo "Cloning KernelSU-Next from branch: $KSUN_BRANCH"
+        git clone --depth=1 --branch "$KSUN_BRANCH" https://github.com/KernelSU-Next/KernelSU-Next.git /tmp/kernelsu-next
+
+        cd /tmp/kernelsu-next
+
+        # Checkout the specific commit
+        echo "Checking out commit: $KSUN_COMMIT"
+        git fetch --depth=50 origin "$KSUN_COMMIT"
+        git checkout "$KSUN_COMMIT"
+
+        # Extract version info
+        COMMITS_COUNT=$(git rev-list --count HEAD)
+        BASE_VERSION=30000
+        KSU_VERSION=$(expr $COMMITS_COUNT "+" $BASE_VERSION)
+
+        # Extract git tag
+        KSU_GIT_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "no-tag")
+
+        echo "Commits count: $COMMITS_COUNT"
+        echo "KSU Version: $KSU_VERSION"
+        echo "KSU Git Tag: $KSU_GIT_TAG"
+
+        # Export as environment for next step
+        echo "KSUN_BRANCH=$KSUN_BRANCH" >> $GITHUB_ENV
+        echo "KSUN_COMMIT=$KSUN_COMMIT" >> $GITHUB_ENV
+        echo "KSU_COMMITS_COUNT=$COMMITS_COUNT" >> $GITHUB_ENV
+        echo "KSU_VERSION=$KSU_VERSION" >> $GITHUB_ENV
+        echo "KSU_GIT_TAG=$KSU_GIT_TAG" >> $GITHUB_ENV
+
     - name: Set release body
       run: |
         set -e
 
-        FEATURE_SET="${{ inputs.feature_set }}"
-        KSUN_COMMIT="2887ea49428bc3fb5184e7c35223f0a9a47ad100"
-        KSUN_TAG="dev"
-        AK3_COMMIT="gki-2.0"
-        PATCHES_COMMIT="main"
-        SUSFS_MAP="gki-android12-5.10:e2b0f05ccca5f8fdfc33991c036672235ce48f05,gki-android13-5.10:97234f8e35cdc3b8ea22d05c98ab9829f6421d67,gki-android13-5.15:bf9bf0091bcd4d0072d845ea62484f3011f8d5a8,gki-android14-5.15:667368cf274311a62971671035738b154be1c062,gki-6.1:e1c57040136760a57969fc6b1378cc936a257561,gki-6.6:5009b9edee98fbe66b1a3cb22c603690d81b7817,gki-6.12:5c34dec2c3b69af1d72ac4a89b179741fc602a79"
-        BBG_COMMIT="main"
-        SUSFS_VERSION="v2.1.0"
+        RELEASE_CONFIG_PATH="$RELEASE_CONFIG"
         : > release_body.md
 
-        {
-          echo
-          echo "**IMPORTANT DISCLAIMER**"
-          echo "This software is provided for testing and educational purposes only. Use at your own risk."
-          echo "The developers are not responsible for any damage, data loss, or issues that may occur."
-          echo "Please ensure you have proper backups before installation."
-          echo
-          echo "## 🔧 Build Configuration"
-          echo "| Component | Version/Setting |"
-          echo "|---|---|"
-          echo "| Feature Set | ${FEATURE_SET} |"
-          echo "| KernelSU-Next Commit | ${KSUN_COMMIT} |"
-          echo "| KernelSU-Next Tag | ${KSUN_TAG:-None} |"
-          echo "| SUSFS Version | ${SUSFS_VERSION} |"
-          echo "| AnyKernel3 Commit | ${AK3_COMMIT} |"
-          echo "| Kernel Patches Commit | ${PATCHES_COMMIT} |"
-          echo "| BBG Commit | ${BBG_COMMIT} |"
-          echo "| Optimization Level | O2 |"
-          echo "| Clean Build | ❌ No (ccache enabled) |"
-          echo
-          echo "## 📌 SUSFS Branch Mapping"
-          echo "| Kernel Version | SUSFS Commit |"
-          echo "|---|---|"
-        } >> release_body.md
-
-        echo "$SUSFS_MAP" | tr ',' '\n' | while IFS=':' read -r branch commit; do
-          [ -n "${branch:-}" ] || continue
-          [ -n "${commit:-}" ] || continue
-          kernel_version="${branch#gki-}"
-          echo "| ${kernel_version} | ${commit} |" >> release_body.md
-        done
-
-        {
-          echo
-          echo "## ✨ Features & Capabilities"
-        } >> release_body.md
-
-        if [[ "$FEATURE_SET" == *"KSUN"* ]]; then
-          {
-            echo "### 🔐 Root Management"
-            echo "- KernelSU-Next (kernel-level root)"
-          } >> release_body.md
-        fi
-
-        if [[ "$FEATURE_SET" == *"SUSFS"* ]]; then
-          echo "- SUSFS ${SUSFS_VERSION}" >> release_body.md
-        fi
-
-        {
-          echo
-          echo "### 🚀 Performance & Networking"
-          echo "- BBRv3 TCP Congestion Control"
-          echo "- IP Set support"
-          echo "- TTL target support (IPv4/IPv6)"
-          echo
-          echo "### 🔹 Bypass Builds"
-          echo "- Includes module check bypass variant (Bypass)"
-          echo
-          echo "## 📦 Release Files"
-          echo "- AnyKernel3: uploaded as ZIP in the Release"
-          echo "- Boot images: uploaded as raw .img files in the Release"
-          echo
-          echo "## 📥 Recommended Tools"
-          echo "- Kernel Flasher: https://github.com/fatalcoder524/KernelFlasher/"
-          echo "- KernelSU-Next Manager: https://github.com/KernelSU-Next/KernelSU-Next"
-          echo "- SUSFS Module: https://github.com/sidex15/ksu_module_susfs"
-        } >> release_body.md
-
-        if [[ "$FEATURE_SET" == *"BBG"* ]]; then
-          {
-            echo
-            echo "### 🛡️ Security & Privacy"
-            echo "- Baseband Guard (BBG): https://github.com/vc-teahouse/Baseband-guard"
-          } >> release_body.md
-        fi
+        python3 .github/scripts/render_release_body.py "$RELEASE_CONFIG_PATH" > release_body.md
 
     - name: Workflow Summary
       if: ${{ always() }}
       run: |
         set -e
 
-        KSUN_COMMIT="2887ea49428bc3fb5184e7c35223f0a9a47ad100"
-        KSUN_TAG="dev"
         AK3_COMMIT="gki-2.0"
         PATCHES_COMMIT="main"
-        SUSFS_MAP="gki-android12-5.10:e2b0f05ccca5f8fdfc33991c036672235ce48f05,gki-android13-5.10:97234f8e35cdc3b8ea22d05c98ab9829f6421d67,gki-android13-5.15:bf9bf0091bcd4d0072d845ea62484f3011f8d5a8,gki-android14-5.15:667368cf274311a62971671035738b154be1c062,gki-6.1:e1c57040136760a57969fc6b1378cc936a257561,gki-6.6:5009b9edee98fbe66b1a3cb22c603690d81b7817,gki-6.12:5c34dec2c3b69af1d72ac4a89b179741fc602a79"
         BBG_COMMIT="main"
 
         short() { echo "${1:0:8}"; }
@@ -399,25 +363,11 @@ jobs:
           echo "## 📦 Components"
           echo "| Component | Branch / Tag | Commit / Version |"
           echo "|---|---|---|"
-          echo "| KernelSU-Next | ${KSUN_TAG:-dev} | $(short "$KSUN_COMMIT") |"
+          echo "| KernelSU-Next | ${KSUN_BRANCH:-dev} | $(short "${KSUN_COMMIT}") / ${KSU_GIT_TAG:-no-tag} / ${KSU_VERSION:-unknown} |"
           echo "| AnyKernel3 | gki-2.0 | $(short "$AK3_COMMIT") |"
           echo "| Kernel Patches | main | $(short "$PATCHES_COMMIT") |"
           echo "| BBG | main | $(short "$BBG_COMMIT") |"
         } >> "$GITHUB_STEP_SUMMARY"
-
-        {
-          echo
-          echo "## 📌 SUSFS Branch Mapping"
-          echo "| Kernel Version | SUSFS Commit |"
-          echo "|---|---|"
-        } >> "$GITHUB_STEP_SUMMARY"
-
-        echo "$SUSFS_MAP" | tr ',' '\n' | while IFS=':' read -r branch commit; do
-          [ -n "${branch:-}" ] || continue
-          [ -n "${commit:-}" ] || continue
-          kernel_version="${branch#gki-}"
-          echo "| ${kernel_version} | ${commit} |" >> "$GITHUB_STEP_SUMMARY"
-        done
 
     - name: Download AnyKernel3 Artifacts
       uses: actions/download-artifact@v7
@@ -450,7 +400,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.tag.outputs.new_tag }}
-        name: ${{ steps.tag.outputs.new_tag }}
+        name: ${{ steps.release_meta.outputs.release_title }}
         body_path: release_body.md
         draft: false
         prerelease: ${{ inputs.release_type == 'Pre-Release' }}

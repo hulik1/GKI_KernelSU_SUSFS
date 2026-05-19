@@ -18,7 +18,6 @@ runs:
 
         ANDROID_VERSION="${{ inputs.android_version }}"
         KERNEL_VERSION="${{ inputs.kernel_version }}"
-
         if [ -f "${{ github.workspace }}/kernel/out/$ANDROID_VERSION-$KERNEL_VERSION/dist/Image" ]; then
           cp "${{ github.workspace }}/kernel/out/$ANDROID_VERSION-$KERNEL_VERSION/dist/Image" "${{ github.workspace }}/AnyKernel3/Image"
           exit 0

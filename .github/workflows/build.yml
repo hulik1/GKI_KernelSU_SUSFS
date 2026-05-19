@@ -79,10 +79,36 @@ jobs:
     - name: Set Build Timestamp from Kernel Commit
       shell: bash
       run: |
-        SOURCE_DATE_EPOCH=$(git -C "${{ github.workspace }}/kernel/common" log -1 --format=%ct 2>/dev/null || date -u +%s)
+        set -x
+        
+        # Verify kernel/common exists and is a git repo
+        if [ ! -d "${{ github.workspace }}/kernel/common" ]; then
+          echo "ERROR: kernel/common directory does not exist!"
+          echo "Contents of kernel/:"
+          ls -la "${{ github.workspace }}/kernel/" || true
+          exit 1
+        fi
+        
+        if [ ! -d "${{ github.workspace }}/kernel/common/.git" ]; then
+          echo "ERROR: kernel/common is not a git repository!"
+          exit 1
+        fi
+        
+        # Try to get commit timestamp
+        SOURCE_DATE_EPOCH=$(git -C "${{ github.workspace }}/kernel/common" log -1 --format=%ct 2>&1)
+        if [ -z "$SOURCE_DATE_EPOCH" ] || [ "$SOURCE_DATE_EPOCH" = "0" ]; then
+          echo "WARNING: Failed to get commit timestamp from kernel/common, using current time"
+          SOURCE_DATE_EPOCH=$(date -u +%s)
+        fi
+        
         echo "SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH" >> $GITHUB_ENV
-        echo "KBUILD_BUILD_TIMESTAMP=$(date -u -d @${SOURCE_DATE_EPOCH} '+%a %b %d %H:%M:%S UTC %Y')" >> $GITHUB_ENV
-        echo "Build timestamp set to: $(date -u -d @${SOURCE_DATE_EPOCH} '+%Y-%m-%d %H:%M:%S UTC')"
+        KBUILD_TS=$(date -u -d @${SOURCE_DATE_EPOCH} '+%a %b %d %H:%M:%S UTC %Y')
+        echo "KBUILD_BUILD_TIMESTAMP=${KBUILD_TS}" >> $GITHUB_ENV
+        # Set git author/committer date so any commits done by actions use this timestamp
+        GIT_DATE=$(date -u -d @${SOURCE_DATE_EPOCH} '+%Y-%m-%dT%H:%M:%SZ')
+        echo "GIT_COMMITTER_DATE=${GIT_DATE}" >> $GITHUB_ENV
+        echo "GIT_AUTHOR_DATE=${GIT_DATE}" >> $GITHUB_ENV
+        echo "Build timestamp set to: $(date -u -d @${SOURCE_DATE_EPOCH} '+%Y-%m-%d %H:%M:%S UTC') (epoch: $SOURCE_DATE_EPOCH)"
 
     - name: Extract Sublevel and Set File Name
       id: extract
@@ -359,38 +385,40 @@ jobs:
         compression_level: 9
         github_token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Create Bootimgs Folder and Build Boot Images
-      uses: ./.github/actions/build-boot-images
-      with:
-        android_version: ${{ inputs.android_version }}
-        kernel_version: ${{ inputs.kernel_version }}
-        os_patch_level: ${{ inputs.os_patch_level }}
-        file_name: ${{ steps.extract.outputs.file_name }}
-
-    - name: Upload Boot Image (.img)
-      uses: actions/upload-artifact@v7
-      with:
-        name: ${{ steps.extract.outputs.file_name }}-boot.img
-        path: ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot.img
-        if-no-files-found: error
-        archive: false
-
-    - name: Upload Boot Image (.img.gz)
-      uses: actions/upload-artifact@v7
-      with:
-        name: ${{ steps.extract.outputs.file_name }}-boot-gz.img
-        path: ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot-gz.img
-        if-no-files-found: error
-        archive: false
-
-    - name: Upload Boot Image (.img.lz4)
-      uses: actions/upload-artifact@v7
-      with:
-        name: ${{ steps.extract.outputs.file_name }}-boot-lz4.img
-        path: ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot-lz4.img
-        if-no-files-found: error
-        archive: false
-
+    # Boot image building and packaging are disabled for now.
+    # Uncomment this block later if you want to generate and upload boot artifacts again.
+    # - name: Create Bootimgs Folder and Build Boot Images
+    #   uses: ./.github/actions/build-boot-images
+    #   with:
+    #     android_version: ${{ inputs.android_version }}
+    #     kernel_version: ${{ inputs.kernel_version }}
+    #     os_patch_level: ${{ inputs.os_patch_level }}
+    #     file_name: ${{ steps.extract.outputs.file_name }}
+    #
+    # - name: Upload Boot Image (.img)
+    #   uses: actions/upload-artifact@v7
+    #   with:
+    #     name: ${{ steps.extract.outputs.file_name }}-boot.img
+    #     path: ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot.img
+    #     if-no-files-found: error
+    #     archive: false
+    #
+    # - name: Upload Boot Image (.img.gz)
+    #   uses: actions/upload-artifact@v7
+    #   with:
+    #     name: ${{ steps.extract.outputs.file_name }}-boot-gz.img
+    #     path: ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot-gz.img
+    #     if-no-files-found: error
+    #     archive: false
+    #
+    # - name: Upload Boot Image (.img.lz4)
+    #   uses: actions/upload-artifact@v7
+    #   with:
+    #     name: ${{ steps.extract.outputs.file_name }}-boot-lz4.img
+    #     path: ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot-lz4.img
+    #     if-no-files-found: error
+    #     archive: false
+    #
     - name: Prepare AnyKernel3 Zip
       uses: ./.github/actions/prepare-anykernel3
       with:
