@@ -24,7 +24,7 @@ def render_markdown(template_path: Path):
 
     susfs_branches = []
     for branch, commit in commits.get("susfs", {}).items():
-        susfs_branches.append(f"  - {branch}: {commit}")
+        susfs_branches.append(f"| {branch} | {commit} |")
 
     if "{{SUSFS_BRANCHS}}" in text:
         text = text.replace("{{SUSFS_BRANCHS}}", "\n".join(susfs_branches))
@@ -101,8 +101,10 @@ for key in data.keys():
 
     if key == "susfs" and "susfs" in commits:
         emit("- Branches:")
+        emit("| Branch | Commit |")
+        emit("| :--- | :---: |")
         for branch, commit in commits["susfs"].items():
-            emit(f"  - {branch}: {commit}")
+            emit(f"| {branch} | {commit} |")
 
     if section.get("items"):
         emit_list(section["items"])

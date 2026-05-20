@@ -385,40 +385,6 @@ jobs:
         compression_level: 9
         github_token: ${{ secrets.GITHUB_TOKEN }}
 
-    # Boot image building and packaging are disabled for now.
-    # Uncomment this block later if you want to generate and upload boot artifacts again.
-    # - name: Create Bootimgs Folder and Build Boot Images
-    #   uses: ./.github/actions/build-boot-images
-    #   with:
-    #     android_version: ${{ inputs.android_version }}
-    #     kernel_version: ${{ inputs.kernel_version }}
-    #     os_patch_level: ${{ inputs.os_patch_level }}
-    #     file_name: ${{ steps.extract.outputs.file_name }}
-    #
-    # - name: Upload Boot Image (.img)
-    #   uses: actions/upload-artifact@v7
-    #   with:
-    #     name: ${{ steps.extract.outputs.file_name }}-boot.img
-    #     path: ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot.img
-    #     if-no-files-found: error
-    #     archive: false
-    #
-    # - name: Upload Boot Image (.img.gz)
-    #   uses: actions/upload-artifact@v7
-    #   with:
-    #     name: ${{ steps.extract.outputs.file_name }}-boot-gz.img
-    #     path: ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot-gz.img
-    #     if-no-files-found: error
-    #     archive: false
-    #
-    # - name: Upload Boot Image (.img.lz4)
-    #   uses: actions/upload-artifact@v7
-    #   with:
-    #     name: ${{ steps.extract.outputs.file_name }}-boot-lz4.img
-    #     path: ${{ github.workspace }}/boot-artifacts/${{ steps.extract.outputs.file_name }}-boot-lz4.img
-    #     if-no-files-found: error
-    #     archive: false
-    #
     - name: Prepare AnyKernel3 Zip
       uses: ./.github/actions/prepare-anykernel3
       with:
