@@ -3,6 +3,8 @@
 > [!CAUTION]
 > This software is provided for testing and educational purposes only. Use at your own risk. The developers are not responsible for any damage, data loss, or issues that may occur. Please ensure you have proper backups before installation.
 
+# https://t.me/WildKernelsTG
+
 ## [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)
 
 A kernel-based root solution for Android devices.
@@ -11,14 +13,6 @@ Manager: {{KSU_MANAGER}}
 
 > [!IMPORTANT]
 > For best compatiblity ensure your Manager Version and Kernel Version match eg. 30100 = 30100.
-
-| Version: | {{KSU_VERSION}} |
-| Tag:     | {{KSU_GIT_TAG}} |
-| Branch:  | {{KSUN_BRANCH}} |
-| Commit:  | {{KSUN_COMMIT}} |
-
-<details>
-<summary>**Build Information**</summary>
 
 **Version**  
 `{{KSU_VERSION}}`
@@ -31,8 +25,6 @@ Manager: {{KSU_MANAGER}}
 
 **Commit**  
 `{{KSUN_COMMIT}}`
-
-</details>
 
 ## [SUSFS v2.1.0](https://gitlab.com/simonpunk/susfs4ksu)
 
@@ -49,11 +41,7 @@ Reccomended Module: [susfs4ksu-module by sidex15](https://github.com/sidex15/sus
 - SUS_MAP - Memory mapping protection
 - AVC_SPOOF - Spoof procfs avc denial logs
 
-<summary>**Build Information**</summary>
-
 {{SUSFS_BRANCHES}}
-
-</details>
 
 ## [Baseband Guard (BBG)](https://github.com/vc-teahouse/Baseband-guard)
 
