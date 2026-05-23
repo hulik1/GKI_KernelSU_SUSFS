@@ -3,7 +3,14 @@
 > [!CAUTION]
 > This software is provided for testing and educational purposes only. Use at your own risk. The developers are not responsible for any damage, data loss, or issues that may occur. Please ensure you have proper backups before installation.
 
-# https://t.me/WildKernelsTG
+Join the telegram here: https://t.me/WildKernelsTG
+
+# Features
+- [KernelSU-Next](#kernelsu-next)
+- [SUSFS v2.1.0](#susfs-v210)
+- [Baseband Guard (BBG)](#baseband-guard-bbg)
+- [DroidSpaces-OSS](#droidspaces-oss)
+- [Networking Improvements](#networking)
 
 ## [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)
 
@@ -63,9 +70,13 @@ A lightweight, LXC-inspired container runtime for Android and Linux. Run full Li
 - TMPFS_XATTR - Extended attributes for tmpfs (Mountify support)
 - TMPFS_POSIX_ACL - POSIX ACLs for tmpfs
 
-## [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher)
+## Recommended Tools
 
-Recommended flashing utility
+[Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher)
+- Recommended flashing utility
+
+[PixelFlasher by badabing2005](https://github.com/badabing2005/PixelFlasher)
+- Pixel phone flashing GUI utility with features.
 
 ## Installation Instructions
 
@@ -85,3 +96,18 @@ Flash the ZIP to the active slot using Kernel Flasher.
 Install the KernelSU‑Next Manager APK, same version as mentioned in the release notes.
 Open the KernelSU‑Next app.
 Reboot the device if you performed any cleanup in step 2
+
+## Force Load Kernel Modules (Bypass) — flashing with `Bypass-Image`
+
+> [!IMPORTANT]
+> Most users do not need this. Try the `Normal` `Image` first. This option does not help bypass root-detection systems — it only replaces the kernel image used during flashing for compatibility workarounds.
+
+**How to enable:**
+- When flashing, the installer will ask the user what they want to flash, `Normal` or `Bypass`. 
+
+**Behavior:**
+- If `Bypass` is chosen it will move `Bypass-Image` to replace the usual `Normal` `Image` file prior to performing version checks and flashing.
+- If `Bypass` is chosen and `Bypass-Image` is not found, the installer will abort with an error to avoid accidental forced flashing of an unintended image.
+
+**Why / When to use:**
+- Use this only when a `Normal` flash fails to boot due to kernel module incompatibilities.

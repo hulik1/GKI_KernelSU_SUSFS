@@ -1,0 +1,57 @@
+diff --git a/anykernel.sh b/anykernel.sh
+index 35b6e59..e2bcb62 100755
+--- a/anykernel.sh
++++ b/anykernel.sh
+@@ -45,6 +45,52 @@ esac
+ ui_print " " "  -> Wild Kernels Supported: $ksu_supported"
+ $ksu_supported || abort "  -> Non-GKI device, abort."
+ 
++handle_input() {
++    while true; do
++        case $(getevent -lqc "/dev/input/event2" 2>/dev/null | grep -m1 'DOWN') in
++            *KEY_POWER*) echo "cancel"; return ;;
++            *KEY_VOLUMEUP*) echo "bypass"; return ;;
++            *KEY_VOLUMEDOWN*) echo "normal"; return ;;
++        esac
++    done
++}
++
++choose_flash_mode() {
++    ui_print " "
++    ui_print "  -> Most users do not need this; try Normal first"
++    ui_print "  -> This does not help bypass root detection; it only swaps the Image for compatibility workarounds"
++    ui_print "  -> Use it only when Normal fails to boot due to kernel module incompatibilities"
++    ui_print " "
++    ui_print "  -> Choose Kernel Image:"
++    ui_print "  -> VOL+ = Bypass"
++    ui_print "  -> VOL- = Normal"
++    ui_print "  -> POWER = Cancel"
++    ui_print " "
++
++    while true; do
++        case $(handle_input) in
++            normal)
++                ui_print "  -> Selected: Normal"
++                return 0
++                ;;
++            bypass)
++                ui_print "  -> Selected: Bypass"
++                if [ -f "$AKHOME/Bypass-Image" ]; then
++                    cp -f "$AKHOME/Bypass-Image" "$AKHOME/Image"
++                    ui_print "  -> Using Bypass-Image for this flash"
++                    return 0
++                fi
++                abort "  -> ERROR: Bypass-Image not found. Abort."
++                ;;
++            cancel)
++                abort "  -> Cancelled by POWER button. Abort."
++                ;;
++        esac
++    done
++}
++
++choose_flash_mode
++
+ # boot install
+ split_boot
+ 

@@ -1,0 +1,264 @@
+name: LTS Download Speed Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  benchmark-download:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 65
+      matrix:
+        branch:
+          - android16-6.12-lts
+        sync_profile:
+          - name: baseline
+          - name: no-tags
+          - name: force-sync
+          - name: current-branch
+          - name: fast-fetch
+          - name: retry-only
+          - name: jobs-network-4
+          - name: jobs-network-8
+          - name: jobs-checkout-4
+          - name: jobs-checkout-8
+          - name: jobs-mixed-4
+          - name: jobs-mixed-8
+          - name: full-mix
+        sync_mode:
+          - name: unset
+            mode: unset
+          - name: j4
+            mode: 4
+          - name: j8
+            mode: 8
+          - name: j16
+            mode: 16
+          - name: all
+            mode: all
+    name: ${{ matrix.branch }} / ${{ matrix.sync_profile.name }} / repo sync ${{ matrix.sync_mode.name }}
+    steps:
+      - name: Install repo tool
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo -o "$HOME/.local/bin/repo"
+          chmod +x "$HOME/.local/bin/repo"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Benchmark repo sync
+        shell: bash
+        run: |
+          set -euo pipefail
+          workdir="$RUNNER_TEMP/kernel-speed-test/${{ matrix.branch }}/${{ matrix.sync_mode.name }}"
+          mkdir -p "$workdir"
+          cd "$workdir"
+
+          branch="common-${{ matrix.branch }}"
+          profile_name="${{ matrix.sync_profile.name }}"
+          mode_name="${{ matrix.sync_mode.name }}"
+          result_file="$RUNNER_TEMP/kernel-speed-test-result.json"
+
+          init_start_ns=$(date +%s%N)
+          init_status=0
+          sync_status=0
+          error_message=""
+
+          set +e
+          repo init -u https://android.googlesource.com/kernel/manifest -b "$branch" --depth=1
+          init_status=$?
+          set -e
+          if [ "$init_status" -ne 0 ]; then
+            error_message="repo init failed (exit ${init_status})"
+          fi
+          init_end_ns=$(date +%s%N)
+          init_elapsed_ms=$(( (init_end_ns - init_start_ns) / 1000000 ))
+
+          sync_cmd=(repo sync -c)
+
+          case "${{ matrix.sync_profile.name }}" in
+            baseline)
+              ;;
+            no-tags)
+              sync_cmd+=(--no-tags)
+              ;;
+            force-sync)
+              sync_cmd+=(--no-tags --force-sync)
+              ;;
+            current-branch)
+              sync_cmd+=(--current-branch)
+              ;;
+            fast-fetch)
+              sync_cmd+=(--no-clone-bundle --optimized-fetch)
+              ;;
+            retry-only)
+              sync_cmd+=(--no-tags --retry-fetches=3)
+              ;;
+            jobs-network-4)
+              sync_cmd+=(--jobs-network=4)
+              ;;
+            jobs-network-8)
+              sync_cmd+=(--jobs-network=8)
+              ;;
+            jobs-checkout-4)
+              sync_cmd+=(--jobs-checkout=4)
+              ;;
+            jobs-checkout-8)
+              sync_cmd+=(--jobs-checkout=8)
+              ;;
+            jobs-mixed-4)
+              sync_cmd+=(--jobs-network=4 --jobs-checkout=4)
+              ;;
+            jobs-mixed-8)
+              sync_cmd+=(--jobs-network=8 --jobs-checkout=8)
+              ;;
+            full-mix)
+              sync_cmd+=(--fail-fast --no-tags --force-sync --no-clone-bundle --optimized-fetch --retry-fetches=3 --jobs-network=8 --jobs-checkout=8)
+              ;;
+            *)
+              echo "Unknown sync profile: ${{ matrix.sync_profile.name }}" >&2
+              exit 1
+              ;;
+          esac
+
+          case "${{ matrix.sync_mode.mode }}" in
+            unset)
+              ;;
+            4)
+              sync_cmd+=(-j4)
+              ;;
+            8)
+              sync_cmd+=(-j8)
+              ;;
+            16)
+              sync_cmd+=(-j16)
+              ;;
+            all)
+              sync_cmd+=(-j"$(nproc)")
+              ;;
+            *)
+              echo "Unknown sync mode: ${{ matrix.sync_mode.mode }}" >&2
+              exit 1
+              ;;
+          esac
+
+          sync_elapsed_ms=""
+          total_elapsed_ms=""
+          if [ "$init_status" -eq 0 ]; then
+            sync_start_ns=$(date +%s%N)
+            set +e
+            timeout 20m "${sync_cmd[@]}"
+            sync_status=$?
+            set -e
+            sync_end_ns=$(date +%s%N)
+            sync_elapsed_ms=$(( (sync_end_ns - sync_start_ns) / 1000000 ))
+            total_elapsed_ms=$(( (sync_end_ns - init_start_ns) / 1000000 ))
+            if [ "$sync_status" -ne 0 ] && [ -z "$error_message" ]; then
+              error_message="repo sync failed (exit ${sync_status})"
+            fi
+          fi
+
+          status_value="ok"
+          if [ -n "$error_message" ]; then
+            status_value="failed"
+          fi
+
+          cat > "$result_file" <<EOF
+          {
+            "branch": "$branch",
+            "profile": "$profile_name",
+            "mode": "$mode_name",
+            "init_ms": ${init_elapsed_ms},
+            "sync_ms": ${sync_elapsed_ms:-null},
+            "total_ms": ${total_elapsed_ms:-null},
+            "init_status": ${init_status},
+            "sync_status": ${sync_status},
+            "status": "${status_value}",
+            "error": "${error_message}"
+          }
+          EOF
+
+      - name: Upload benchmark result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-${{ matrix.branch }}-${{ matrix.sync_profile.name }}-${{ matrix.sync_mode.name }}
+          path: ${{ runner.temp }}/kernel-speed-test-result.json
+          if-no-files-found: error
+
+  summarize-results:
+    runs-on: ubuntu-latest
+    needs: benchmark-download
+    if: always()
+    steps:
+      - name: Download benchmark results
+        uses: actions/download-artifact@v4
+        with:
+          path: benchmark-results
+
+      - name: Build summary table
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('benchmark-results')
+          rows = []
+          for path in sorted(root.glob('*/kernel-speed-test-result.json')):
+              data = json.loads(path.read_text())
+              rows.append(data)
+
+          def sort_key(row):
+              total = row.get('total_ms')
+              return (total is None, total if total is not None else 10**18, row['branch'], row['profile'], row['mode'])
+
+          rows.sort(key=sort_key)
+
+          ok_rows = [row for row in rows if row.get('status') == 'ok' and row.get('total_ms') is not None]
+          failed_rows = [row for row in rows if row.get('status') != 'ok']
+
+          def fmt_ms(value):
+              return f"{value/1000:.2f}s" if value is not None else 'n/a'
+
+          summary = []
+          summary.append('## LTS download benchmark summary')
+          summary.append('')
+          summary.append('| Branch | Profile | Sync mode | Repo init | Repo sync | Total | Status |')
+          summary.append('| --- | --- | --- | ---: | ---: | ---: | --- |')
+          for row in rows:
+              summary.append(
+                  f"| {row['branch']} | {row['profile']} | {row['mode']} | {fmt_ms(row.get('init_ms'))} | {fmt_ms(row.get('sync_ms'))} | {fmt_ms(row.get('total_ms'))} | {row.get('status', 'unknown')} |"
+              )
+
+          summary.append('')
+          summary.append('### Best total times')
+          for row in ok_rows[:10]:
+              summary.append(f"- {fmt_ms(row['total_ms'])} - {row['branch']} / {row['profile']} / {row['mode']}")
+
+          if ok_rows:
+              summary.append('')
+              summary.append('### Worst total times')
+              for row in ok_rows[-10:][::-1]:
+                  summary.append(f"- {fmt_ms(row['total_ms'])} - {row['branch']} / {row['profile']} / {row['mode']}")
+
+          if failed_rows:
+              summary.append('')
+              summary.append('### Failed runs')
+              for row in failed_rows:
+                  summary.append(f"- {row['branch']} / {row['profile']} / {row['mode']}: {row.get('error') or row.get('status', 'failed')}")
+
+          Path('benchmark-summary.md').write_text('\n'.join(summary) + '\n')
+          PY
+
+      - name: Publish benchmark summary
+        shell: bash
+        run: cat benchmark-summary.md >> "$GITHUB_STEP_SUMMARY"

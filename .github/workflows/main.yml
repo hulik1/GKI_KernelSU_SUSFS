@@ -44,15 +44,6 @@ on:
           - NONE
           - FULL
         default: FULL
-      variant:
-        description: "Build Variant"
-        type: choice
-        options:
-          - All
-          - Normal
-          - Bypass
-          - Wild
-        default: Normal
       use_repo:
         description: "Use repo for downloading kernel source"
         type: boolean
@@ -69,7 +60,6 @@ jobs:
     with:
       config_file: .github/config/android12-5.10.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
-      variant: ${{ inputs.variant || 'Normal' }}
       use_repo: ${{ inputs.use_repo }}
     secrets: inherit
 
@@ -79,7 +69,6 @@ jobs:
     with:
       config_file: .github/config/android13-5.10.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
-      variant: ${{ inputs.variant || 'Normal' }}
       use_repo: ${{ inputs.use_repo }}
     secrets: inherit
 
@@ -89,7 +78,6 @@ jobs:
     with:
       config_file: .github/config/android13-5.15.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
-      variant: ${{ inputs.variant || 'Normal' }}
       use_repo: ${{ inputs.use_repo }}
     secrets: inherit
 
@@ -99,7 +87,6 @@ jobs:
     with:
       config_file: .github/config/android14-5.15.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
-      variant: ${{ inputs.variant || 'Normal' }}
       use_repo: ${{ inputs.use_repo }}
     secrets: inherit
 
@@ -109,7 +96,6 @@ jobs:
     with:
       config_file: .github/config/android14-6.1.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
-      variant: ${{ inputs.variant || 'Normal' }}
       use_repo: ${{ inputs.use_repo }}
     secrets: inherit
 
@@ -119,7 +105,6 @@ jobs:
     with:
       config_file: .github/config/android15-6.6.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
-      variant: ${{ inputs.variant || 'Normal' }}
       use_repo: ${{ inputs.use_repo }}
     secrets: inherit
 
@@ -129,7 +114,6 @@ jobs:
     with:
       config_file: .github/config/android16-6.12.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
-      variant: ${{ inputs.variant || 'Normal' }}
       use_repo: ${{ inputs.use_repo }}
     secrets: inherit
 
@@ -362,21 +346,27 @@ jobs:
       id: tag
       if: inputs.release_type != 'Action'
       run: |
-        LATEST_TAG=$(gh api repos/${{ github.repository }}/tags --jq '.[0].name' 2>/dev/null || echo "v0.0.0")
-        if [[ -z "$LATEST_TAG" || "$LATEST_TAG" == "null" ]]; then
-          LATEST_TAG="v0.0.0"
-        fi
-        
-        if [[ "$LATEST_TAG" =~ ^(.*)-r([0-9]+)$ ]]; then
-          VERSION="${BASH_REMATCH[1]}"
-          REV="${BASH_REMATCH[2]}"
-          NEW_REV=$((REV + 1))
-          NEW_TAG="${VERSION}-r${NEW_REV}"
+        mapfile -t RELEASE_TAGS < <(gh api --paginate "repos/${{ github.repository }}/tags?per_page=100" --jq '.[].name' 2>/dev/null | grep -E '^r[0-9]+$' || true)
+
+        LATEST_REV=0
+        for TAG in "${RELEASE_TAGS[@]}"; do
+          REV="${TAG#r}"
+          if [[ "$REV" =~ ^[0-9]+$ && "$REV" -gt "$LATEST_REV" ]]; then
+            LATEST_REV="$REV"
+          fi
+        done
+
+        if [[ "$LATEST_REV" -gt 0 ]]; then
+          NEW_TAG="r$((LATEST_REV + 1))"
         else
-          NEW_TAG="${LATEST_TAG}-r1"
+          NEW_TAG="r1"
         fi
-        
-        echo "Latest tag: $LATEST_TAG"
+
+        if [[ ${#RELEASE_TAGS[@]} -gt 0 ]]; then
+          echo "Latest r-tag: r${LATEST_REV}"
+        else
+          echo "No existing r-tags found; starting at r1"
+        fi
         echo "New tag: $NEW_TAG"
         echo "NEW_TAG=${NEW_TAG}" >> $GITHUB_ENV
         echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
@@ -386,7 +376,14 @@ jobs:
       run: |
         set -euo pipefail
 
-        release_title="GKI Kernel Build ${NEW_TAG}"
+        # Format release title: convert rN -> Release N
+        if [[ "${NEW_TAG}" =~ ^r([0-9]+)$ ]]; then
+          REV_NUM="${BASH_REMATCH[1]}"
+          release_title="Wild Kernels for GKI2 Devices 5.10+ Release ${REV_NUM}"
+        else
+          release_title="Wild Kernels for GKI2 Devices 5.10+ Release ${NEW_TAG}"
+        fi
+
         echo "release_title=$release_title" >> "$GITHUB_OUTPUT"
 
     - name: Extract KernelSU Version Info
