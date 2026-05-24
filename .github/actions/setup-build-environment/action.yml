@@ -18,25 +18,4 @@ runs:
 
         if [ -d "${{ github.workspace }}/AnyKernel3" ]; then rm -rf "${{ github.workspace }}/AnyKernel3"; fi
         git clone https://github.com/WildKernels/AnyKernel3.git -b gki-2.0 "${{ github.workspace }}/AnyKernel3"
-
-        AOSP_MIRROR=https://android.googlesource.com
-        BRANCH=main-kernel-2025
-        git clone $AOSP_MIRROR/kernel/prebuilts/build-tools -b $BRANCH --depth 1 kernel-build-tools
-        git clone $AOSP_MIRROR/platform/system/tools/mkbootimg -b $BRANCH --depth 1 mkbootimg
-
-        echo "AVBTOOL=${{ github.workspace }}/kernel-build-tools/linux-x86/bin/avbtool" >> "$GITHUB_ENV"
-        echo "MKBOOTIMG=${{ github.workspace }}/mkbootimg/mkbootimg.py" >> "$GITHUB_ENV"
-        echo "UNPACK_BOOTIMG=${{ github.workspace }}/mkbootimg/unpack_bootimg.py" >> "$GITHUB_ENV"
-        echo "BOOT_SIGN_KEY_PATH=${{ github.workspace }}/kernel-build-tools/linux-x86/share/avb/testkey_rsa2048.pem" >> "$GITHUB_ENV"
-
-        mkdir -p "${{ github.workspace }}/kernel-build-tools/linux-x86/share/avb"
-        if [ -z "${BOOT_SIGN_KEY:-}" ]; then
-          exit 1
-        fi
-
-        KEY_PATH="${{ github.workspace }}/kernel-build-tools/linux-x86/share/avb/testkey_rsa2048.pem"
-        printf '%s' "$BOOT_SIGN_KEY" > "$KEY_PATH"
-        if ! head -n 1 "$KEY_PATH" | grep -q 'BEGIN'; then
-          printf '%s' "$BOOT_SIGN_KEY" | base64 -d > "$KEY_PATH"
-        fi
-        chmod 600 "$KEY_PATH"
+        

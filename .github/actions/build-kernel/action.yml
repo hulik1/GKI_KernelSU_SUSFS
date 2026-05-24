@@ -94,15 +94,17 @@ runs:
     working-directory: ${{ github.workspace }}
     run: |
       set -euo pipefail
-      if [ -f "/home/runner/out/${{ inputs.version }}/dist/Image" ]; then
+      if [ -f "/home/runner/out/dist/Image" ]; then
+        echo "Found Image at /home/runner/out/dist/Image"
         if [[ ${{ inputs.bypass }} == "true" ]]; then
-          cp "/home/runner/out/${{ inputs.version }}/dist/Image" "${{ github.workspace }}/AnyKernel3/Bypass-Image"
+          cp "/home/runner/out/dist/Image" "${{ github.workspace }}/AnyKernel3/Bypass-Image"
         else
-          cp "/home/runner/out/${{ inputs.version }}/dist/Image" "${{ github.workspace }}/AnyKernel3/Image"
+          cp "/home/runner/out/dist/Image" "${{ github.workspace }}/AnyKernel3/Image"
         fi
           exit 0
         fi
       if [ -f "/home/runner/out/Image" ]; then
+        echo "Found Image at /home/runner/out/Image"
         if [[ ${{ inputs.bypass }} == "true" ]]; then
           cp "/home/runner/out/Image" "${{ github.workspace }}/AnyKernel3/Bypass-Image"
         else
@@ -121,6 +123,6 @@ runs:
       set -euo pipefail
       PATCH_FILE="${{ github.action_path }}/patches/bypass.patch"
       if [ -f "$PATCH_FILE" ]; then
-        patch -d "${{ github.workspace }}/AnyKernel3" -p1 < "$PATCH_FILE"
+        patch -p1 -d "${{ github.workspace }}/AnyKernel3" -p1 < "$PATCH_FILE"
       fi
 

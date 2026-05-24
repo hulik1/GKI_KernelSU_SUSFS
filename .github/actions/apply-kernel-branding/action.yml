@@ -62,13 +62,7 @@ runs:
 
         DEFCONFIG="${{ github.workspace }}/kernel/common/arch/arm64/configs/gki_defconfig"
         
-        if grep -q '^CONFIG_LOCALVERSION=' "$DEFCONFIG"; then
-          LOCALVERSION_VALUE="$(grep -m1 '^CONFIG_LOCALVERSION=' "$DEFCONFIG" | sed -E 's/^CONFIG_LOCALVERSION="?([^"]*)"?$/\1/')"
-          echo "CONFIG_LOCALVERSION=\"${LOCALVERSION_VALUE}-Wild\"" >> "$CONFIG_FRAGMENT"
-        else
-          echo 'CONFIG_LOCALVERSION="-Wild"' >> "$CONFIG_FRAGMENT"
-        fi
         cat >> "${{ github.workspace }}/wild_gki.fragment" << 'EOF'
-        CONFIG_LOCALVERSION=""
+        CONFIG_LOCALVERSION="-Wild"
         # CONFIG_LOCALVERSION_AUTO is not set
         EOF
