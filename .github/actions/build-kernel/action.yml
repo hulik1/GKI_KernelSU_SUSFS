@@ -118,11 +118,9 @@ runs:
   - name: 'Gather Build Artifacts'
     shell: bash
     if: ${{ inputs.bypass == 'true' }}
-    working-directory: ${{ github.workspace }}
+    working-directory: ${{ github.workspace }}/AnyKernel3
     run: |
       set -euo pipefail
-      PATCH_FILE="${{ github.action_path }}/patches/bypass.patch"
-      if [ -f "$PATCH_FILE" ]; then
-        patch -p1 -d "${{ github.workspace }}/AnyKernel3" -p1 < "$PATCH_FILE"
-      fi
+      cp ${{ github.action_path }}/patches/bypass.patch "${{ github.workspace }}/AnyKernel3/bypass.patch"
+      patch -p1 < bypass.patch
 

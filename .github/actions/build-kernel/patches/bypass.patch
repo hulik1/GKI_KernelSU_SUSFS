@@ -1,6 +1,5 @@
-diff --git a/AnyKernel3/anykernel.sh b/AnyKernel3/anykernel.sh
---- a/AnyKernel3/anykernel.sh	2026-05-23 20:16:58.305522267 -0400
-+++ b/AnyKernel3/anykernel.sh	2026-05-23 21:32:11.537813431 -0400
+--- a/anykernel.sh	2026-05-23 20:16:58.305522267 -0400
++++ b/anykernel.sh	2026-05-23 21:32:11.537813431 -0400
 @@ -45,6 +45,72 @@
  ui_print " " "  -> Wild Kernels Supported: $ksu_supported"
  $ksu_supported || abort "  -> Non-GKI device, abort."

@@ -1,5 +1,5 @@
 name: 'Restore Cache'
-description: 'Archive, split if necessary, and upload cache to GitHub Releases for later retrieval.'
+description: 'Restores cache from GitHub Releases. Supports both single and multiple cache paths/keys/buckets.'
 
 inputs:
   cache_path:
@@ -199,7 +199,7 @@ runs:
               done
               return 1
             }
-
+            
             if [ "$IS_SPLIT" = "true" ]; then
               for part in {a..z}{a..z}; do
                 PART_NAME="$BASE_FILENAME$EXT.part$part"
