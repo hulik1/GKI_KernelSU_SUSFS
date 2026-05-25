@@ -229,6 +229,7 @@ jobs:
         compression-level: 9
 
     - name: 'Setup Cache and Build Environment'
+      if: false
       uses: ./.github/actions/cache-setup
       with:
         version: ${{ inputs.version }}
@@ -238,10 +239,7 @@ jobs:
 
     - name: Restore ccache
       id: restore-ccache
-      if: |
-        inputs.version == 'android12-5.10' ||
-        inputs.version == 'android13-5.10' ||
-        inputs.version == 'android13-5.15'
+      if: false
       uses: ./.github/actions/cache-restore
       with:
         cache_path: /home/runner/.ccache
@@ -254,10 +252,7 @@ jobs:
 
     - name: Restore lto-cache (ccache versions)
       id: restore-lto-ccache
-      if: |
-        inputs.version == 'android12-5.10' ||
-        inputs.version == 'android13-5.10' ||
-        inputs.version == 'android13-5.15'
+      if: false
       uses: ./.github/actions/cache-restore
       with:
         cache_path: /home/runner/.ld_cache
@@ -270,11 +265,7 @@ jobs:
 
     - name: Restore bazel-cache
       id: restore-bazel
-      if: |
-        inputs.version == 'android14-5.15' ||
-        inputs.version == 'android14-6.1' ||
-        inputs.version == 'android15-6.6' ||
-        inputs.version == 'android16-6.12'
+      if: false
       uses: ./.github/actions/cache-restore
       with:
         cache_path: /home/runner/.cache/bazel
@@ -287,11 +278,7 @@ jobs:
 
     - name: Restore lto-cache (bazel versions)
       id: restore-lto-bazel
-      if: |
-        inputs.version == 'android14-5.15' ||
-        inputs.version == 'android14-6.1' ||
-        inputs.version == 'android15-6.6' ||
-        inputs.version == 'android16-6.12'
+      if: false
       uses: ./.github/actions/cache-restore
       with:
         cache_path: /home/runner/.ld_cache
@@ -303,6 +290,7 @@ jobs:
           ${{ inputs.android_version }}-${{ inputs.kernel_version }}-
 
     - name: Check cache hit
+      if: false
       run: |
         echo "Cache restore status:"        CCACHE_HIT="${{ steps.restore-ccache.outputs.cache-hit || 'skipped' }}"
         LTO_CCACHE_HIT="${{ steps.restore-lto-ccache.outputs.cache-hit || 'skipped' }}"
@@ -314,6 +302,7 @@ jobs:
         echo "  lto (bazel versions): $LTO_BAZEL_HIT"
 
     - name: Get Cache Stats
+      if: false
       uses: ./.github/actions/cache-stats
       with:
         clear_stats: true
@@ -328,15 +317,13 @@ jobs:
         bypass: false
 
     - name: Get Cache Stats
+      if: false
       uses: ./.github/actions/cache-stats
       with:
         clear_stats: false
 
     - name: Save ccache
-      if: |
-        inputs.version == 'android12-5.10' ||
-        inputs.version == 'android13-5.10' ||
-        inputs.version == 'android13-5.15'
+      if: false
       uses: ./.github/actions/cache-save
       with:
         cache_path: /home/runner/.ccache
@@ -346,10 +333,7 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Save lto-cache (ccache versions)
-      if: |
-        inputs.version == 'android12-5.10' ||
-        inputs.version == 'android13-5.10' ||
-        inputs.version == 'android13-5.15'
+      if: false
       uses: ./.github/actions/cache-save
       with:
         cache_path: /home/runner/.ld_cache
@@ -359,11 +343,7 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Save bazel-cache
-      if: |
-        inputs.version == 'android14-5.15' ||
-        inputs.version == 'android14-6.1' ||
-        inputs.version == 'android15-6.6' ||
-        inputs.version == 'android16-6.12'
+      if: false
       uses: ./.github/actions/cache-save
       with:
         cache_path: /home/runner/.cache/bazel
@@ -373,11 +353,7 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Save lto-cache (bazel versions)
-      if: |
-        inputs.version == 'android14-5.15' ||
-        inputs.version == 'android14-6.1' ||
-        inputs.version == 'android15-6.6' ||
-        inputs.version == 'android16-6.12'
+      if: false
       uses: ./.github/actions/cache-save
       with:
         cache_path: /home/runner/.ld_cache
