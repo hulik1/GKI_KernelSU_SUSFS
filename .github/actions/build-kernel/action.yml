@@ -76,13 +76,23 @@ runs:
       else
         tools/bazel info output_base
         cp "${{ github.workspace }}/wild_gki.fragment" common/arch/arm64/configs/wild_gki.fragment
-        tools/bazel run \
-          --config=fast \
-          --lto=default \
-          --defconfig_fragment=//common:arch/arm64/configs/wild_gki.fragment \
-          --disk_cache=/home/runner/.cache/bazel \
-          //common:kernel_aarch64_dist \
-          -- --dist_dir=/home/runner/out
+        if [[ ${{ inputs.version }} == "android16-6.12" ]]; then
+            tools/bazel run \
+              --config=fast \
+              --lto=default \
+              --defconfig_fragment=//common:arch/arm64/configs/wild_gki.fragment \
+              --disk_cache=/home/runner/.cache/bazel \
+              //common:kernel_aarch64_dist \
+              -- --distdir=/home/runner/out
+          else
+            tools/bazel run \
+              --config=fast \
+              --lto=default \
+              --defconfig_fragment=//common:arch/arm64/configs/wild_gki.fragment \
+              --disk_cache=/home/runner/.cache/bazel \
+              //common:kernel_aarch64_dist \
+              -- --dist_dir=/home/runner/out
+          fi
         tools/bazel info output_base
       fi
 

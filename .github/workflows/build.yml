@@ -229,7 +229,6 @@ jobs:
         compression-level: 9
 
     - name: 'Setup Cache and Build Environment'
-      if: false
       uses: ./.github/actions/cache-setup
       with:
         version: ${{ inputs.version }}
