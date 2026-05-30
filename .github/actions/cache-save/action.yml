@@ -1,5 +1,5 @@
 name: 'Save Cache'
-description: 'Archive, split if necessary, and upload cache to GitHub Releases for later retrieval.'
+description: ''
 
 inputs:
   cache_path:
@@ -112,33 +112,20 @@ runs:
             local max_attempts=3
             for ((i=1; i<=max_attempts; i++)); do
               echo "  Attempt $i for $file..."
-              local upload_log
-              upload_log=$(mktemp)
               
               if [ "${{ inputs.debug }}" = "true" ]; then
-                if timeout 10m gh release upload "$TAG_NAME" "$file" --clobber --repo "$TARGET_REPO" > >(tee "$upload_log") 2> >(tee -a "$upload_log" >&2); then
-                  rm -f "$upload_log"
+                if timeout 10m gh release upload "$TAG_NAME" "$file" --clobber --repo "$TARGET_REPO"; then
                   echo "  Successfully uploaded $file"
                   return 0
                 fi
               else
-                if timeout 10m gh release upload "$TAG_NAME" "$file" --clobber --repo "$TARGET_REPO" > "$upload_log" 2>&1; then
-                  rm -f "$upload_log"
+                if timeout 10m gh release upload "$TAG_NAME" "$file" --clobber --repo "$TARGET_REPO" > /dev/null 2>&1; then
                   echo "  Successfully uploaded $file"
                   return 0
                 fi
               fi
               
-              local exit_code=$?
-              echo "  ⚠ Attempt $i failed with exit code $exit_code."
-              echo "  └─ Upload output for $file:"
-              sed 's/^/    /' "$upload_log" || true
-              rm -f "$upload_log"
-              if [ "$exit_code" -eq 124 ]; then
-                echo "  ⚠ Attempt $i timed out after 10m. Retrying..."
-              else
-                echo "  ⚠ Attempt $i failed. Retrying..."
-              fi
+              echo "  ⚠ Attempt $i failed or timed out. Retrying..."
               sleep 5
             done
             return 1
@@ -164,5 +151,11 @@ runs:
             fi
             rm -f "$FILENAME"
           fi
+          # Cleanup any leftover archive artifacts (single-file or split parts)
+          if [ "${{ inputs.debug }}" = "true" ]; then
+            echo "Cleaning archive artifacts: ${BASE_FILENAME}*"
+          fi
+          rm -f "${BASE_FILENAME}"* || true
+
           echo "::endgroup::"
         fi
