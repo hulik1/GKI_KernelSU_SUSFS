@@ -123,3 +123,27 @@ runs:
       working-directory: ${{ github.workspace }}/kernel
       run: |
         python "${{ github.workspace }}/.github/actions/download-kernel/fast_parallel_download.py"
+
+    - name: Capture Kernel Common Commit Metadata
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel
+      run: |
+        set -euo pipefail
+
+        if [[ ! -d common ]]; then
+          echo "WARNING: common folder not found; skipping commit metadata capture."
+          exit 0
+        fi
+
+        cd common
+
+        if [[ ! -d .git ]]; then
+          echo "WARNING: common is not a git checkout; skipping commit metadata capture."
+          exit 0
+        fi
+
+        COMMIT_DATE=$(git log -1 --format=%cI)
+        COMMIT_MSG=$(git log -1 --format=%s)
+
+        echo "Kernel common commit date: $COMMIT_DATE"
+        echo "Kernel common commit msg: $COMMIT_MSG"

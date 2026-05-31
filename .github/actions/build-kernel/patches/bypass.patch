@@ -1,52 +1,78 @@
 diff --git a/anykernel.sh b/anykernel.sh
-index 35b6e59..7936667 100755
+index 719de4c..3f71202 100755
 --- a/anykernel.sh
 +++ b/anykernel.sh
-@@ -45,6 +45,47 @@ esac
- ui_print " " "  -> Wild Kernels Supported: $ksu_supported"
- $ksu_supported || abort "  -> Non-GKI device, abort."
+@@ -46,6 +46,64 @@ esac
  
-+handle_input() {
-+    /system/bin/getevent -lq 2>/dev/null | while IFS= read -r line; do
-+        case "$line" in
-+            *KEY_VOLUMEUP*DOWN*) echo "bypass"; break ;;
-+            *KEY_VOLUMEDOWN*DOWN*) echo "normal"; break ;;
-+            *KEY_POWER*DOWN*) echo "cancel"; break ;;
-+        esac
-+    done
-+}
+ ui_print "  -> Wild Kernels Supported: $ksu_supported"
+ $ksu_supported || abort "  -> Non-GKI device, abort."
 +
 +choose_flash_mode() {
++    ui_print " "
++    ui_print "  -> Have a clean backup of your boot.img before proceeding!"
 +    ui_print "  -> Most users do not need Bypass; try Normal first!"
-+    ui_print "  -> This only swaps the Image for compatibility workarounds, this doesn't help with hiding root."
-+    ui_print "  -> VOL+ = Bypass"
-+    ui_print "  -> VOL- = Normal"
-+    ui_print "  -> POWER = Cancel"
++    ui_print "  -> Bypass only swaps the Image for compatibility workarounds!"
++    ui_print "  -> Bypass does NOT help with hiding root."
++    ui_print " "
++    sleep 5
++    ui_print "-------------------------"
++    ui_print " "
++    ui_print "  -> VOL + = Bypass"
++    ui_print " "
++    ui_print "  -> VOL - = Normal"
++    ui_print " "
++    ui_print "  -> Power = Cancel"
++    ui_print " "
++    ui_print "-------------------------"
++    raw_events="/tmp/ak3_raw_events"
++    events="/tmp/ak3_events"
++    : > "$raw_events"
++    : > "$events"
++    getevent -lc 1 2>&1 > "$raw_events" &
++    pid=$!
++    sleep 1
++    kill -0 $pid 2>/dev/null && kill $pid 2>/dev/null
++    grep VOLUME "$raw_events" | grep " DOWN" > "$events" 2>/dev/null || true
 +
-+    while true; do
-+        case $(handle_input) in
-+            normal)
-+                ui_print "  -> Selected: Normal"
-+                return 0
-+                ;;
-+            bypass)
-+                ui_print "  -> Selected: Bypass"
-+                if [ -f "$AKHOME/Bypass-Image" ]; then
-+                    cp -f "$AKHOME/Bypass-Image" "$AKHOME/Image"
-+                    ui_print "  -> Using Bypass-Image for this flash"
-+                    return 0
-+                fi
-+               abort "  -> ERROR: Bypass-Image not found. Abort."
-+                ;;
-+            cancel)
-+                abort "  -> Cancelled by POWER button. Abort."
-+                ;;
-+        esac
-+    done
++    if grep -q "VOLUMEUP" "$events" 2>/dev/null; then
++        ui_print "  -> Selected: Bypass"
++        if [ -f "$AKHOME/Bypass-Image" ]; then
++            cp -f "$AKHOME/Bypass-Image" "$AKHOME/Image" || abort "  -> ERROR: Failed to copy Bypass-Image. Abort."
++            ui_print " "
++            ui_print "  -> Selected Bypass"
++            ui_print " "
++            return 0
++        else
++            abort "  -> ERROR: Bypass-Image not found. Abort."
++        fi
++    elif grep -q "VOLUMEDOWN" "$events" 2>/dev/null; then
++        if [ -f "$AKHOME/Image" ]; then
++            ui_print " "
++            ui_print "  -> Selected: Normal"
++            ui_print " "
++            return 0
++        else
++            abort "  -> ERROR: Image not found. Abort."
++        fi
++    elif grep -q "POWER" "$raw_events" 2>/dev/null; then
++        abort "  -> Cancelled by Power button. Abort."
++    else
++        abort "  -> No input detected. Abort."
++    fi
 +}
 +
-+choose_flash_mode
++# Ask user which mode to use
++choose_flash_mode     
 +
- # boot install
- split_boot
+ ui_print " -> Flashing Now... "
  
+ # boot install
+@@ -77,3 +135,8 @@ ui_print "Samsung_KernelSU_SUSFS GitHub Repository:"
+ ui_print "https://github.com/WildKernels/Samsung_KernelSU_SUSFS"
+ ui_print "Samsung kernels with KernelSU and SUSFS."
+ ui_print " "
++ui_print " "
++ui_print " "
++ui_print "Thanks for using Wild Kernels!"
++ui_print "Please consider donating if you want to support development!"
++ui_print "Have a great day! - TheWildJames"
