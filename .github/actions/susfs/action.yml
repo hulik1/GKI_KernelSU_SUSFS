@@ -161,7 +161,26 @@ runs:
         if [ "${{ inputs.sublevel }}" -le "30" ]; then
           echo "Applying taskmmu.c Android 15 6.6 Fake Patch"
           sed -i '/smap_gather_stats(vma, &mss, last_vma_end);/a\last_vma_end = vma->vm_end;' fs/proc/task_mmu.c
-          sed -i '0,/last_vma_end = vma->vm_end;/{s/last_vma_end = vma->vm_end;/\t\t\t\t&/}' fs/proc/task_mmu.c
+          perl -0777 -i -pe '
+          @l = split /\n/;
+          for ($i = $#l; $i >= 0; $i--) {
+              if ($l[$i] =~ /last_vma_end = vma->vm_end;/) {
+                  $l[$i] = "\t\t\t\t" . $l[$i];
+                  splice(@l, $i + 1, 0, "\t\t\t}");
+
+                  # add { to the if line above
+                  for ($j = $i; $j >= 0; $j--) {
+                      if ($l[$j] =~ /if\s*\(vma->vm_end > last_vma_end\)/) {
+                          $l[$j] =~ s/\)\s*$/) {/;
+                          last;
+                      }
+                  }
+
+                  last;
+              }
+          }
+          $_ = join "\n", @l
+          ' fs/proc/task_mmu.c
         fi
         if [ "${{ inputs.sublevel }}" -le "92" ]; then
           echo "Applying base.c Android 15 6.6 Fake Patch"

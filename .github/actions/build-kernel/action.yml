@@ -93,15 +93,15 @@ runs:
               //common:kernel_aarch64_dist \
               -- --dist_dir=/home/runner/out
           fi
-        #CACHE=/home/runner/.cache/bazel
-        #MAX_BYTES=$((12*1024*1024*1024))
+        CACHE=/home/runner/.cache/bazel
+        MAX_BYTES=$((16*1024*1024*1024))
 
         tools/bazel shutdown || true
-        #while [ "$(du -sb "$CACHE" | cut -f1 || echo 0)" -gt "$MAX_BYTES" ]; do
-        #  OLDEST=$(find "$CACHE" -type f -printf '%T@ %p\n' | sort -n | head -n1 | cut -d' ' -f2-)
-        #  [ -z "$OLDEST" ] && break
-        #  rm -f "$OLDEST"
-        #done
+        while [ "$(du -sb "$CACHE" | cut -f1 || echo 0)" -gt "$MAX_BYTES" ]; do
+          OLDEST=$(find "$CACHE" -type f -printf '%T@ %p\n' | sort -n | head -n1 | cut -d' ' -f2-)
+          [ -z "$OLDEST" ] && break
+          rm -f "$OLDEST"
+        done
       fi
 
       echo "Contents of /home/runner/out"
