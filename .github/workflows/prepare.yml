@@ -16,6 +16,11 @@ on:
         required: false
         type: boolean
         default: false
+      use_latest_commits:
+        description: "Use branch tip for KernelSU and SUSFS instead of pinned commits"
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   generate-matrix:
@@ -88,4 +93,5 @@ jobs:
       variant: ${{ matrix.variant }}
       feature_set: ${{ inputs.feature_set }}
       use_repo: ${{ inputs.use_repo }}
+      use_latest_commits: ${{ inputs.use_latest_commits }}
     secrets: inherit

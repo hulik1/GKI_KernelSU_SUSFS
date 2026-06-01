@@ -16,6 +16,9 @@ Join the telegram here: https://t.me/WildKernelsTG
 
 A kernel-based root solution for Android devices.
 
+> [!WARNING]
+> This release uses the [pershoot/KernelSU-Next](https://github.com/pershoot/KernelSU-Next) fork. The fork maintainer has said it is not ready for production use, so treat it as use at your own risk.
+
 Manager: {{KSU_MANAGER}}
 
 > [!IMPORTANT]

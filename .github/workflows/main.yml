@@ -48,6 +48,10 @@ on:
         description: "Use repo for downloading kernel source"
         type: boolean
         default: true
+      use_latest_commits:
+        description: "Use branch tip for KernelSU and SUSFS instead of pinned commits"
+        type: boolean
+        default: true
       test_release_notes:
         description: "Test release notes only"
         type: boolean
@@ -61,6 +65,7 @@ jobs:
       config_file: .github/config/android12-5.10.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
       use_repo: ${{ inputs.use_repo }}
+      use_latest_commits: ${{ inputs.use_latest_commits }}
     secrets: inherit
 
   build-android13-5-10:
@@ -70,6 +75,7 @@ jobs:
       config_file: .github/config/android13-5.10.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
       use_repo: ${{ inputs.use_repo }}
+      use_latest_commits: ${{ inputs.use_latest_commits }}
     secrets: inherit
 
   build-android13-5-15:
@@ -79,6 +85,7 @@ jobs:
       config_file: .github/config/android13-5.15.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
       use_repo: ${{ inputs.use_repo }}
+      use_latest_commits: ${{ inputs.use_latest_commits }}
     secrets: inherit
 
   build-android14-5-15:
@@ -88,6 +95,7 @@ jobs:
       config_file: .github/config/android14-5.15.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
       use_repo: ${{ inputs.use_repo }}
+      use_latest_commits: ${{ inputs.use_latest_commits }}
     secrets: inherit
 
   build-android14-6-1:
@@ -97,6 +105,7 @@ jobs:
       config_file: .github/config/android14-6.1.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
       use_repo: ${{ inputs.use_repo }}
+      use_latest_commits: ${{ inputs.use_latest_commits }}
     secrets: inherit
 
   build-android15-6-6:
@@ -106,6 +115,7 @@ jobs:
       config_file: .github/config/android15-6.6.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
       use_repo: ${{ inputs.use_repo }}
+      use_latest_commits: ${{ inputs.use_latest_commits }}
     secrets: inherit
 
   build-android16-6-12:
@@ -115,6 +125,7 @@ jobs:
       config_file: .github/config/android16-6.12.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
       use_repo: ${{ inputs.use_repo }}
+      use_latest_commits: ${{ inputs.use_latest_commits }}
     secrets: inherit
 
   rej:
@@ -137,39 +148,44 @@ jobs:
       uses: actions/download-artifact@v7
       with:
         path: ./downloaded-artifacts
-        pattern: '*-Normal-Rejects'
+        pattern: '*-Rejects'
         merge-multiple: false
 
     - name: Process Reject Artifacts
       run: |
         mkdir -p aio-rejects
-        
+
         # Iterate over Rejects artifacts in downloaded-artifacts
         for dir in ./downloaded-artifacts/*-Rejects; do
-            # Ensure it is a directory
             [ -d "$dir" ] || continue
-            
+
             dirname=$(basename "$dir")
-            # Process each reject artifact
-            
-            # Get original name (remove -Rejects suffix)
             original_name=${dirname%-Rejects}
-            
-            mkdir -p "aio-rejects/$original_name"
-            
-            # Check for patch-rejects folder (legacy structure) or direct contents
+            source_dir="$dir"
+
             if [ -d "$dir/patch-rejects" ]; then
-              # Legacy structure
-                cp -r "$dir/patch-rejects/." "aio-rejects/$original_name/"
+              source_dir="$dir/patch-rejects"
+            fi
+
+            mapfile -t rej_files < <(find "$source_dir" -type f -name '*.rej' | sort)
+            if [ "${#rej_files[@]}" -eq 1 ]; then
+              rel_rej="${rej_files[0]#${source_dir}/}"
+              if [ "$rel_rej" = "common/mm/rmap.c.rej" ]; then
+                echo "Skipping $dirname because it only contains common/mm/rmap.c.rej"
+                continue
+              fi
+            fi
+
+            mkdir -p "aio-rejects/$original_name"
+
+            if [ -d "$dir/patch-rejects" ]; then
+              cp -r "$dir/patch-rejects/." "aio-rejects/$original_name/"
             else
-              # Current structure
-                cp -r "$dir/." "aio-rejects/$original_name/"
+              cp -r "$dir/." "aio-rejects/$original_name/"
             fi
         done
-        
-        # Zip and upload if we found anything
+
         if [ "$(ls -A aio-rejects)" ]; then
-            # Create a single zip of all rejects
             cd aio-rejects
             zip -r -q -9 ../AIO-REJ.zip .
             cd ..
@@ -198,7 +214,6 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       RELEASE_NOTES: .github/config/RELEASE_NOTES.md
       COMMITS_JSON: .github/config/commits.json
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v5
@@ -210,27 +225,31 @@ jobs:
       run: |
         set -euo pipefail
 
-        # Extract KernelSU commit and branch from commits config
-        KSUN_COMMIT=$(jq -er '.kernelsu.dev' "$COMMITS_JSON_PATH")
         KSUN_BRANCH="dev"
 
-        # Clone KernelSU-Next on the specified branch
-        echo "Cloning KernelSU-Next from branch: $KSUN_BRANCH"
-        git clone --depth=1 --branch "$KSUN_BRANCH" https://github.com/KernelSU-Next/KernelSU-Next.git /tmp/kernelsu-next
+        if [ "${{ inputs.use_latest_commits }}" = "true" ]; then
+          echo "Cloning KernelSU-Next from full branch tip: $KSUN_BRANCH"
+          git clone --branch "$KSUN_BRANCH" https://github.com/KernelSU-Next/KernelSU-Next.git /tmp/kernelsu-next
+        else
+          echo "Cloning KernelSU-Next from branch: $KSUN_BRANCH"
+          git clone --depth=1 --branch "$KSUN_BRANCH" https://github.com/KernelSU-Next/KernelSU-Next.git /tmp/kernelsu-next
+        fi
 
         cd /tmp/kernelsu-next
 
-        # Checkout the specific commit
-        echo "Checking out commit: $KSUN_COMMIT"
-        git fetch --depth=50 origin "$KSUN_COMMIT"
-        git checkout "$KSUN_COMMIT"
+        if [ "${{ inputs.use_latest_commits }}" = "true" ]; then
+          KSUN_COMMIT=$(git rev-parse HEAD)
+        else
+          KSUN_COMMIT=$(jq -er '.kernelsu.dev' "$COMMITS_JSON_PATH")
+          echo "Checking out commit: $KSUN_COMMIT"
+          git fetch --depth=50 origin "$KSUN_COMMIT"
+          git checkout "$KSUN_COMMIT"
+        fi
 
-        # Extract version info
         COMMITS_COUNT=$(git rev-list --count HEAD)
         BASE_VERSION=30000
         KSU_VERSION=$(expr $COMMITS_COUNT "+" $BASE_VERSION)
 
-        # Extract git tag
         KSU_GIT_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "no-tag")
 
         MANAGER_RUN_ID=$(curl -fsSL "https://api.github.com/repos/KernelSU-Next/KernelSU-Next/actions/workflows/build-manager-ci.yml/runs?head_sha=${KSUN_COMMIT}" | jq -r '.workflow_runs[0].id // empty')
@@ -245,7 +264,6 @@ jobs:
         echo "KSU Git Tag: $KSU_GIT_TAG"
         echo "KSU Manager: $KSU_MANAGER"
 
-        # Export as environment for next step
         echo "KSUN_BRANCH=$KSUN_BRANCH" >> $GITHUB_ENV
         echo "KSUN_COMMIT=$KSUN_COMMIT" >> $GITHUB_ENV
         echo "KSU_COMMITS_COUNT=$COMMITS_COUNT" >> $GITHUB_ENV
@@ -393,20 +411,27 @@ jobs:
       run: |
         set -euo pipefail
 
-        # Extract KernelSU commit and branch from commits config
-        KSUN_COMMIT=$(jq -er '.kernelsu.dev' "$COMMITS_JSON_PATH")
         KSUN_BRANCH="dev"
 
-        # Clone KernelSU-Next on the specified branch
-        echo "Cloning KernelSU-Next from branch: $KSUN_BRANCH"
-        git clone --depth=1 --branch "$KSUN_BRANCH" https://github.com/KernelSU-Next/KernelSU-Next.git /tmp/kernelsu-next
+        if [ "${{ inputs.use_latest_commits }}" = "true" ]; then
+          echo "Cloning KernelSU-Next from full branch tip: $KSUN_BRANCH"
+          git clone --branch "$KSUN_BRANCH" https://github.com/KernelSU-Next/KernelSU-Next.git /tmp/kernelsu-next
+        else
+          echo "Cloning KernelSU-Next from branch: $KSUN_BRANCH"
+          git clone --depth=1 --branch "$KSUN_BRANCH" https://github.com/KernelSU-Next/KernelSU-Next.git /tmp/kernelsu-next
+        fi
 
         cd /tmp/kernelsu-next
 
-        # Checkout the specific commit
-        echo "Checking out commit: $KSUN_COMMIT"
-        git fetch --depth=50 origin "$KSUN_COMMIT"
-        git checkout "$KSUN_COMMIT"
+        if [ "${{ inputs.use_latest_commits }}" = "true" ]; then
+          KSUN_COMMIT=$(git rev-parse HEAD)
+        else
+          # Extract KernelSU commit and branch from commits config
+          KSUN_COMMIT=$(jq -er '.kernelsu.dev' "$COMMITS_JSON_PATH")
+          echo "Checking out commit: $KSUN_COMMIT"
+          git fetch --depth=50 origin "$KSUN_COMMIT"
+          git checkout "$KSUN_COMMIT"
+        fi
 
         # Extract version info
         COMMITS_COUNT=$(git rev-list --count HEAD)

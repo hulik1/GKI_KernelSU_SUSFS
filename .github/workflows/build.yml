@@ -30,6 +30,10 @@ on:
       use_repo:
         required: false
         type: boolean
+      use_latest_commits:
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   build-gki:
@@ -129,11 +133,14 @@ jobs:
     - name: Setup KernelSU-Next
       if: contains(inputs.feature_set, 'KSUN') || inputs.feature_set == 'FULL'
       uses: ./.github/actions/kernelsu
+      with:
+        use_latest_commits: ${{ inputs.use_latest_commits }}
 
     - name: SUSFS
       if: contains(inputs.feature_set, 'SUSFS') || inputs.feature_set == 'FULL'
       uses: ./.github/actions/susfs
       with:
+        use_latest_commits: ${{ inputs.use_latest_commits }}
         version: ${{ inputs.version }}
         android_version: ${{ inputs.android_version }}
         kernel_version: ${{ inputs.kernel_version }}
@@ -210,11 +217,11 @@ jobs:
 
     - name: Scan and collect patch rejects
       id: scan
-      if: ${{ always() && inputs.variant == 'Normal' }}
+      if: ${{ always() }}
       uses: ./.github/actions/scan-patch-rejects
         
     - name: Upload Rejects
-      if: ${{ always() && inputs.variant == 'Normal' }}
+      if: ${{ always() }}
       uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.extract.outputs.file_name }}-Rejects
@@ -278,6 +285,9 @@ jobs:
       uses: ./.github/actions/cache-stats
       with:
         clear_stats: true
+
+    - name: Initialize Config Fragment
+      run: touch "${{ github.workspace }}/wild_gki.fragment"
 
     - name: Build Normal Kernel
       env:

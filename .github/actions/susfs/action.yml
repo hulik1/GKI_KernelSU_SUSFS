@@ -1,6 +1,10 @@
 name: Setup SUSFS
 description: Clone and apply SUSFS patches with version-specific fixes
 inputs:
+  use_latest_commits:
+    description: 'Use the latest commit on the branch instead of the pinned commit'
+    required: false
+    default: true
   version:
     description: 'Kernel config version (e.g., android15-6.6)'
     required: true
@@ -27,15 +31,17 @@ runs:
 
         SUSFS_BRANCH="gki-${{ inputs.version }}"
         SUSFS_REPO="https://gitlab.com/simonpunk/susfs4ksu.git"        
-        COMMITS_JSON="${{ github.workspace }}/.github/config/commits.json"
 
         echo "Preparing SUSFS for branch: $SUSFS_BRANCH"
         echo "Cloning latest from $SUSFS_BRANCH..."
         git clone "$SUSFS_REPO" -b "$SUSFS_BRANCH" susfs4ksu
 
-        SUSFS_COMMIT=$(jq -er --arg key "$SUSFS_BRANCH" '.susfs[$key]' "$COMMITS_JSON")
-        cd ${{ github.workspace }}/susfs4ksu
-        git checkout "$SUSFS_COMMIT"
+        if [ "${{ inputs.use_latest_commits }}" != "true" ]; then
+          COMMITS_JSON="${{ github.workspace }}/.github/config/commits.json"
+          SUSFS_COMMIT=$(jq -er --arg key "$SUSFS_BRANCH" '.susfs[$key]' "$COMMITS_JSON")
+          cd ${{ github.workspace }}/susfs4ksu
+          git checkout "$SUSFS_COMMIT"
+        fi
 
     - name: Enable KernelSU SUSFS Config
       shell: bash
@@ -56,6 +62,7 @@ runs:
         EOF
 
     - name: Apply KSU SUSFS Patches
+      if: false
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/KernelSU-Next
       run: |
@@ -118,6 +125,10 @@ runs:
           perl -i -pe 's/\bmask,\s*mark->ignored_mask/inotify_mark_user_mask(mark)/g' fs/notify/fdinfo.c
           perl -i -pe 's/ignored_mask:%x/ignored_mask:0/g' fs/notify/fdinfo.c
         fi
+        if [ "${{ inputs.sublevel }}" -ge "197" ]; then
+          echo "Applying namespace.c Android 13 5.15 Fake Patch"
+          sed -i '/^#include <trace\/hooks\/blk.h>$/d' fs/namespace.c
+        fi
         if [ "${{ inputs.sublevel }}" -ge "207" ]; then
           echo "Applying task_mmu.c Android 13 5.15 Fake Patch"
           sed -i '/^#include <trace\/hooks\/mm.h>$/d' fs/proc/task_mmu.c
@@ -150,6 +161,7 @@ runs:
         if [ "${{ inputs.sublevel }}" -le "30" ]; then
           echo "Applying taskmmu.c Android 15 6.6 Fake Patch"
           sed -i '/smap_gather_stats(vma, &mss, last_vma_end);/a\last_vma_end = vma->vm_end;' fs/proc/task_mmu.c
+          sed -i '0,/last_vma_end = vma->vm_end;/{s/last_vma_end = vma->vm_end;/\t\t\t\t&/}' fs/proc/task_mmu.c
         fi
         if [ "${{ inputs.sublevel }}" -le "92" ]; then
           echo "Applying base.c Android 15 6.6 Fake Patch"
@@ -172,14 +184,14 @@ runs:
         fi
         if [ "${{ inputs.sublevel }}" -ge "69" ]; then
           echo "Applying task_mmu.c Android 16 6.12 Fake Patch"
-          sed -i 's/vma_pages/vma_data_pages/g' fs/proc/task_mmu.c
+          sed -i 's/vma_data_pages/vma_pages/g' fs/proc/task_mmu.c
         fi
 
     - name: Apply Kernel SUSFS Patches
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
-        patch -p1 < 50_add_susfs_in_gki-${{ inputs.version }}.patch || true
+        patch -p1 < 50_add_susfs_in_gki-${{ inputs.version }}.patch
 
     - name: Revert Android 12 5.10 Fake Patches
       shell: bash
@@ -227,6 +239,10 @@ runs:
           perl -i -pe 's/ignored_mask:0/ignored_mask:%x/g' fs/notify/fdinfo.c
           sed -i 's|i_uid_into_mnt(i_user_ns(&fi->inode), &fi->inode).val|i_uid_into_mnt(\&init_user_ns, \&fi->inode).val|g' fs/susfs.c
           sed -i 's|i_uid_into_mnt(i_user_ns(inode), inode).val|i_uid_into_mnt(\&init_user_ns, inode).val|g' fs/susfs.c
+        fi
+        if [ "${{ inputs.sublevel }}" -ge "197" ]; then
+          echo "Reverting namespace.c Android 13 5.15 Fake Patch"
+          sed -i '/^#include "internal.h"$/a #include <trace/hooks/blk.h>' fs/namespace.c
         fi
         if [ "${{ inputs.sublevel }}" -ge "207" ]; then
           echo "Reverting task_mmu.c Android 13 5.15 Fake Patch"

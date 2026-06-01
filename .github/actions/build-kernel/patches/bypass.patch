@@ -1,12 +1,11 @@
 diff --git a/anykernel.sh b/anykernel.sh
-index 719de4c..3f71202 100755
+index 35b6e59..3f7ad84 100755
 --- a/anykernel.sh
 +++ b/anykernel.sh
-@@ -46,6 +46,64 @@ esac
- 
- ui_print "  -> Wild Kernels Supported: $ksu_supported"
+@@ -45,6 +45,63 @@ esac
+ ui_print " " "  -> Wild Kernels Supported: $ksu_supported"
  $ksu_supported || abort "  -> Non-GKI device, abort."
-+
+ 
 +choose_flash_mode() {
 +    ui_print " "
 +    ui_print "  -> Have a clean backup of your boot.img before proceeding!"
@@ -30,7 +29,7 @@ index 719de4c..3f71202 100755
 +    : > "$events"
 +    getevent -lc 1 2>&1 > "$raw_events" &
 +    pid=$!
-+    sleep 1
++    sleep 20
 +    kill -0 $pid 2>/dev/null && kill $pid 2>/dev/null
 +    grep VOLUME "$raw_events" | grep " DOWN" > "$events" 2>/dev/null || true
 +
@@ -64,15 +63,6 @@ index 719de4c..3f71202 100755
 +# Ask user which mode to use
 +choose_flash_mode     
 +
- ui_print " -> Flashing Now... "
- 
  # boot install
-@@ -77,3 +135,8 @@ ui_print "Samsung_KernelSU_SUSFS GitHub Repository:"
- ui_print "https://github.com/WildKernels/Samsung_KernelSU_SUSFS"
- ui_print "Samsung kernels with KernelSU and SUSFS."
- ui_print " "
-+ui_print " "
-+ui_print " "
-+ui_print "Thanks for using Wild Kernels!"
-+ui_print "Please consider donating if you want to support development!"
-+ui_print "Have a great day! - TheWildJames"
+ split_boot
+ 

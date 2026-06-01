@@ -1,5 +1,10 @@
 name: Setup Wild KSU
 description: Download and configure Wild KSU with version tracking
+inputs:
+  use_latest_commits:
+    description: 'Use the latest commit on the branch instead of the pinned commit'
+    required: false
+    default: true
 
 runs:
   using: composite
@@ -10,11 +15,21 @@ runs:
       run: |
         set -euo pipefail
 
-        COMMITS_JSON="${{ github.workspace }}/.github/config/commits.json"
-        KSU_SETUP_COMMIT=$(jq -er '.kernelsu.dev' "$COMMITS_JSON")
+        KSU_REPO="https://github.com/KernelSU-Next/KernelSU-Next.git"
+        KSU_BRANCH="dev"
 
-        curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/dev/kernel/setup.sh" | bash -s "$KSU_SETUP_COMMIT"
-        
+        if [ "${{ inputs.use_latest_commits }}" = "true" ]; then
+          echo "Using latest KernelSU-Next from branch: $KSU_BRANCH"
+          curl -LSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
+        else
+          COMMITS_JSON="${{ github.workspace }}/.github/config/commits.json"
+          KSU_SETUP_COMMIT=$(jq -er '.kernelsu.dev' "$COMMITS_JSON")
+          echo "Using pinned KernelSU commit: $KSU_SETUP_COMMIT"
+          curl -LSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
+          git -C KernelSU-Next/kernel fetch --depth=50 origin "$KSU_SETUP_COMMIT"
+          git -C KernelSU-Next/kernel checkout "$KSU_SETUP_COMMIT"
+        fi
+
         cd KernelSU-Next/kernel
         
         COMMITS_COUNT=$(/usr/bin/git rev-list --count HEAD)
@@ -49,3 +64,11 @@ runs:
         echo "KSU_GIT_TAG=$KSU_GIT_TAG" >> $GITHUB_ENV
         echo "KSU_VERSION=$KSU_VERSION" >> $GITHUB_ENV
         echo "KSU_COMMIT=$KSU_COMMIT" >> $GITHUB_ENV
+
+    - name: 'Fix KernelSU-Next'
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel/KernelSU-Next
+      run: |
+        set -euo pipefail
+        cp ${{ github.action_path }}/patches/static.patch "${{ github.workspace }}/kernel/KernelSU-Next/static.patch"
+        patch -p1 < static.patch
