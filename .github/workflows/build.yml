@@ -239,6 +239,7 @@ jobs:
 
     - name: Restore ccache
       id: restore-ccache
+      continue-on-error: true
       if: inputs.version == 'android12-5.10' || inputs.version == 'android13-5.10' || inputs.version == 'android13-5.15'
       uses: ./.github/actions/cache-restore
       with:
@@ -250,6 +251,7 @@ jobs:
 
     - name: Restore lto-cache (ccache versions)
       id: restore-lto-ccache
+      continue-on-error: true
       if: inputs.version == 'android12-5.10' || inputs.version == 'android13-5.10' || inputs.version == 'android13-5.15'
       uses: ./.github/actions/cache-restore
       with:
@@ -261,6 +263,7 @@ jobs:
 
     - name: Restore bazel-cache
       id: restore-bazel
+      continue-on-error: true
       if: inputs.version == 'android14-5.15' || inputs.version == 'android14-6.1' || inputs.version == 'android15-6.6' || inputs.version == 'android16-6.12'
       uses: ./.github/actions/cache-restore
       with:
@@ -272,10 +275,11 @@ jobs:
 
     - name: Check cache hit
       run: |
-        echo "Cache restore status:"        CCACHE_HIT="${{ steps.restore-ccache.outputs.cache-hit || 'skipped' }}"
+        echo "Cache restore status:"
+        CCACHE_HIT="${{ steps.restore-ccache.outputs.cache-hit || 'skipped' }}"
         LTO_CCACHE_HIT="${{ steps.restore-lto-ccache.outputs.cache-hit || 'skipped' }}"
         BAZEL_HIT="${{ steps.restore-bazel.outputs.cache-hit || 'skipped' }}"
-        LTO_BAZEL_HIT="${{ steps.restore-lto-bazel.outputs.cache-hit || 'skipped' }}"
+        LTO_BAZEL_HIT="skipped"
         echo "  ccache: $CCACHE_HIT"
         echo "  lto (ccache versions): $LTO_CCACHE_HIT"
         echo "  bazel: $BAZEL_HIT"
@@ -304,6 +308,7 @@ jobs:
         clear_stats: false
 
     - name: Save ccache
+      continue-on-error: true
       uses: ./.github/actions/cache-save
       if: inputs.version == 'android12-5.10' || inputs.version == 'android13-5.10' || inputs.version == 'android13-5.15'
       with:
@@ -314,6 +319,7 @@ jobs:
         github_token: ${{ secrets.MY_GITHUB_TOKEN }}
 
     - name: Save lto-cache
+      continue-on-error: true
       uses: ./.github/actions/cache-save
       if: inputs.version == 'android12-5.10' || inputs.version == 'android13-5.10' || inputs.version == 'android13-5.15'
       with:
@@ -324,6 +330,7 @@ jobs:
         github_token: ${{ secrets.MY_GITHUB_TOKEN }}
 
     - name: Save bazel-cache
+      continue-on-error: true
       uses: ./.github/actions/cache-save
       if:  inputs.version == 'android14-5.15' || inputs.version == 'android14-6.1' || inputs.version == 'android15-6.6' || inputs.version == 'android16-6.12'
       with:

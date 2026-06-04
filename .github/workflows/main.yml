@@ -168,12 +168,20 @@ jobs:
             fi
 
             mapfile -t rej_files < <(find "$source_dir" -type f -name '*.rej' | sort)
-            if [ "${#rej_files[@]}" -eq 1 ]; then
-              rel_rej="${rej_files[0]#${source_dir}/}"
-              if [ "$rel_rej" = "common/mm/rmap.c.rej" ]; then
-                echo "Skipping $dirname because it only contains common/mm/rmap.c.rej"
+            filtered_rej_files=()
+            for rej_file in "${rej_files[@]}"; do
+              rel_rej="${rej_file#${source_dir}/}"
+              rel_name="$(basename "$rel_rej")"
+              if [ "$rel_rej" = "common/mm/rmap.c.rej" ] || [ "$rel_name" = "i2c-nomadik.c.rej" ]; then
+                echo "Skipping $rel_rej because it is an ignored reject file"
                 continue
               fi
+              filtered_rej_files+=("$rej_file")
+            done
+
+            if [ "${#filtered_rej_files[@]}" -eq 0 ]; then
+              echo "Skipping $dirname because it only contains ignored reject files"
+              continue
             fi
 
             mkdir -p "aio-rejects/$original_name"
@@ -183,6 +191,8 @@ jobs:
             else
               cp -r "$dir/." "aio-rejects/$original_name/"
             fi
+
+            find "aio-rejects/$original_name" -type f -name 'i2c-nomadik.c.rej' -delete
         done
 
         if [ "$(ls -A aio-rejects)" ]; then

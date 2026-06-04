@@ -39,16 +39,6 @@ runs:
 
         KSU_GIT_TAG="$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.1")"
         sed -i "s/^KSU_VERSION_TAG_FALLBACK := v0.0.1$/KSU_VERSION_TAG_FALLBACK := ${KSU_GIT_TAG}/" Kbuild
-
-
-    - name: Enable KernelSU Config
-      shell: bash
-      working-directory: ${{ github.workspace }}/kernel
-      run: |
-        cat >> "${{ github.workspace }}/wild_gki.fragment" << 'EOF'
-        # KernelSU Configuration
-        CONFIG_KSU=y
-        EOF
     
     - name: Extract KSU Version Info
       id: ksu-version
@@ -72,3 +62,9 @@ runs:
         set -euo pipefail
         cp ${{ github.action_path }}/patches/static.patch "${{ github.workspace }}/kernel/KernelSU-Next/static.patch"
         patch -p1 < static.patch
+
+    - name: Enable Kernel Configs
+      uses: ./.github/actions/set-kernel-config
+      with:
+        configs: |
+          CONFIG_KSU

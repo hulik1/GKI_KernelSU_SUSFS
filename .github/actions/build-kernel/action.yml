@@ -13,7 +13,7 @@ runs:
   steps:
   - name: 'Build Kernel'
     shell: bash
-    working-directory: ${{ github.workspace }}/kernel
+    working-directory: ${{ github.workspace }}/kernel/common
     run: |
       set -euo pipefail
       if [ "${{ inputs.bypass }}" = "true" ]; then
@@ -34,37 +34,24 @@ runs:
         echo "Bypass hack not applied as per input parameter."
       fi
   
-      rm -rf "out"
-
-      GKI_KCONFIG_FRAGMENT_PATH="${{ github.workspace }}/wild_gki.fragment"
-      GKI_DEFCONFIG_WRAPPER_PATH="${{ github.workspace }}/wild_gki.wrap.sh"
-
-      cat > "${GKI_DEFCONFIG_WRAPPER_PATH}" <<EOF
-      append_cmd POST_DEFCONFIG_CMDS 'if [ -f "${GKI_KCONFIG_FRAGMENT_PATH}" ]; then \${KERNEL_DIR}/scripts/kconfig/merge_config.sh -m -O \${OUT_DIR} \${OUT_DIR}/.config "${GKI_KCONFIG_FRAGMENT_PATH}"; fi && (cd \${KERNEL_DIR} && make O=\${OUT_DIR} olddefconfig)'
-      EOF
-
-      # Override expensive GKI build.sh artifact defaults we do not need in CI.
-      GKI_BUILD_CONFIG_FRAGMENT_PATH="${{ github.workspace }}/gki_build_overrides.fragment"
-      cat > "${GKI_BUILD_CONFIG_FRAGMENT_PATH}" <<'EOF'
-      BUILD_GKI_ARTIFACTS=
-      BUILD_GKI_CERTIFICATION_TOOLS=0
-      BUILD_SYSTEM_DLKM=0
-
-      # Skip heavy packaging steps we don't need in CI
-      SKIP_VENDOR_BOOT=1
-      SKIP_EXT_MODULES=1
-      SKIP_CP_KERNEL_HDR=1
-      SKIP_MRPROPER=1
-      EOF
-
+      make O=/home/runner/out savedefconfig
+      echo "Before patching, defconfig content:"
+      cat arch/arm64/configs/gki_defconfig
+      cp /home/runner/out/defconfig arch/arm64/configs/gki_defconfig
+      echo "After patching, defconfig content:"
+      cat arch/arm64/configs/gki_defconfig
+      rm -rf /home/runner/out
       mkdir -p /home/runner/out
-
+      cd ${{ github.workspace }}/kernel
       if [ -f "build/build.sh" ]; then
-        #SKIP_MRPROPER=1 
+        BUILD_GKI_ARTIFACTS= \
+        BUILD_GKI_CERTIFICATION_TOOLS=0 \
+        BUILD_SYSTEM_DLKM=0 \
+        SKIP_VENDOR_BOOT=1 \
+        SKIP_EXT_MODULES=1 \
+        SKIP_CP_KERNEL_HDR=1 \
         OUT_DIR="/home/runner/out" \
         LTO=thin \
-        GKI_DEFCONFIG_FRAGMENT="${GKI_DEFCONFIG_WRAPPER_PATH}" \
-        GKI_BUILD_CONFIG_FRAGMENT="${GKI_BUILD_CONFIG_FRAGMENT_PATH}" \
         BUILD_CONFIG=common/build.config.gki.aarch64 \
         build/build.sh -j"$(nproc)" \
         CC="/usr/bin/ccache clang" \
@@ -84,24 +71,15 @@ runs:
               --disk_cache=/home/runner/.cache/bazel \
               //common:kernel_aarch64_dist \
               -- --destdir=/home/runner/out
-          else
-            tools/bazel run \
-              --config=fast \
-              --config=stamp \
-              --defconfig_fragment=//common:arch/arm64/configs/wild_gki.fragment \
-              --disk_cache=/home/runner/.cache/bazel \
-              //common:kernel_aarch64_dist \
-              -- --dist_dir=/home/runner/out
-          fi
-        CACHE=/home/runner/.cache/bazel
-        MAX_BYTES=$((16*1024*1024*1024))
-
-        tools/bazel shutdown || true
-        while [ "$(du -sb "$CACHE" | cut -f1 || echo 0)" -gt "$MAX_BYTES" ]; do
-          OLDEST=$(find "$CACHE" -type f -printf '%T@ %p\n' | sort -n | head -n1 | cut -d' ' -f2-)
-          [ -z "$OLDEST" ] && break
-          rm -f "$OLDEST"
-        done
+        else
+          tools/bazel run \
+            --config=fast \
+            --config=stamp \
+            --defconfig_fragment=//common:arch/arm64/configs/wild_gki.fragment \
+            --disk_cache=/home/runner/.cache/bazel \
+            //common:kernel_aarch64_dist \
+            -- --dist_dir=/home/runner/out
+        fi
       fi
 
       echo "Contents of /home/runner/out"

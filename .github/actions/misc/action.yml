@@ -20,19 +20,12 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Apply Kernel Configuration
-      shell: bash
-      run: |
-        cat >> "${{ github.workspace }}/wild_gki.fragment" << 'EOF'
-        # Mountify Support
-        CONFIG_OVERLAY_FS=y
-        CONFIG_TMPFS_XATTR=y
-        CONFIG_TMPFS_POSIX_ACL=y
-
-        # KPatch-Next Support
-        CONFIG_KALLSYMS=y
-        CONFIG_KALLSYMS_ALL=y
-
-        EOF
-        # CONFIG_TRIM_UNUSED_KSYMS is not set
-        # add this here for later
+    - name: Enable Kernel Configs
+      uses: ./.github/actions/set-kernel-config
+      with:
+        configs: |
+          CONFIG_OVERLAY_FS
+          CONFIG_TMPFS_XATTR
+          CONFIG_TMPFS_POSIX_ACL
+          CONFIG_KALLSYMS
+          CONFIG_KALLSYMS_ALL

@@ -1,0 +1,61 @@
+# .github/actions/set-kernel-config/action.yml
+name: Set Kernel Config
+description: Applies kernel config values directly using scripts/config (NO fragments)
+
+inputs:
+  configs:
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Apply configs
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel
+      run: |
+        set -euo pipefail
+
+        CONFIG_FILE="/home/runner/out/.config "
+
+        # ensure config tool exists
+        if [ ! -f common/scripts/config ]; then
+          echo "ERROR: common/scripts/config not found"
+          exit 1
+        fi
+
+        apply_config() {
+          local input="$1"
+
+          # trim whitespace
+          input="$(echo "$input" | xargs)"
+
+          # skip empty or comments
+          [[ -z "$input" || "$input" == \#* ]] && return
+
+          if [[ "$input" == *"="* ]]; then
+            local config="${input%%=*}"
+            local value="${input#*=}"
+          else
+            local config="$input"
+            local value="y"
+          fi
+
+          echo "Setting: $config=$value"
+
+          case "$value" in
+            y|Y|yes|YES|1|true|TRUE)
+              common/scripts/config --file "$CONFIG_FILE" -e "$config"
+              ;;
+            n|N|no|NO|0|false|FALSE)
+              common/scripts/config --file "$CONFIG_FILE" -d "$config"
+              ;;
+            *)
+              # assume explicit value (string/int)
+              common/scripts/config --file "$CONFIG_FILE" --set-val "$config" "$value"
+              ;;
+          esac
+        }
+
+        while IFS= read -r line; do
+          apply_config "$line"
+        done <<< "${{ inputs.configs }}"

@@ -44,22 +44,19 @@ runs:
         fi
 
     - name: Enable KernelSU SUSFS Config
-      shell: bash
-      working-directory: ${{ github.workspace }}/kernel
-      run: |
-        cat >> "${{ github.workspace }}/wild_gki.fragment" << 'EOF'
-        # KernelSU SUSFS Configuration
-        CONFIG_KSU_SUSFS=y
-        CONFIG_KSU_SUSFS_SUS_PATH=y
-        CONFIG_KSU_SUSFS_SUS_MOUNT=y
-        CONFIG_KSU_SUSFS_SUS_KSTAT=y
-        CONFIG_KSU_SUSFS_SPOOF_UNAME=y
-        CONFIG_KSU_SUSFS_ENABLE_LOG=y
-        CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
-        CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
-        CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
-        CONFIG_KSU_SUSFS_SUS_MAP=y
-        EOF
+      uses: ./.github/actions/set-kernel-config
+      with:
+        configs: |
+          CONFIG_KSU_SUSFS
+          CONFIG_KSU_SUSFS_SUS_PATH
+          CONFIG_KSU_SUSFS_SUS_MOUNT
+          CONFIG_KSU_SUSFS_SUS_KSTAT
+          CONFIG_KSU_SUSFS_SPOOF_UNAME
+          CONFIG_KSU_SUSFS_ENABLE_LOG
+          CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS
+          CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
+          CONFIG_KSU_SUSFS_OPEN_REDIRECT
+          CONFIG_KSU_SUSFS_SUS_MAP
 
     - name: Apply KSU SUSFS Patches
       if: false

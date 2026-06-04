@@ -103,14 +103,14 @@ Reboot the device if you performed any cleanup in step 2
 ## Force Load Kernel Modules (Bypass) — flashing with `Bypass-Image`
 
 > [!IMPORTANT]
-> Most users do not need this. Try the `Normal` `Image` first. This option does not help bypass root-detection systems — it only replaces the kernel image used during flashing for compatibility workarounds.
+> Most users do not need this. This option does not help bypass root-detection systems — it only replaces the kernel image used during flashing for compatibility workarounds.
 
 **How to enable:**
-- When flashing, the installer will ask the user what they want to flash, `Normal` or `Bypass`. 
+- Set `do.flash_bypass=1`, in the anykernel.sh file within the AnyKernel3.zip. 
 
 **Behavior:**
-- If `Bypass` is chosen it will move `Bypass-Image` to replace the usual `Normal` `Image` file prior to performing version checks and flashing.
-- If `Bypass` is chosen and `Bypass-Image` is not found, the installer will abort with an error to avoid accidental forced flashing of an unintended image.
+- If `do.flash_bypass=1` is set it will move `Bypass-Image` to replace the usual `Image` file prior to performing version checks and flashing.
+- If `do.flash_bypass=1` is set and `Bypass-Image` is not found, the installer will abort with an error to avoid accidental forced flashing of an unintended image.
 
 **Why / When to use:**
 - Use this only when a `Normal` flash fails to boot due to kernel module incompatibilities.

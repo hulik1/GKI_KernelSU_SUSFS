@@ -147,3 +147,9 @@ runs:
 
         echo "Kernel common commit date: $COMMIT_DATE"
         echo "Kernel common commit msg: $COMMIT_MSG"
+
+    - name: Generate .config
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
+        make O=/home/runner/out gki_defconfig AARCH=arm64

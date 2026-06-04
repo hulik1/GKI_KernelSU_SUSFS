@@ -1,68 +1,47 @@
 diff --git a/anykernel.sh b/anykernel.sh
-index 35b6e59..3f7ad84 100755
+index 7ac0233..864ecf4 100755
 --- a/anykernel.sh
 +++ b/anykernel.sh
-@@ -45,6 +45,63 @@ esac
- ui_print " " "  -> Wild Kernels Supported: $ksu_supported"
- $ksu_supported || abort "  -> Non-GKI device, abort."
+@@ -21,7 +21,6 @@ supported.patchlevels=
+ supported.vendorpatchlevels=
+ '; } # end properties
  
-+choose_flash_mode() {
-+    ui_print " "
-+    ui_print "  -> Have a clean backup of your boot.img before proceeding!"
-+    ui_print "  -> Most users do not need Bypass; try Normal first!"
-+    ui_print "  -> Bypass only swaps the Image for compatibility workarounds!"
-+    ui_print "  -> Bypass does NOT help with hiding root."
-+    ui_print " "
-+    sleep 5
-+    ui_print "-------------------------"
-+    ui_print " "
-+    ui_print "  -> VOL + = Bypass"
-+    ui_print " "
-+    ui_print "  -> VOL - = Normal"
-+    ui_print " "
-+    ui_print "  -> Power = Cancel"
-+    ui_print " "
-+    ui_print "-------------------------"
-+    raw_events="/tmp/ak3_raw_events"
-+    events="/tmp/ak3_events"
-+    : > "$raw_events"
-+    : > "$events"
-+    getevent -lc 1 2>&1 > "$raw_events" &
-+    pid=$!
-+    sleep 20
-+    kill -0 $pid 2>/dev/null && kill $pid 2>/dev/null
-+    grep VOLUME "$raw_events" | grep " DOWN" > "$events" 2>/dev/null || true
-+
-+    if grep -q "VOLUMEUP" "$events" 2>/dev/null; then
-+        ui_print "  -> Selected: Bypass"
-+        if [ -f "$AKHOME/Bypass-Image" ]; then
-+            cp -f "$AKHOME/Bypass-Image" "$AKHOME/Image" || abort "  -> ERROR: Failed to copy Bypass-Image. Abort."
-+            ui_print " "
-+            ui_print "  -> Selected Bypass"
-+            ui_print " "
-+            return 0
-+        else
-+            abort "  -> ERROR: Bypass-Image not found. Abort."
-+        fi
-+    elif grep -q "VOLUMEDOWN" "$events" 2>/dev/null; then
-+        if [ -f "$AKHOME/Image" ]; then
-+            ui_print " "
-+            ui_print "  -> Selected: Normal"
-+            ui_print " "
-+            return 0
-+        else
-+            abort "  -> ERROR: Image not found. Abort."
-+        fi
-+    elif grep -q "POWER" "$raw_events" 2>/dev/null; then
-+        abort "  -> Cancelled by Power button. Abort."
+-
+ ### AnyKernel install
+ ## boot shell variables
+ block=boot
+diff --git a/tools/ak3-core.sh b/tools/ak3-core.sh
+index dfbec13..c9900f7 100755
+--- a/tools/ak3-core.sh
++++ b/tools/ak3-core.sh
+@@ -1051,8 +1051,30 @@ do_check_boot_version() {
+   ui_print "  -> Kernel version: COMPATIBLE ($new_ver >= $dev_ver)"
+ }
+ 
++do_flash_bypass() {
++  # do.flash_bypass=0 in anykernel.sh skips bypass option and flashs normal
++  if [ "$(file_getprop anykernel.sh do.flash_bypass)" != 1 ]; then
++    ui_print "  -> [NORMAL] do.flash_bypass=0: bypass option SKIPPED."
++    if [ -f "$AKHOME/Image" ]; then
++      ui_print "  -> [NORMAL] Flashing Normal Image..."
 +    else
-+        abort "  -> No input detected. Abort."
++      abort "  -> ERROR: Image not found. Abort."
 +    fi
++  else
++    ui_print "  -> [BYPASS] do.flash_bypass=1: flash bypass option ENABLED."
++    if [ -f "$AKHOME/Bypass-Image" ]; then
++      cp -f "$AKHOME/Bypass-Image" "$AKHOME/Image" || abort "  -> ERROR: Failed to copy Bypass-Image. Abort."
++      ui_print "  -> [BYPASS] Flashing Bypass Image..."
++    else
++      abort "  -> ERROR: Bypass-Image not found. Abort."
++    fi
++  fi
 +}
-+
-+# Ask user which mode to use
-+choose_flash_mode     
-+
- # boot install
- split_boot
++ 
+ ### end methods
  
+ setup_ak;
+ 
+ do_check_boot_version;
++
++do_flash_bypass;
