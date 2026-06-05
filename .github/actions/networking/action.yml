@@ -1,6 +1,9 @@
 name: 'Setup Networking Options'
 description: 'Set up kernel configuration fragment with required options'
 inputs:
+  version:
+    description: 'Kernel config version (e.g., android15-6.6)'
+    required: true
   kernel_version:
     description: 'Kernel version (e.g., 6.1)'
     required: true
@@ -20,48 +23,50 @@ runs:
         curl -L https://raw.githubusercontent.com/ahmed-alnassif/GKI-Duchamp/dev/kernel-patches/bbrv3/bbrv3.patch | patch -p1
 
     - name: Add IP SET & IPv6_NAT Support
-      uses: ./.github/actions/set-kernel-config
-      with:
-        configs: |
-          CONFIG_IP_SET
-          CONFIG_IP_SET_MAX=65534
-          CONFIG_IP_SET_BITMAP_IP
-          CONFIG_IP_SET_BITMAP_IPMAC
-          CONFIG_IP_SET_BITMAP_PORT
-          CONFIG_IP_SET_HASH_IP
-          CONFIG_IP_SET_HASH_IPMARK
-          CONFIG_IP_SET_HASH_IPPORT
-          CONFIG_IP_SET_HASH_IPPORTIP
-          CONFIG_IP_SET_HASH_IPPORTNET
-          CONFIG_IP_SET_HASH_IPMAC
-          CONFIG_IP_SET_HASH_MAC
-          CONFIG_IP_SET_HASH_NETPORTNET
-          CONFIG_IP_SET_HASH_NET
-          CONFIG_IP_SET_HASH_NETNET
-          CONFIG_IP_SET_HASH_NETPORT
-          CONFIG_IP_SET_HASH_NETIFACE
-          CONFIG_IP_SET_LIST_SET
-          CONFIG_NETFILTER_XT_MATCH_ADDRTYPE
-          CONFIG_NETFILTER_XT_SET
-          CONFIG_NETFILTER_XT_TARGET_LOG
-          CONFIG_NETFILTER_XT_MATCH_RECENT
-          CONFIG_IP6_NF_NAT
-          CONFIG_IP6_NF_TARGET_MASQUERADE
+      shell: bash
+      run: |
+        cat >> "${{ github.workspace }}/kernel/common/arch/arm64/configs/gki_defconfig" << 'EOF'
+        CONFIG_IP_SET=y
+        CONFIG_IP_SET_MAX=65534
+        CONFIG_IP_SET_BITMAP_IP=y
+        CONFIG_IP_SET_BITMAP_IPMAC=y
+        CONFIG_IP_SET_BITMAP_PORT=y
+        CONFIG_IP_SET_HASH_IP=y
+        CONFIG_IP_SET_HASH_IPMARK=y
+        CONFIG_IP_SET_HASH_IPPORT=y
+        CONFIG_IP_SET_HASH_IPPORTIP=y
+        CONFIG_IP_SET_HASH_IPPORTNET=y
+        CONFIG_IP_SET_HASH_IPMAC=y
+        CONFIG_IP_SET_HASH_MAC=y
+        CONFIG_IP_SET_HASH_NETPORTNET=y
+        CONFIG_IP_SET_HASH_NET=y
+        CONFIG_IP_SET_HASH_NETNET=y
+        CONFIG_IP_SET_HASH_NETPORT=y
+        CONFIG_IP_SET_HASH_NETIFACE=y
+        CONFIG_IP_SET_LIST_SET=y
+        CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
+        CONFIG_NETFILTER_XT_SET=y
+        CONFIG_NETFILTER_XT_TARGET_LOG=y
+        CONFIG_NETFILTER_XT_MATCH_RECENT=y
+        CONFIG_IP6_NF_NAT=y
+        CONFIG_IP6_NF_TARGET_MASQUERADE=y
+        EOF
 
     - name: Apply TCP Congestion Control
-      uses: ./.github/actions/set-kernel-config
-      with:
-        configs: |
-          CONFIG_TCP_CONG_ADVANCED
-          CONFIG_TCP_CONG_BBR
-          CONFIG_TCP_CONG_CUBIC
-          CONFIG_TCP_CONG_BIC
-          CONFIG_TCP_CONG_WESTWOOD
-          CONFIG_TCP_CONG_HTCP
-          CONFIG_DEFAULT_BBR
-          CONFIG_DEFAULT_TCP_CONG="bbr"
-          CONFIG_NET_SCH_FQ
-          CONFIG_NET_SCH_FQ_CODEL
+      shell: bash
+      run: |
+        cat >> "${{ github.workspace }}/kernel/common/arch/arm64/configs/gki_defconfig" << 'EOF'
+        CONFIG_TCP_CONG_ADVANCED=y
+        CONFIG_TCP_CONG_BBR=y
+        CONFIG_TCP_CONG_CUBIC=y
+        CONFIG_TCP_CONG_BIC=y
+        CONFIG_TCP_CONG_WESTWOOD=y
+        CONFIG_TCP_CONG_HTCP=y
+        CONFIG_DEFAULT_BBR=y
+        CONFIG_DEFAULT_TCP_CONG="bbr"
+        CONFIG_NET_SCH_FQ=y
+        CONFIG_NET_SCH_FQ_CODEL=y
+        EOF
 
     - name: Apply Kernel Config for 5.10
       shell: bash
@@ -69,3 +74,34 @@ runs:
       if: inputs.kernel_version == '5.10'
       run: |
         sed -i 's/CONFIG_IP_SET_MAX/65534/g' net/netfilter/ipset/ip_set_core.c
+
+    - name: 'Apply BBRv3'
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
+        set -euo pipefail
+        cp ${{ github.action_path }}/patches/bbrv3-android14-6.1.patch "${{ github.workspace }}/kernel/common/bbrv3-android14-6.1.patch"
+        patch -p1 < bbrv3-android14-6.1.patch
+
+    - name: Apply NTSync Patch
+      if: false
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
+        set -euo pipefail
+
+        echo "Using patch: $(basename $NTSYNC_PATCH)"
+        if [[ ${{ inputs.versi0n }} = "android16-6.12" ]}; then
+          echo "Removing pre-existing ntsync files for android16-6.12"
+          rm -f include/uapi/linux/ntsync.h
+          rm -f drivers/misc/ntsync.c
+        fi
+
+        cp ${{ github.workspace }}/kernel_patches/common/ntsync/ntsync_compat_${{ inputs.versi0n }}.patch ${{ github.workspace }}/kernel/common
+        patch -p1 ntsync_compat_${{ inputs.versi0n }}.patch
+        
+        cp ${{ github.workspace }}/kernel_patches/common/ntsync/ntsync_base.patch ${{ github.workspace }}/kernel/common
+        patch -p1 < ntsync_base.patch
+        cat >> "${{ github.workspace }}/kernel/common/arch/arm64/configs/gki_defconfig" << 'EOF'
+        CONFIG_NTSYNC=y
+        EOF

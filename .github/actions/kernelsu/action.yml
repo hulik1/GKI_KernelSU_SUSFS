@@ -64,7 +64,8 @@ runs:
         patch -p1 < static.patch
 
     - name: Enable Kernel Configs
-      uses: ./.github/actions/set-kernel-config
-      with:
-        configs: |
-          CONFIG_KSU
+      shell: bash
+      run: |
+        cat >> "${{ github.workspace }}/kernel/common/arch/arm64/configs/gki_defconfig" << 'EOF'
+        CONFIG_KSU=y
+        EOF

@@ -67,15 +67,16 @@ runs:
         echo 'EXPORT_SYMBOL_GPL(init_ipc_ns);' >> "${{ github.workspace }}/kernel/common/ipc/msgutil.c"
 
     - name: Enable Kernel Configs
-      uses: ./.github/actions/set-kernel-config
-      with:
-        configs: |
-          CONFIG_PID_NS
-          CONFIG_SYSVIPC
-          CONFIG_POSIX_MQUEUE
-          CONFIG_IPC_NS
-          CONFIG_DEVTMPFS
-          CONFIG_BINFMT_MISC
-          CONFIG_BINFMT_SCRIPT
-          CONFIG_BINFMT_ELF
+      shell: bash
+      run: |
+        cat >> "${{ github.workspace }}/kernel/common/arch/arm64/configs/gki_defconfig" << 'EOF'
+        CONFIG_PID_NS=y
+        CONFIG_SYSVIPC=y
+        CONFIG_POSIX_MQUEUE=y
+        CONFIG_IPC_NS=y
+        CONFIG_DEVTMPFS=y
+        CONFIG_BINFMT_MISC=y
+        CONFIG_BINFMT_SCRIPT=y
+        CONFIG_BINFMT_ELF=y
+        EOF
 

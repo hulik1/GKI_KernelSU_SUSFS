@@ -155,6 +155,7 @@ jobs:
       if: contains(inputs.feature_set, 'NET') || inputs.feature_set == 'FULL'
       uses: ./.github/actions/networking
       with:
+        version: ${{ inputs.version }}
         kernel_version: ${{ inputs.kernel_version }}
         android_version: ${{ inputs.android_version }}
 

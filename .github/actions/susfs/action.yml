@@ -44,27 +44,20 @@ runs:
         fi
 
     - name: Enable KernelSU SUSFS Config
-      uses: ./.github/actions/set-kernel-config
-      with:
-        configs: |
-          CONFIG_KSU_SUSFS
-          CONFIG_KSU_SUSFS_SUS_PATH
-          CONFIG_KSU_SUSFS_SUS_MOUNT
-          CONFIG_KSU_SUSFS_SUS_KSTAT
-          CONFIG_KSU_SUSFS_SPOOF_UNAME
-          CONFIG_KSU_SUSFS_ENABLE_LOG
-          CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS
-          CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
-          CONFIG_KSU_SUSFS_OPEN_REDIRECT
-          CONFIG_KSU_SUSFS_SUS_MAP
-
-    - name: Apply KSU SUSFS Patches
-      if: false
       shell: bash
-      working-directory: ${{ github.workspace }}/kernel/KernelSU-Next
       run: |
-        cp ${{ github.workspace }}/kernel_patches/wild/ksun-5a4a718-susfs-f7ae19ef-gki-android14-6.1.patch ./
-        patch -p1 < ksun-5a4a718-susfs-f7ae19ef-gki-android14-6.1.patch
+        cat >> "${{ github.workspace }}/kernel/common/arch/arm64/configs/gki_defconfig" << 'EOF'
+        CONFIG_KSU_SUSFS=y
+        CONFIG_KSU_SUSFS_SUS_PATH=y
+        CONFIG_KSU_SUSFS_SUS_MOUNT=y
+        CONFIG_KSU_SUSFS_SUS_KSTAT=y
+        CONFIG_KSU_SUSFS_SPOOF_UNAME=y
+        CONFIG_KSU_SUSFS_ENABLE_LOG=y
+        CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
+        CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
+        CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
+        CONFIG_KSU_SUSFS_SUS_MAP=y
+        EOF
 
     - name: Apply Kernel SUSFS Patches
       shell: bash
@@ -126,7 +119,7 @@ runs:
           echo "Applying namespace.c Android 13 5.15 Fake Patch"
           sed -i '/^#include <trace\/hooks\/blk.h>$/d' fs/namespace.c
         fi
-        if [ "${{ inputs.sublevel }}" -ge "207" ]; then
+        if [ "${{ inputs.sublevel }}" -ge "206" ]; then
           echo "Applying task_mmu.c Android 13 5.15 Fake Patch"
           sed -i '/^#include <trace\/hooks\/mm.h>$/d' fs/proc/task_mmu.c
         fi
@@ -260,7 +253,7 @@ runs:
           echo "Reverting namespace.c Android 13 5.15 Fake Patch"
           sed -i '/^#include "internal.h"$/a #include <trace/hooks/blk.h>' fs/namespace.c
         fi
-        if [ "${{ inputs.sublevel }}" -ge "207" ]; then
+        if [ "${{ inputs.sublevel }}" -ge "206" ]; then
           echo "Reverting task_mmu.c Android 13 5.15 Fake Patch"
           sed -i '/^#include <linux\/pkeys.h>$/a #include <trace/hooks/mm.h>' fs/proc/task_mmu.c
         fi

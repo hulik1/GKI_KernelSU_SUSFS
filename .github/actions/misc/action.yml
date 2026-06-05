@@ -21,11 +21,12 @@ runs:
   using: "composite"
   steps:
     - name: Enable Kernel Configs
-      uses: ./.github/actions/set-kernel-config
-      with:
-        configs: |
-          CONFIG_OVERLAY_FS
-          CONFIG_TMPFS_XATTR
-          CONFIG_TMPFS_POSIX_ACL
-          CONFIG_KALLSYMS
-          CONFIG_KALLSYMS_ALL
+      shell: bash
+      run: |
+        cat >> "${{ github.workspace }}/kernel/common/arch/arm64/configs/gki_defconfig" << 'EOF'
+        CONFIG_OVERLAY_FS=y
+        CONFIG_TMPFS_XATTR=y
+        CONFIG_TMPFS_POSIX_ACL=y
+        CONFIG_KALLSYMS=y
+        CONFIG_KALLSYMS_ALL=y
+        EOF
