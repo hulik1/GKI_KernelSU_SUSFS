@@ -51,7 +51,6 @@ runs:
         SKIP_VENDOR_BOOT=1 \
         SKIP_EXT_MODULES=1 \
         SKIP_CP_KERNEL_HDR=1 \
-        SKIP_MRPROPER=1 \
         OUT_DIR="/home/runner/out" \
         LTO=thin \
         BUILD_CONFIG=common/build.config.gki.aarch64 \
@@ -82,6 +81,8 @@ runs:
             -- --dist_dir=/home/runner/out
         fi
       fi
+
+      cat /home/runner/out/common/.config || true
 
   - name: 'Gather Build Artifacts'
     shell: bash

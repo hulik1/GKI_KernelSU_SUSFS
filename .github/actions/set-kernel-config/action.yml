@@ -1,68 +1,57 @@
-# .github/actions/set-kernel-config/action.yml
 name: Set Kernel Config
-description: Applies kernel config values directly using scripts/config (NO fragments)
+description: Patch gki_defconfig directly (add or modify entries)
+
+inputs:
+  config_list:
+    required: true
+    description: "Kernel config lines"
 
 runs:
   using: composite
   steps:
-  - name: Apply configs
+  - name: Patch gki_defconfig
     shell: bash
     working-directory: ${{ github.workspace }}/kernel/common
     run: |
       set -euo pipefail
 
-      make O=/home/runner/out gki_defconfig AARCH=arm64
+      DEFCONFIG="arch/arm64/configs/gki_defconfig"
+      CONFIG_LIST="${{ inputs.config_list }}"
 
-      CONFIG_FILE="/home/runner/out/.config"
-      CONFIG_LIST="${{ github.workspace }}/wild_gki.fragment"
-
-      if [ ! -f scripts/config ]; then
-        echo "ERROR: common/scripts/config not found"
+      if [ ! -f "$DEFCONFIG" ]; then
+        echo "ERROR: gki_defconfig not found"
         exit 1
       fi
 
-      if [ ! -f "$CONFIG_FILE" ]; then
-        echo "ERROR: config file not found: $CONFIG_FILE"
-        exit 1
-      fi
+      apply_line() {
+        local line="$1"
+        line="$(echo "$line" | xargs)"
 
-      if [ ! -f "$CONFIG_LIST" ]; then
-        echo "ERROR: config list file not found: $CONFIG_LIST"
-        exit 1
-      fi
+        # skip empty/comments
+        [[ -z "$line" || "$line" == \#* ]] && return
 
-      apply_config() {
-        local input="$1"
-
-        # trim whitespace
-        input="$(echo "$input" | xargs)"
-
-        # skip empty lines and comments
-        [[ -z "$input" || "$input" == \#* ]] && return
-
-        if [[ "$input" == *"="* ]]; then
-          local config="${input%%=*}"
-          local value="${input#*=}"
+        local key value
+        if [[ "$line" == *"="* ]]; then
+          key="${line%%=*}"
+          value="${line#*=}"
         else
-          local config="$input"
-          local value="y"
+          key="$line"
+          value="y"
         fi
 
-        echo "Setting: $config=$value"
+        echo "Processing: $key=$value"
 
-        case "$value" in
-          y|Y|yes|YES|1|true|TRUE)
-            scripts/config --file "$CONFIG_FILE" -e "$config"
-            ;;
-          n|N|no|NO|0|false|FALSE)
-            scripts/config --file "$CONFIG_FILE" -d "$config"
-            ;;
-          *)
-            scripts/config --file "$CONFIG_FILE" --set-val "$config" "$value"
-            ;;
-        esac
+        # if config exists anywhere in file → replace it
+        if grep -q "^$key=" "$DEFCONFIG"; then
+          sed -i "s|^$key=.*|$key=$value|g" "$DEFCONFIG"
+        elif grep -q "^# $key is not set" "$DEFCONFIG"; then
+          sed -i "s|^# $key is not set|$key=$value|g" "$DEFCONFIG"
+        else
+          # not present → append
+          echo "$key=$value" >> "$DEFCONFIG"
+        fi
       }
 
       while IFS= read -r line || [ -n "$line" ]; do
-        apply_config "$line"
-      done < "$CONFIG_LIST"
+        apply_line "$line"
+      done <<< "$CONFIG_LIST"
