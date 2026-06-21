@@ -14,13 +14,19 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Patch with BBRv3
-      if: ${{ inputs.kernel_version == '6.1' && false }}
+    - name: 'Apply BBRv3'
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
         set -euo pipefail
-        curl -L https://raw.githubusercontent.com/ahmed-alnassif/GKI-Duchamp/dev/kernel-patches/bbrv3/bbrv3.patch | patch -p1
+        cp ${{ github.action_path }}/patches/bbrv3.patch "${{ github.workspace }}/kernel/common/bbrv3.patch"
+        patch -p1 < bbrv3.patch
+
+    - name: Enable Kernel Configs
+      uses: ./.github/actions/set-kernel-config
+      with:
+        config_list: |
+          CONFIG_TCP_CONG_BBRV3=y
 
     - name: Enable Kernel Configs
       uses: ./.github/actions/set-kernel-config
@@ -72,15 +78,6 @@ runs:
       if: inputs.kernel_version == '5.10'
       run: |
         sed -i 's/CONFIG_IP_SET_MAX/65534/g' net/netfilter/ipset/ip_set_core.c
-
-    - name: 'Apply BBRv3'
-      if: false
-      shell: bash
-      working-directory: ${{ github.workspace }}/kernel/common
-      run: |
-        set -euo pipefail
-        cp ${{ github.action_path }}/patches/bbrv3-android14-6.1.patch "${{ github.workspace }}/kernel/common/bbrv3-android14-6.1.patch"
-        patch -p1 < bbrv3-android14-6.1.patch
 
     - name: Apply NTSync Patch
       if: false
