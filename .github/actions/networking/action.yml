@@ -16,6 +16,7 @@ runs:
   steps:
     - name: 'Apply BBRv3'
       shell: bash
+      if: false
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
         set -euo pipefail
@@ -24,6 +25,7 @@ runs:
 
     - name: Enable Kernel Configs
       uses: ./.github/actions/set-kernel-config
+      if: false
       with:
         config_list: |
           CONFIG_TCP_CONG_BBRV3=y
