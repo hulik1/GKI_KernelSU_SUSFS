@@ -20,15 +20,20 @@ runs:
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
         set -euo pipefail
-        cp ${{ github.action_path }}/patches/bbrv3.patch "${{ github.workspace }}/kernel/common/bbrv3.patch"
-        patch -p1 < bbrv3.patch
+        PATCH_URL="https://raw.githubusercontent.com/fatalcoder524/kernel_patches_additional/refs/heads/main/bbr3/0001-net-tcp-backport-BBRv3-to-${{ inputs.version }}.patch"
+        if curl -f -Ls "$PATCH_URL" -o temp.patch; then
+          patch -p1 -F 3 < temp.patch
+          rm temp.patch
+        fi
+        
+        echo "✅ BBRv3 patches applied"
 
     - name: Enable Kernel Configs
-      uses: ./.github/actions/set-kernel-config
       if: false
+      uses: ./.github/actions/set-kernel-config
       with:
         config_list: |
-          CONFIG_TCP_CONG_BBRV3=y
+          CONFIG_TCP_CONG_BBR3=y
 
     - name: Enable Kernel Configs
       uses: ./.github/actions/set-kernel-config
@@ -73,6 +78,8 @@ runs:
           CONFIG_DEFAULT_TCP_CONG="bbr"
           CONFIG_NET_SCH_FQ=y
           CONFIG_NET_SCH_FQ_CODEL=y
+          CONFIG_NET_ACT_CONNMARK=y
+          CONFIG_NET_SCH_CAKE=y
         
     - name: Apply Kernel Config for 5.10
       shell: bash
@@ -89,14 +96,14 @@ runs:
         set -euo pipefail
 
         echo "Using patch: $(basename $NTSYNC_PATCH)"
-        if [[ ${{ inputs.versi0n }} = "android16-6.12" ]}; then
+        if [[ ${{ inputs.version }} = "android16-6.12" ]]; then
           echo "Removing pre-existing ntsync files for android16-6.12"
           rm -f include/uapi/linux/ntsync.h
           rm -f drivers/misc/ntsync.c
         fi
 
-        cp ${{ github.workspace }}/kernel_patches/common/ntsync/ntsync_compat_${{ inputs.versi0n }}.patch ${{ github.workspace }}/kernel/common
-        patch -p1 ntsync_compat_${{ inputs.versi0n }}.patch
+        cp ${{ github.workspace }}/kernel_patches/common/ntsync/ntsync_compat_${{ inputs.version }}.patch ${{ github.workspace }}/kernel/common
+        patch -p1 ntsync_compat_${{ inputs.version }}.patch
         
         cp ${{ github.workspace }}/kernel_patches/common/ntsync/ntsync_base.patch ${{ github.workspace }}/kernel/common
         patch -p1 < ntsync_base.patch
