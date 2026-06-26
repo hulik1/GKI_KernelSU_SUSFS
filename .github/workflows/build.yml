@@ -27,13 +27,14 @@ on:
       feature_set:
         required: true
         type: string
-      use_repo:
+      ksu_branch:
         required: false
-        type: boolean
-      use_latest_commits:
+        type: string
+        default: ""
+      susfs_commit:
         required: false
-        type: boolean
-        default: true
+        type: string
+        default: ""
 
 jobs:
   build-gki:
@@ -82,7 +83,6 @@ jobs:
         android_version: ${{ inputs.android_version }}
         kernel_version: ${{ inputs.kernel_version }}
         os_patch_level: ${{ inputs.os_patch_level }}
-        use_repo: ${{ inputs.use_repo }}
 
     - name: Set Build Timestamp from Kernel Commit
       shell: bash
@@ -134,13 +134,13 @@ jobs:
       if: contains(inputs.feature_set, 'KSUN') || inputs.feature_set == 'FULL'
       uses: ./.github/actions/kernelsu
       with:
-        use_latest_commits: ${{ inputs.use_latest_commits }}
+        ksu_branch: ${{ inputs.ksu_branch }}
 
     - name: SUSFS
       if: contains(inputs.feature_set, 'SUSFS') || inputs.feature_set == 'FULL'
       uses: ./.github/actions/susfs
       with:
-        use_latest_commits: ${{ inputs.use_latest_commits }}
+        susfs_commit: ${{ inputs.susfs_commit }}
         version: ${{ inputs.version }}
         android_version: ${{ inputs.android_version }}
         kernel_version: ${{ inputs.kernel_version }}
@@ -158,6 +158,7 @@ jobs:
         version: ${{ inputs.version }}
         kernel_version: ${{ inputs.kernel_version }}
         android_version: ${{ inputs.android_version }}
+        sublevel: ${{ steps.extract.outputs.sublevel }}
 
     - name: DroidSpaces-OSS Patches
       if: contains(inputs.feature_set, 'DS') || inputs.feature_set == 'FULL'
@@ -349,6 +350,34 @@ jobs:
       with:
         bypass: true
         version: ${{ inputs.version }}
+
+    - name: 📋 Consolidated Build Summary
+      if: ${{ always() }}
+      shell: bash
+      run: |
+        SUMMARY_FILE="/tmp/build-summary-${{ steps.extract.outputs.file_name }}.md"
+        {
+          echo "## ${{ inputs.android_version }} ${{ inputs.kernel_version }}.${{ inputs.sublevel }} (${{ inputs.variant }})"
+          echo
+          # Kernel Fixes
+          if [ -f /tmp/kernel-fixes-summary.md ]; then
+            cat /tmp/kernel-fixes-summary.md
+            echo
+          fi
+          # Add more summary files here as other actions adopt this pattern:
+          # if [ -f /tmp/kernelsu-summary.md ]; then cat /tmp/kernelsu-summary.md; echo; fi
+          # if [ -f /tmp/susfs-summary.md ]; then cat /tmp/susfs-summary.md; echo; fi
+          # if [ -f /tmp/networking-summary.md ]; then cat /tmp/networking-summary.md; echo; fi
+        } > "$SUMMARY_FILE"
+
+    - name: Upload Build Summary Artifact
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ steps.extract.outputs.file_name }}-Summary
+        path: /tmp/build-summary-${{ steps.extract.outputs.file_name }}.md
+        if-no-files-found: ignore
+        compression-level: 9
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v7

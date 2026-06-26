@@ -10,26 +10,16 @@ PLACEHOLDERS = {
     "{{KSUN_BRANCH}}": lambda: os.environ.get("KSUN_BRANCH", "dev"),
     "{{KSUN_COMMIT}}": lambda: os.environ.get("KSUN_COMMIT", "unknown"),
     "{{KSU_MANAGER}}": lambda: os.environ.get("KSU_MANAGER", "Placeholder"),
+    "{{SUSFS_BRANCHES}}": lambda: os.environ.get("SUSFS_COMMIT", "latest on auto-derived gki-{version} branch"),
+    "{{SUSFS_BRANCHS}}": lambda: os.environ.get("SUSFS_COMMIT", "latest on auto-derived gki-{version} branch"),
 }
 
 
 def render_markdown(template_path: Path):
     text = template_path.read_text()
 
-    commits_path = template_path.parent / "commits.json"
-    commits = json.loads(commits_path.read_text()) if commits_path.exists() else {}
-
     for placeholder, getter in PLACEHOLDERS.items():
         text = text.replace(placeholder, getter())
-
-    susfs_branches = []
-    for branch, commit in commits.get("susfs", {}).items():
-        susfs_branches.append(f"**{branch}**\n`{commit}`")
-
-    if "{{SUSFS_BRANCHS}}" in text:
-        text = text.replace("{{SUSFS_BRANCHS}}", "\n".join(susfs_branches))
-    if "{{SUSFS_BRANCHES}}" in text:
-        text = text.replace("{{SUSFS_BRANCHES}}", "\n".join(susfs_branches))
 
     print(text, end="")
 
@@ -60,9 +50,6 @@ def emit_description(value):
 
 
 data = json.loads(config_path.read_text())
-
-commits_path = config_path.parent / "commits.json"
-commits = json.loads(commits_path.read_text()) if commits_path.exists() else {}
 
 emit("**IMPORTANT DISCLAIMER**")
 for line in data["release"]["disclaimer"]:
@@ -99,11 +86,12 @@ for key in data.keys():
     if section.get("branch"):
         emit(f"- Branch: {section['branch']}")
 
-    if key == "susfs" and "susfs" in commits:
-        emit("- Branches:")
-        for branch, commit in commits["susfs"].items():
-            emit(f"**{branch}**")
-            emit(f"`{commit}`")
+    if key == "susfs":
+        susfs_commit = os.environ.get("SUSFS_COMMIT", "")
+        if susfs_commit:
+            emit(f"- Commit: `{susfs_commit}`")
+        else:
+            emit("- Commit: latest on auto-derived gki-{version} branch")
 
     if section.get("items"):
         emit_list(section["items"])

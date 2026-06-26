@@ -11,16 +11,16 @@ on:
         description: "Feature Set"
         required: false
         type: string
-      use_repo:
-        description: "Use repo for downloading kernel source"
+      ksu_branch:
+        description: "KernelSU branch or commit (empty = latest dev)"
         required: false
-        type: boolean
-        default: false
-      use_latest_commits:
-        description: "Use branch tip for KernelSU and SUSFS instead of pinned commits"
+        type: string
+        default: ""
+      susfs_commit:
+        description: "SUSFS commit hash (empty = latest on auto-derived branch)"
         required: false
-        type: boolean
-        default: true
+        type: string
+        default: ""
 
 jobs:
   generate-matrix:
@@ -92,6 +92,6 @@ jobs:
       os_patch_level: ${{ matrix.os_patch_level }}
       variant: ${{ matrix.variant }}
       feature_set: ${{ inputs.feature_set }}
-      use_repo: ${{ inputs.use_repo }}
-      use_latest_commits: ${{ inputs.use_latest_commits }}
+      ksu_branch: ${{ inputs.ksu_branch }}
+      susfs_commit: ${{ inputs.susfs_commit }}
     secrets: inherit

@@ -12,7 +12,7 @@ Join the telegram here: https://t.me/WildKernelsTG
 - [DroidSpaces-OSS](#droidspaces-oss)
 - [Networking Improvements](#networking)
 
-## [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)
+## [KernelSU-Next](https://github.com/pershoot/KernelSU-Next)
 
 A kernel-based root solution for Android devices.
 

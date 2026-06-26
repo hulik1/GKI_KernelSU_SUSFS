@@ -15,8 +15,6 @@ jobs:
 
       - name: Build commit summary
         shell: bash
-        env:
-          COMMITS_JSON: .github/config/commits.json
         run: |
           set -euo pipefail
 
@@ -30,11 +28,6 @@ jobs:
             printf '%s' "$value"
           }
 
-          gitlab_commit_message() {
-            local sha="$1"
-            curl -fsSL "https://gitlab.com/api/v4/projects/simonpunk%2Fsusfs4ksu/repository/commits/${sha}" | jq -r '.message | split("\n")[0]'
-          }
-
           gitlab_latest_commit() {
             local branch="$1"
             curl -fsSL "https://gitlab.com/api/v4/projects/simonpunk%2Fsusfs4ksu/repository/commits?ref_name=${branch}&per_page=1" | jq -r '.[0].id'
@@ -45,59 +38,55 @@ jobs:
             curl -fsSL "https://gitlab.com/api/v4/projects/simonpunk%2Fsusfs4ksu/repository/commits?ref_name=${branch}&per_page=1" | jq -r '.[0].message | split("\n")[0]'
           }
 
-          github_commit_message() {
-            local sha="$1"
-            curl -fsSL "https://api.github.com/repos/KernelSU-Next/KernelSU-Next/commits/${sha}" | jq -r '.commit.message | split("\n")[0]'
-          }
-
           github_latest_commit() {
-            curl -fsSL "https://api.github.com/repos/KernelSU-Next/KernelSU-Next/commits/dev" | jq -r '.sha'
+            curl -fsSL "https://api.github.com/repos/pershoot/KernelSU-Next/commits/dev-susfs" | jq -r '.sha'
           }
 
           github_latest_message() {
-            curl -fsSL "https://api.github.com/repos/KernelSU-Next/KernelSU-Next/commits/dev" | jq -r '.commit.message | split("\n")[0]'
+            curl -fsSL "https://api.github.com/repos/pershoot/KernelSU-Next/commits/dev-susfs" | jq -r '.commit.message | split("\n")[0]'
           }
 
           {
             echo "# Commit Status Report"
             echo ""
-            echo "This report shows the pinned commit from this repository and the latest upstream commit for each supported SUSFS branch plus KernelSU-Next."
+            echo "This report shows the latest upstream commit for each supported SUSFS branch plus KernelSU-Next."
             echo ""
           } >> "$summary_file"
 
           {
             echo "## SUSFS"
             echo ""
-            echo "| Branch | Current Commit | Current Message | Latest Commit | Latest Message |"
-            echo "| --- | --- | --- | --- | --- |"
+            echo "| Branch | Latest Commit | Latest Message |"
+            echo "| --- | --- | --- |"
           } >> "$summary_file"
 
-          while IFS= read -r branch; do
-            current_commit="$(jq -r --arg key "$branch" '.susfs[$key]' "$COMMITS_JSON")"
+          SUSFS_BRANCHES=(
+            "gki-android12-5.10"
+            "gki-android13-5.10"
+            "gki-android13-5.15"
+            "gki-android14-5.15"
+            "gki-android14-6.1"
+            "gki-android15-6.6"
+            "gki-android16-6.12"
+          )
+
+          for branch in "${SUSFS_BRANCHES[@]}"; do
             latest_commit="$(gitlab_latest_commit "$branch")"
-            current_message="$(gitlab_commit_message "$current_commit")"
             latest_message="$(gitlab_latest_message "$branch")"
-
-            current_message="$(sanitize_cell "$current_message")"
             latest_message="$(sanitize_cell "$latest_message")"
-
-            printf '| %s | %s | %s | %s | %s |\n' "$branch" "$current_commit" "$current_message" "$latest_commit" "$latest_message" >> "$summary_file"
-          done < <(jq -r '.susfs | keys[]' "$COMMITS_JSON" | sort)
+            printf '| %s | %s | %s |\n' "$branch" "$latest_commit" "$latest_message" >> "$summary_file"
+          done
 
           {
             echo ""
             echo "## KernelSU-Next"
             echo ""
-            echo "| Branch | Current Commit | Current Message | Latest Commit | Latest Message |"
-            echo "| --- | --- | --- | --- | --- |"
+            echo "| Branch | Latest Commit | Latest Message |"
+            echo "| --- | --- | --- |"
           } >> "$summary_file"
 
-          current_kernelsu_commit="$(jq -r '.kernelsu.dev' "$COMMITS_JSON")"
           latest_kernelsu_commit="$(github_latest_commit)"
-          current_kernelsu_message="$(github_commit_message "$current_kernelsu_commit")"
           latest_kernelsu_message="$(github_latest_message)"
-
-          current_kernelsu_message="$(sanitize_cell "$current_kernelsu_message")"
           latest_kernelsu_message="$(sanitize_cell "$latest_kernelsu_message")"
 
-          printf '| %s | %s | %s | %s | %s |\n' "dev" "$current_kernelsu_commit" "$current_kernelsu_message" "$latest_kernelsu_commit" "$latest_kernelsu_message" >> "$summary_file"
+          printf '| %s | %s | %s |\n' "dev-susfs" "$latest_kernelsu_commit" "$latest_kernelsu_message" >> "$summary_file"

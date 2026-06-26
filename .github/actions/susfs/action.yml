@@ -1,10 +1,10 @@
 name: Setup SUSFS
 description: Clone and apply SUSFS patches with version-specific fixes
 inputs:
-  use_latest_commits:
-    description: 'Use the latest commit on the branch instead of the pinned commit'
+  susfs_commit:
+    description: 'SUSFS commit hash (empty = latest on auto-derived gki-{version} branch)'
     required: false
-    default: true
+    default: ""
   version:
     description: 'Kernel config version (e.g., android15-6.6)'
     required: true
@@ -36,11 +36,10 @@ runs:
         echo "Cloning latest from $SUSFS_BRANCH..."
         git clone "$SUSFS_REPO" -b "$SUSFS_BRANCH" susfs4ksu
 
-        if [ "${{ inputs.use_latest_commits }}" != "true" ]; then
-          COMMITS_JSON="${{ github.workspace }}/.github/config/commits.json"
-          SUSFS_COMMIT=$(jq -er --arg key "$SUSFS_BRANCH" '.susfs[$key]' "$COMMITS_JSON")
+        if [ -n "${{ inputs.susfs_commit }}" ]; then
+          echo "Checking out SUSFS commit: ${{ inputs.susfs_commit }}"
           cd ${{ github.workspace }}/susfs4ksu
-          git checkout "$SUSFS_COMMIT"
+          git checkout "${{ inputs.susfs_commit }}"
         fi
 
     - name: Enable Kernel Configs

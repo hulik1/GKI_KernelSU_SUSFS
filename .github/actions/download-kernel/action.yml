@@ -14,9 +14,6 @@ inputs:
   os_patch_level:
     description: 'OS patch level (e.g., 2024-01)'
     required: true
-  use_repo:
-    description: 'Use repo for downloading kernel source'
-    required: false
 
 outputs:
   deprecated_branch:
@@ -27,7 +24,6 @@ runs:
   using: composite
   steps:
     - name: Initialize and Sync Kernel Repository
-      if: ${{ inputs.use_repo == 'true' }}
       id: sync
       shell: bash
       working-directory: ${{ github.workspace }}/kernel
@@ -85,44 +81,42 @@ runs:
           attempt=$((attempt+1))
         done
 
-    - name: Download manifest.xml for branch (with deprecated fallback)
-      shell: bash
-      if: ${{ inputs.use_repo != 'true' }}
-      working-directory: ${{ github.workspace }}/kernel
-      run: |
-        set -euo pipefail
-        VERSION="${{ inputs.version }}"
-        ANDROID_PART=$(echo "$VERSION" | cut -d- -f1)
-        KERNEL_PART=$(echo "$VERSION" | cut -d- -f2)
-        FORMATTED_BRANCH="${ANDROID_PART}-${KERNEL_PART}-${{ inputs.os_patch_level }}"
-        MAIN_MANIFEST_URL="https://android.googlesource.com/kernel/manifest/+/refs/heads/common-${FORMATTED_BRANCH}/default.xml?format=TEXT"
-        DEPRECATED_MANIFEST_URL="https://android.googlesource.com/kernel/manifest/+/refs/heads/deprecated/common-${FORMATTED_BRANCH}/default.xml?format=TEXT"
-        echo "Trying to fetch manifest from $MAIN_MANIFEST_URL"
-        if curl -fsSL "$MAIN_MANIFEST_URL" | base64 -d > manifest.xml; then
-          echo "Fetched manifest from $MAIN_MANIFEST_URL"
-        else
-          echo "Main manifest fetch failed, trying deprecated branch."
-          echo "⚠ Note: Branch common-${FORMATTED_BRANCH} is considered deprecated."
-          if curl -fsSL "$DEPRECATED_MANIFEST_URL" | base64 -d > manifest.xml; then
-            echo "Fetched manifest from $DEPRECATED_MANIFEST_URL"
-          else
-            echo "ERROR: Neither main nor deprecated branch exists for $FORMATTED_BRANCH" >&2
-            exit 22
-          fi
-        fi
-
-    - name: Debug Show manifest.xml
-      shell: bash
-      if: ${{ inputs.use_repo != 'true' }}
-      working-directory: ${{ github.workspace }}/kernel
-      run: cat manifest.xml
-      
-    - name: Fast Parallel Archive Download
-      shell: bash
-      if: ${{ inputs.use_repo != 'true' }}
-      working-directory: ${{ github.workspace }}/kernel
-      run: |
-        python "${{ github.workspace }}/.github/actions/download-kernel/fast_parallel_download.py"
+    # --- Non-repo steps (commented out; we only use repo now) ---
+    # - name: Download manifest.xml for branch (with deprecated fallback)
+    #   shell: bash
+    #   working-directory: ${{ github.workspace }}/kernel
+    #   run: |
+    #     set -euo pipefail
+    #     VERSION="${{ inputs.version }}"
+    #     ANDROID_PART=$(echo "$VERSION" | cut -d- -f1)
+    #     KERNEL_PART=$(echo "$VERSION" | cut -d- -f2)
+    #     FORMATTED_BRANCH="${ANDROID_PART}-${KERNEL_PART}-${{ inputs.os_patch_level }}"
+    #     MAIN_MANIFEST_URL="https://android.googlesource.com/kernel/manifest/+/refs/heads/common-${FORMATTED_BRANCH}/default.xml?format=TEXT"
+    #     DEPRECATED_MANIFEST_URL="https://android.googlesource.com/kernel/manifest/+/refs/heads/deprecated/common-${FORMATTED_BRANCH}/default.xml?format=TEXT"
+    #     echo "Trying to fetch manifest from $MAIN_MANIFEST_URL"
+    #     if curl -fsSL "$MAIN_MANIFEST_URL" | base64 -d > manifest.xml; then
+    #       echo "Fetched manifest from $MAIN_MANIFEST_URL"
+    #     else
+    #       echo "Main manifest fetch failed, trying deprecated branch."
+    #       echo "⚠ Note: Branch common-${FORMATTED_BRANCH} is considered deprecated."
+    #       if curl -fsSL "$DEPRECATED_MANIFEST_URL" | base64 -d > manifest.xml; then
+    #         echo "Fetched manifest from $DEPRECATED_MANIFEST_URL"
+    #       else
+    #         echo "ERROR: Neither main nor deprecated branch exists for $FORMATTED_BRANCH" >&2
+    #         exit 22
+    #       fi
+    #     fi
+    #
+    # - name: Debug Show manifest.xml
+    #   shell: bash
+    #   working-directory: ${{ github.workspace }}/kernel
+    #   run: cat manifest.xml
+    #
+    # - name: Fast Parallel Archive Download
+    #   shell: bash
+    #   working-directory: ${{ github.workspace }}/kernel
+    #   run: |
+    #     python "${{ github.workspace }}/.github/actions/download-kernel/fast_parallel_download.py"
 
     - name: Capture Kernel Common Commit Metadata
       shell: bash
