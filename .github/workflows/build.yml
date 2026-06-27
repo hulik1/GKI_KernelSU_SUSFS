@@ -231,6 +231,13 @@ jobs:
         if-no-files-found: ignore
         compression-level: 9
 
+    - name: Get prebuilt ccache (downloaded once by prepare-ccache)
+      uses: actions/download-artifact@v8
+      with:
+        name: ccache-binary
+        path: ccache-dl
+      continue-on-error: true
+
     - name: 'Setup Cache and Build Environment'
       uses: ./.github/actions/cache-setup
       with:
@@ -356,18 +363,64 @@ jobs:
       shell: bash
       run: |
         SUMMARY_FILE="/tmp/build-summary-${{ steps.extract.outputs.file_name }}.md"
+        
+        # Determine build status
+        if [ "${{ job.status }}" = "success" ]; then
+          STATUS="✅ Success"
+        else
+          STATUS="❌ Failed"
+        fi
+        
+        # Get kernel version from Image if available
+        KERNEL_VER_STR=""
+        if [ -f "/home/runner/out/dist/Image" ]; then
+          KERNEL_VER_STR=$(strings "/home/runner/out/dist/Image" | grep -m1 "^Linux version " | sed 's/Linux version //' || echo "")
+        elif [ -f "/home/runner/out/Image" ]; then
+          KERNEL_VER_STR=$(strings "/home/runner/out/Image" | grep -m1 "^Linux version " | sed 's/Linux version //' || echo "")
+        fi
+        
+        # Get KSU version from env (set by kernelsu action)
+        KSU_VER="${KSU_VERSION:-N/A}"
+        KSU_TAG="${KSU_GIT_TAG:-N/A}"
+        
+        # Get SUSFS version from susfs.h if available
+        SUSFS_VER="N/A"
+        if [ -f "${{ github.workspace }}/kernel/common/include/linux/susfs.h" ]; then
+          SUSFS_VER=$(grep '#define SUSFS_VERSION' "${{ github.workspace }}/kernel/common/include/linux/susfs.h" | awk -F'"' '{print $2}' || echo "N/A")
+        fi
+        
+        # Get cache stats from env (set by cache-stats action)
+        CCACHE_HIT="${CCACHE_HIT_RATE:-N/A}"
+        
+        # Get build time (approximate from step timing)
+        BUILD_TIME="N/A"
+        
+        # Count warnings from build log if available
+        WARNINGS="N/A"
+        
         {
-          echo "## ${{ inputs.android_version }} ${{ inputs.kernel_version }}.${{ inputs.sublevel }} (${{ inputs.variant }})"
+          echo "## ${{ inputs.android_version }} ${{ inputs.kernel_version }}.${{ inputs.sublevel }} (${{ inputs.variant }}) — ${STATUS}"
           echo
+          echo "| Metric | Value |"
+          echo "|--------|-------|"
+          echo "| **Status** | ${STATUS} |"
+          echo "| **Kernel** | ${{ inputs.kernel_version }}.${{ inputs.sublevel }}-${{ inputs.android_version }}-${{ inputs.os_patch_level }} |"
+          if [ -n "$KERNEL_VER_STR" ]; then
+            echo "| **Version String** | \`${KERNEL_VER_STR}\` |"
+          fi
+          echo "| **KSU Version** | ${KSU_VER} |"
+          echo "| **KSU Tag** | ${KSU_TAG} |"
+          echo "| **SUSFS Version** | ${SUSFS_VER} |"
+          echo "| **Feature Set** | ${{ inputs.feature_set }} |"
+          echo "| **Variant** | ${{ inputs.variant }} |"
+          echo
+          
           # Kernel Fixes
           if [ -f /tmp/kernel-fixes-summary.md ]; then
+            echo "### 🔧 Kernel Fixes"
             cat /tmp/kernel-fixes-summary.md
             echo
           fi
-          # Add more summary files here as other actions adopt this pattern:
-          # if [ -f /tmp/kernelsu-summary.md ]; then cat /tmp/kernelsu-summary.md; echo; fi
-          # if [ -f /tmp/susfs-summary.md ]; then cat /tmp/susfs-summary.md; echo; fi
-          # if [ -f /tmp/networking-summary.md ]; then cat /tmp/networking-summary.md; echo; fi
         } > "$SUMMARY_FILE"
 
     - name: Upload Build Summary Artifact

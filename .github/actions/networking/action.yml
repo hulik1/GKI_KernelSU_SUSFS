@@ -114,25 +114,3 @@ runs:
       if: inputs.kernel_version == '5.10'
       run: |
         sed -i 's/CONFIG_IP_SET_MAX/65534/g' net/netfilter/ipset/ip_set_core.c
-
-    - name: Apply NTSync Patch
-      shell: bash
-      working-directory: ${{ github.workspace }}/kernel/common
-      run: |
-        set -euo pipefail
-
-        echo "Using patch: $(basename $NTSYNC_PATCH)"
-        if [[ ${{ inputs.version }} = "android16-6.12" ]]; then
-          echo "Removing pre-existing ntsync files for android16-6.12"
-          rm -f include/uapi/linux/ntsync.h
-          rm -f drivers/misc/ntsync.c
-        fi
-
-        cp ${{ github.workspace }}/kernel_patches/common/ntsync/ntsync_compat_${{ inputs.version }}.patch ${{ github.workspace }}/kernel/common
-        patch -p1 ntsync_compat_${{ inputs.version }}.patch
-        
-        cp ${{ github.workspace }}/kernel_patches/common/ntsync/ntsync_base.patch ${{ github.workspace }}/kernel/common
-        patch -p1 < ntsync_base.patch
-        cat >> "${{ github.workspace }}/kernel/common/arch/arm64/configs/gki_defconfig" << 'EOF'
-        CONFIG_NTSYNC=y
-        EOF

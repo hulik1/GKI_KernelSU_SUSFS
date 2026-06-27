@@ -40,6 +40,28 @@ runs:
           CONFIG_CIFS_XATTR=y
           CONFIG_CIFS_POSIX=y
 
+    - name: Apply NTSync Patch
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
+        set -euo pipefail
+
+        echo "Using patch: $(basename $NTSYNC_PATCH)"
+        if [[ ${{ inputs.version }} = "android16-6.12" ]]; then
+          echo "Removing pre-existing ntsync files for android16-6.12"
+          rm -f include/uapi/linux/ntsync.h
+          rm -f drivers/misc/ntsync.c
+        fi
+
+        cp ${{ github.workspace }}/kernel_patches/common/ntsync/ntsync_compat_${{ inputs.version }}.patch ${{ github.workspace }}/kernel/common
+        patch -p1 ntsync_compat_${{ inputs.version }}.patch
+        
+        cp ${{ github.workspace }}/kernel_patches/common/ntsync/ntsync_base.patch ${{ github.workspace }}/kernel/common
+        patch -p1 < ntsync_base.patch
+        cat >> "${{ github.workspace }}/kernel/common/arch/arm64/configs/gki_defconfig" << 'EOF'
+        CONFIG_NTSYNC=y
+        EOF
+
     - name: Apply Ptrace Patch
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
@@ -59,7 +81,7 @@ runs:
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
         set -euo pipefail
-        KERNEL_VERSION="${{ env.KERNEL_VER }}"
+        KERNEL_VERSION="${{ inputs.kernel_version }}"
         MIN_VERSION="5.16"
         
         echo "Patching unicode!"
@@ -112,6 +134,17 @@ runs:
         echo "Patching adjust_cpu_scan_order.patch"
         patch -p1 -F3 --forward < "${{ github.workspace }}/kernel_patches/common/adjust_cpu_scan_order.patch"
         echo "Patching avoid_extra_s2idle_wake_attempts.patch"
+        FILE="drivers/base/power/wakeup.c"
+        # Check if the function exists
+        if grep -q "^void pm_system_wakeup(void)" "$FILE"; then
+            # Check if the line exists inside the function
+            if sed -n '/^void pm_system_wakeup(void)/,/^}/p' "$FILE" | grep -q 'suspend_abort_fs_sync();'; then
+                # Remove the line
+                sed -i '/^void pm_system_wakeup(void)/,/^}/{
+                    /suspend_abort_fs_sync();/d
+                }' "$FILE"
+            fi
+        fi
         patch -p1 -F3 --forward < "${{ github.workspace }}/kernel_patches/common/avoid_extra_s2idle_wake_attempts.patch"
         echo "Patching disable_cache_hot_buddy.patch"
         patch -p1 -F3 --forward < "${{ github.workspace }}/kernel_patches/common/disable_cache_hot_buddy.patch"
