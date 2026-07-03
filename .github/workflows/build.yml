@@ -151,6 +151,12 @@ jobs:
       if: (contains(inputs.feature_set, 'BBG') || inputs.feature_set == 'FULL')
       uses: ./.github/actions/bbg
 
+    - name: Apply BBRv3 Patches
+      uses: ./.github/actions/bbrv3
+      with:
+        version: ${{ inputs.version }}
+        sublevel: ${{ steps.extract.outputs.sublevel }}
+
     - name: Setup Networking
       if: contains(inputs.feature_set, 'NET') || inputs.feature_set == 'FULL'
       uses: ./.github/actions/networking
@@ -167,14 +173,29 @@ jobs:
         version: ${{ inputs.version }}
         kernel_version: ${{ inputs.kernel_version }}
 
-    - name: Setup Misc Configs
-      uses: ./.github/actions/misc
+    - name: Apply NTSync Patches
+      uses: ./.github/actions/ntsync
       with:
         version: ${{ inputs.version }}
         kernel_version: ${{ inputs.kernel_version }}
-        android_version: ${{ inputs.android_version }}
-        sublevel: ${{ steps.extract.outputs.sublevel }}
-        variant: ${{ inputs.variant }}
+
+    - name: Apply Ptrace Patch
+      uses: ./.github/actions/ptrace
+      with:
+        kernel_version: ${{ inputs.kernel_version }}
+
+    - name: Apply Unicode Fix Patch
+      uses: ./.github/actions/unicode-fix
+      with:
+        kernel_version: ${{ inputs.kernel_version }}
+
+    - name: Apply Performance Patches
+      uses: ./.github/actions/performance
+      with:
+        kernel_version: ${{ inputs.kernel_version }}
+
+    - name: Setup Misc Configs
+      uses: ./.github/actions/misc
 
     - name: Apply Device-Specific Patches
       uses: ./.github/actions/apply-device-patches

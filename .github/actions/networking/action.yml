@@ -17,51 +17,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: 'Apply BBRv3'
-      shell: bash
-      if: true
-      working-directory: ${{ github.workspace }}/kernel/common
-      run: |
-        set -euo pipefail
-        if [[ ${{ inputs.version }} == "android16-6.12" ]]; then
-          cp "${{ github.workspace }}/kernel_patches/common/bbrv3/0001-net-tcp-backport-BBRv3-to-android15-6.6.patch" temp.patch
-          #patch -p1 -F 3 < temp.patch
-          rm temp.patch
-        elif [[ ${{ inputs.version }} == "android15-6.6" ]]; then
-          cp "${{ github.workspace }}/kernel_patches/common/bbrv3/0001-net-tcp-backport-BBRv3-to-android15-6.6.patch" temp.patch
-          patch -p1 -F 3 < temp.patch
-          rm temp.patch
-        elif [[ ${{ inputs.version }} == "android14-6.1" ]]; then
-          cp "${{ github.workspace }}/kernel_patches/common/bbrv3/0001-net-tcp-backport-BBRv3-to-android14-6.1.patch" temp.patch
-          patch -p1 -F 3 < temp.patch
-          rm temp.patch
-        elif [[ ${{ inputs.version }} == "android14-5.15" ]]; then
-          cp "${{ github.workspace }}/kernel_patches/common/bbrv3/0001-net-tcp-backport-BBRv3-to-android13-5.15.patch" temp.patch
-          patch -p1 -F 3 < temp.patch
-          rm temp.patch
-        elif [[ ${{ inputs.version }} == "android13-5.15" && ${{ inputs.sublevel }} -ge "74" ]]; then
-          cp "${{ github.workspace }}/kernel_patches/common/bbrv3/0001-net-tcp-backport-BBRv3-to-android13-5.15.patch" temp.patch
-          patch -p1 -F 3 < temp.patch
-          rm temp.patch
-        elif [[ ${{ inputs.version }} == "android13-5.10" && ${{ inputs.sublevel }} -ge "186" ]]; then
-          cp "${{ github.workspace }}/kernel_patches/common/bbrv3/0001-net-tcp-backport-BBRv3-to-android12-5.10.patch" temp.patch
-          patch -p1 -F 3 < temp.patch
-          rm temp.patch
-        elif [[ ${{ inputs.version }} == "android12-5.10" && ${{ inputs.sublevel }} -ge "185" ]]; then
-          cp "${{ github.workspace }}/kernel_patches/common/bbrv3/0001-net-tcp-backport-BBRv3-to-android12-5.10.patch" temp.patch
-          patch -p1 -F 3 < temp.patch
-          rm temp.patch
-        fi
-        
-        echo "✅ BBRv3 patches applied"
-
-    - name: Enable Kernel Configs
-      if: true
-      uses: ./.github/actions/set-kernel-config
-      with:
-        config_list: |
-          CONFIG_TCP_CONG_BBR3=y
-
     - name: Enable Kernel Configs
       uses: ./.github/actions/set-kernel-config
       with:
