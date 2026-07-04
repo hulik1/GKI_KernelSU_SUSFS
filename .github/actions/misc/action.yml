@@ -36,6 +36,7 @@ runs:
         config_list: |
           CONFIG_CIFS=y
           CONFIG_NETWORK_FILESYSTEMS=y
+          CONFIG_NETFS_SUPPORT=y
           CONFIG_KEYS=y
           CONFIG_CIFS_XATTR=y
           CONFIG_CIFS_POSIX=y

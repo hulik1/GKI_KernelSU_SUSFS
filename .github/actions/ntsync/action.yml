@@ -24,9 +24,17 @@ runs:
           rm -f drivers/misc/ntsync.c
         fi
 
-        cp ${{ github.workspace }}/kernel_patches/common/ntsync/ntsync_compat_${{ inputs.version }}.patch ${{ github.workspace }}/kernel/common
-        patch -p1 ntsync_compat_${{ inputs.version }}.patch
-        
+        if [[ ${{ inputs.version }} = "android13-5.10" ]]; then
+          cp ${{ github.workspace }}/kernel_patches/common/ntsync/ntsync_compat_android12-5.10.patch ${{ github.workspace }}/kernel/common
+          patch -p1 ntsync_compat_android12-5.10.patch
+        elif [[ ${{ inputs.version }} = "android14-5.15" ]]; then
+          cp ${{ github.workspace }}/kernel_patches/common/ntsync/ntsync_compat_android13-5.15.patch ${{ github.workspace }}/kernel/common
+          patch -p1 ntsync_compat_android13-5.15.patch
+        else
+          cp ${{ github.workspace }}/kernel_patches/common/ntsync/ntsync_compat_${{ inputs.version }}.patch ${{ github.workspace }}/kernel/common
+          patch -p1 ntsync_compat_${{ inputs.version }}.patch
+        fi
+
         cp ${{ github.workspace }}/kernel_patches/common/ntsync/ntsync_base.patch ${{ github.workspace }}/kernel/common
         patch -p1 < ntsync_base.patch
         cat >> "${{ github.workspace }}/kernel/common/arch/arm64/configs/gki_defconfig" << 'EOF'
