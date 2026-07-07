@@ -29,15 +29,4 @@ runs:
           CONFIG_TMPFS_POSIX_ACL=y
           CONFIG_KALLSYMS=y
           CONFIG_KALLSYMS_ALL=y
-
-    - name: Enable Kernel Configs
-      uses: ./.github/actions/set-kernel-config
-      if: false
-      with:
-        config_list: |
-          CONFIG_CIFS=y
-          CONFIG_NETWORK_FILESYSTEMS=y
-          CONFIG_NETFS_SUPPORT=y
-          CONFIG_KEYS=y
-          CONFIG_CIFS_XATTR=y
-          CONFIG_CIFS_POSIX=y
+          
