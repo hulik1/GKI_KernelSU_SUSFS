@@ -535,7 +535,7 @@ jobs:
         echo "KSU Manager: $KSU_MANAGER"
 
         # Export as environment for next step
-        echo "KSUN_BRANCH=$KSUN_BRANCH" >> $GITHUB_ENV
+        echo "KSUN_BRANCH=$KSU_INPUT" >> $GITHUB_ENV
         echo "KSUN_COMMIT=$KSUN_COMMIT" >> $GITHUB_ENV
         echo "KSU_COMMITS_COUNT=$COMMITS_COUNT" >> $GITHUB_ENV
         echo "KSU_VERSION=$KSU_VERSION" >> $GITHUB_ENV

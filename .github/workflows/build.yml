@@ -151,13 +151,6 @@ jobs:
       if: (contains(inputs.feature_set, 'BBG') || inputs.feature_set == 'FULL')
       uses: ./.github/actions/bbg
 
-    - name: Apply BBRv3 Patches
-      uses: ./.github/actions/bbrv3
-      if: false
-      with:
-        version: ${{ inputs.version }}
-        sublevel: ${{ steps.extract.outputs.sublevel }}
-
     - name: Setup Networking
       if: contains(inputs.feature_set, 'NET') || inputs.feature_set == 'FULL'
       uses: ./.github/actions/networking
