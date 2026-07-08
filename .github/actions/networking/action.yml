@@ -101,7 +101,7 @@ runs:
         set -euo pipefail
         if [[ ${{ inputs.version }} == "android16-6.12" ]]; then
           #patch -p1 < "${{ github.workspace }}/kernel_patches/common/bbrv3/0001-net-tcp-backport-BBRv3-to-android15-6.6.patch"
-          echo "skipper
+          echo "skipped"
         elif [[ ${{ inputs.version }} == "android15-6.6" ]]; then
           patch -p1 < "${{ github.workspace }}/kernel_patches/common/bbrv3/0001-net-tcp-backport-BBRv3-to-android15-6.6.patch"
         elif [[ ${{ inputs.version }} == "android14-6.1" ]]; then
@@ -139,5 +139,13 @@ runs:
           CONFIG_NETWORK_FILESYSTEMS=y
           CONFIG_NETFS_SUPPORT=y
           CONFIG_KEYS=y
-          CONFIG_CIFS_XATTR=y
+          CONFIG_CIFS_XATTR=ys
           CONFIG_CIFS_POSIX=y
+   
+    - name: Fix CIFS on android16-6.12
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel/common
+      run: |
+        if [[ ${{ inputs.version }} == "android16-6.12" ]]; then
+          sed -i '/"fs\/netfs\/netfs\.ko",/d' modules.bzl
+        fi
