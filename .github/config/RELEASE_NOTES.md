@@ -66,7 +66,7 @@ A lightweight, LXC-inspired container runtime for Android and Linux. Run full Li
 ## Networking
 
 - BBRv1 - Improved TCP congestion control
-- BBRv3 - Improved TCP congestion control (5.10-6.6, 6.12 coming soon!)
+- BBRv3 - Improved TCP congestion control (coming soon!)
 - Wireguard - Built-in VPN support
 - IP Set & IPv6 NAT Support - Advanced firewall capabilities
 - TTL Target Support - Network packet manipulation
@@ -93,7 +93,7 @@ Provide high-performance, low-latency synchronization primitives compatible with
 ## Changelog
 
 ### This Release
-- Added BBRv3 (5.10-6.6, 6.12 coming soon!)
+- Added BBRv3 (delayed)
 - Added NTSync
 - Ptrace Leak Fix - For kernels < 5.16
 - Unicode Fix - Prevent path traversal and other detections using non-printable Unicode codepoints [Experimental]
