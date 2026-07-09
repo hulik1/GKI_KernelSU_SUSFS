@@ -95,6 +95,7 @@ runs:
         sed -i 's/CONFIG_IP_SET_MAX/65534/g' net/netfilter/ipset/ip_set_core.c
 
     - name: Apply BBRv3 Patch
+      if: false
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
@@ -126,6 +127,7 @@ runs:
         echo "✅ BBRv3 patches applied"
 
     - name: Enable BBRv3 Kernel Config
+      if: false
       uses: ./.github/actions/set-kernel-config
       with:
         config_list: |
