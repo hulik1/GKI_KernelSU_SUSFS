@@ -481,9 +481,9 @@ jobs:
         # Format release title: convert rN -> Release N
         if [[ "${NEW_TAG}" =~ ^r([0-9]+)$ ]]; then
           REV_NUM="${BASH_REMATCH[1]}"
-          release_title="Wild Kernels for GKI2 Devices 5.10+ Release ${REV_NUM}"
+          release_title="Release ${REV_NUM}"
         else
-          release_title="Wild Kernels for GKI2 Devices 5.10+ Release ${NEW_TAG}"
+          release_title="Release ${NEW_TAG}"
         fi
 
         echo "release_title=$release_title" >> "$GITHUB_OUTPUT"
