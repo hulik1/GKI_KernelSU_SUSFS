@@ -1,3 +1,5 @@
+# Wild Kernels for GKI2 Devices 5.10+ Release #
+
 **IMPORTANT DISCLAIMER**
 
 > [!CAUTION]
@@ -10,11 +12,13 @@ Join the telegram here: https://t.me/WildKernelsTG
 - [SUSFS v2.2.0](#susfs-v220)
 - [Baseband Guard (BBG)](#baseband-guard-bbg)
 - [DroidSpaces-OSS](#droidspaces-oss)
-- [Networking Improvements](#networking)
+- [Networking Improvements](#networking-improvements)
 - [NTSync](#ntsync)
 - [Misc](#misc)
 
-## [KernelSU-Next](https://github.com/pershoot/KernelSU-Next)
+<!-- NOTE: Anchor links above must match the heading IDs below. GitHub Flavored Markdown auto-generates anchors from heading text, but since these headings contain links, we use explicit IDs for reliable navigation. -->
+
+## [KernelSU-Next](https://github.com/pershoot/KernelSU-Next) {#kernelsu-next}
 
 A kernel-based root solution for Android devices.
 
@@ -38,7 +42,7 @@ Manager: {{KSU_MANAGER}}
 **Commit**  
 `{{KSUN_COMMIT}}`
 
-## [SUSFS v2.2.0](https://gitlab.com/simonpunk/susfs4ksu)
+## [SUSFS v2.2.0](https://gitlab.com/simonpunk/susfs4ksu) {#susfs-v220}
 
 A KSU addon for hiding root using kernel patches and a userspace module!
 
@@ -55,15 +59,15 @@ Reccomended Module: [susfs4ksu-module by sidex15](https://github.com/sidex15/sus
 
 {{SUSFS_BRANCHES}}
 
-## [Baseband Guard (BBG)](https://github.com/vc-teahouse/Baseband-guard)
+## [Baseband Guard (BBG)](https://github.com/vc-teahouse/Baseband-guard) {#baseband-guard-bbg}
 
 A lightweight LSM (Linux Security Module) for the Android kernel, designed to block unauthorized writes to critical partitions/device nodes at the system level.
 
-## [DroidSpaces-OSS](https://github.com/ravindu644/Droidspaces-OSS)
+## [DroidSpaces-OSS](https://github.com/ravindu644/Droidspaces-OSS) {#droidspaces-oss}
 
 A lightweight, LXC-inspired container runtime for Android and Linux. Run full Linux distributions natively with zero performance penalty.
 
-## Networking
+## Networking {#networking-improvements}
 
 - BBRv1 - Improved TCP congestion control
 - BBRv3 - Improved TCP congestion control (coming soon!)
@@ -79,11 +83,11 @@ A lightweight, LXC-inspired container runtime for Android and Linux. Run full Li
 - TMPFS_XATTR - Extended attributes for tmpfs (Mountify support)
 - TMPFS_POSIX_ACL - POSIX ACLs for tmpfs
 
-## [NTSync](#ntsync)
+## [NTSync](#ntsync) {#ntsync}
 
 Provide high-performance, low-latency synchronization primitives compatible with the Windows NT kernel API
 
-## [Misc](#misc)
+## [Misc](#misc) {#misc}
 
 - Ptrace Leak Fix: For kernels < 5.16
 - Unicode Fix: Prevent path traversal and other detections using non-printable Unicode codepoints [Experimental]
