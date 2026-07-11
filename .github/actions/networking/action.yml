@@ -107,7 +107,7 @@ runs:
         elif [[ ${{ inputs.version }} == "android14-6.1" ]]; then
           patch -p1 < "${{ github.workspace }}/kernel_patches/common/bbrv3/0001-net-tcp-backport-BBRv3-to-android14-6.1.patch"
         elif [[ ${{ inputs.version }} == "android14-5.15" ]]; then
-          patch -p1 -F3 < "${{ github.workspace }}/kernel_patches/common/bbrv3/0001-net-tcp-backport-BBRv3-to-android13-5.15.patch"
+          patch -p1 < "${{ github.workspace }}/kernel_patches/common/bbrv3/0001-net-tcp-backport-BBRv3-to-android13-5.15.patch"
         elif [[ ${{ inputs.version }} == "android13-5.15" ]]; then
           patch -p1 < "${{ github.workspace }}/kernel_patches/common/bbrv3/0001-net-tcp-backport-BBRv3-to-android13-5.15.patch"
         elif [[ ${{ inputs.version }} == "android13-5.10" ]]; then
