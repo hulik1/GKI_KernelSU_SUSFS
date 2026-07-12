@@ -7,6 +7,10 @@ runs:
     - shell: bash
       run: |
         set -euo pipefail
+
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
         mkdir -p "${{ github.workspace }}/kernel"
         mkdir -p "${{ github.workspace }}/git-repo"
         curl -L https://storage.googleapis.com/git-repo-downloads/repo -o "${{ github.workspace }}/git-repo/repo"
