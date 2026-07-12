@@ -58,9 +58,7 @@ runs:
         CC="/usr/bin/ccache clang" \
         CXX="/usr/bin/ccache clang+" \
         HOSTCC="/usr/bin/ccache clang" \
-        HOSTCXX="/usr/bin/ccache clang+" \
-        LD="${{ github.workspace }}/kernel/common/ld-wrapper" \
-        HOSTLD="${{ github.workspace }}/kernel/common/ld-wrapper"
+        HOSTCXX="/usr/bin/ccache clang+"
       else
         if [[ ${{ inputs.version }} == "android16-6.12" ]]; then
           if [ "${{ inputs.bypass }}" = "false" ]; then

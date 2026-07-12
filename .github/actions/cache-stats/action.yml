@@ -154,17 +154,6 @@ runs:
             echo "🔍 DEBUG: Skipping ccache atime update (directory empty or missing)"
           fi
           
-          echo "🔍 DEBUG: Checking if ld_cache directory needs atime update"
-          if [ -d /home/runner/.ld_cache ] && find /home/runner/.ld_cache -type f -print -quit 2>/dev/null | grep -q .; then
-            echo "🔍 DEBUG: ld_cache directory has files, updating atime"
-            echo "Updating LTO cache atime to prevent cache eviction..."
-            echo "🔍 DEBUG: Executing find touch command for ld_cache files"
-            find /home/runner/.ld_cache -type f -exec touch -t $(date -d "1 day ago" +%Y%m%d%H%M) {} +
-            echo "✅ LTO cache atime updated"
-            echo "🔍 DEBUG: LTO cache atime update completed"
-          else
-            echo "🔍 DEBUG: Skipping ld_cache atime update (directory empty or missing)"
-          fi
         else
           echo "🔍 DEBUG: clear_stats is false, keeping ccache stats for next run"
           echo "Keeping ccache stats for next run"
@@ -205,20 +194,4 @@ runs:
         summarize_dir /home/runner/.cache/bazel 10 5 || true
         echo "🔍 DEBUG: Bazel cache folder stats section complete"
         
-    - name: Show ld cache folder Stats
-      shell: bash
-      working-directory: ${{ github.workspace }}
-      run: |
-        set -euo pipefail
-        echo "🔍 DEBUG: ld cache folder stats section started"
-        # shellcheck disable=SC1091
-        source /tmp/cache_summary.sh
-        echo "🔍 DEBUG: cache_summary.sh loaded successfully"
-
-        echo "🔍 DEBUG: Calling summarize_dir for /home/runner/.ld_cache with top_n=10, sub_n=5"
-        echo "================="
-        echo "=== .ld_cache ==="
-        echo "================="
-        summarize_dir /home/runner/.ld_cache 10 5 || true
-        echo "🔍 DEBUG: ld cache folder stats section complete"
         echo "🔍 DEBUG: cache-stats action finished successfully"
