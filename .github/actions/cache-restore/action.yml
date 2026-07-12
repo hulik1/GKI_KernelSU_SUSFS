@@ -51,7 +51,7 @@ runs:
         fi
 
         cd "$GITHUB_WORKSPACE"
-        
+
         echo "🔍 DEBUG: Starting cache restore process"
         echo "🔍 DEBUG: GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
         echo "🔍 DEBUG: inputs.cache_path=${{ inputs.cache_path }}"
@@ -63,7 +63,7 @@ runs:
         TAG_NAME="${{ inputs.cache_bucket }}"
         BASE_URL="https://github.com/${TARGET_REPO}/releases/download/$TAG_NAME"
         ASSETS_URL="https://github.com/${TARGET_REPO}/releases/expanded_assets/$TAG_NAME"
-        
+
         echo "🔍 DEBUG: TAG_NAME=$TAG_NAME"
         echo "🔍 DEBUG: BASE_URL=$BASE_URL"
         echo "🔍 DEBUG: ASSETS_URL=$ASSETS_URL"
@@ -80,41 +80,41 @@ runs:
           ARIA2_OPTS+=("--quiet" "--summary-interval=0" "--console-log-level=error")
         fi
 
-echo "🔍 DEBUG: Fetching asset list from GitHub Releases..."
-echo "🔍 DEBUG: HTTP request to ASSETS_URL=$ASSETS_URL"
-echo "::group:: Fetching Asset List"
-HTTP_RESPONSE=$(curl -sL -A "Mozilla/5.0" -w "%{http_code}" "$ASSETS_URL" -o assets.html || echo "404")
-echo "🔍 DEBUG: HTTP_RESPONSE=$HTTP_RESPONSE"
+        echo "🔍 DEBUG: Fetching asset list from GitHub Releases..."
+        echo "🔍 DEBUG: HTTP request to ASSETS_URL=$ASSETS_URL"
+        echo "::group:: Fetching Asset List"
+        HTTP_RESPONSE=$(curl -sL -A "Mozilla/5.0" -w "%{http_code}" "$ASSETS_URL" -o assets.html || echo "404")
+        echo "🔍 DEBUG: HTTP_RESPONSE=$HTTP_RESPONSE"
 
-if [ "$HTTP_RESPONSE" -eq 200 ]; then
-  ALL_ASSETS=$(grep -oP "download/$TAG_NAME/\K[^\"' ]+" assets.html | sort -u || true)
-  echo "🔍 DEBUG: Parsed ALL_ASSETS count=$(echo "$ALL_ASSETS" | wc -l)"
-  echo "🔍 DEBUG: First 10 assets: $(echo "$ALL_ASSETS" | head -n 10 | tr '\n' ' ')"
-else
-  echo "Status $HTTP_RESPONSE: Failed to fetch assets from scraper endpoint."
-  ALL_ASSETS=""
-  echo "🔍 DEBUG: No assets parsed due to HTTP failure"
-fi
-rm -f assets.html
-echo "🔍 DEBUG: assets.html removed"
+        if [ "$HTTP_RESPONSE" -eq 200 ]; then
+          ALL_ASSETS=$(grep -oP "download/$TAG_NAME/\K[^\"' ]+" assets.html | sort -u || true)
+          echo "🔍 DEBUG: Parsed ALL_ASSETS count=$(echo "$ALL_ASSETS" | wc -l)"
+          echo "🔍 DEBUG: First 10 assets: $(echo "$ALL_ASSETS" | head -n 10 | tr '\n' ' ')"
+        else
+          echo "Status $HTTP_RESPONSE: Failed to fetch assets from scraper endpoint."
+          ALL_ASSETS=""
+          echo "🔍 DEBUG: No assets parsed due to HTTP failure"
+        fi
+        rm -f assets.html
+        echo "🔍 DEBUG: assets.html removed"
 
-if [ -z "$ALL_ASSETS" ]; then
-  echo "🔍 DEBUG: ALL_ASSETS is empty, exiting early"
-  echo "No assets found in bucket '$TAG_NAME'. Skipping search."
-  echo "cache-hit=false" >> "$GITHUB_OUTPUT"
-  echo "::endgroup::"
-  exit 0
-fi
+        if [ -z "$ALL_ASSETS" ]; then
+          echo "🔍 DEBUG: ALL_ASSETS is empty, exiting early"
+          echo "No assets found in bucket '$TAG_NAME'. Skipping search."
+          echo "cache-hit=false" >> "$GITHUB_OUTPUT"
+          echo "::endgroup::"
+          exit 0
+        fi
 
-echo "Successfully fetched asset list. Has $(echo "$ALL_ASSETS" | wc -l) assets."
-echo "🔍 DEBUG: Full asset list (first 20 lines):"
-echo "$ALL_ASSETS" | head -n 20
-echo "::endgroup::"
+        echo "Successfully fetched asset list. Has $(echo "$ALL_ASSETS" | wc -l) assets."
+        echo "🔍 DEBUG: Full asset list (first 20 lines):"
+        echo "$ALL_ASSETS" | head -n 20
+        echo "::endgroup::"
 
-SEARCH_LIST=$(printf "%s\n%s" "${{ inputs.cache_key }}" "${{ inputs.restore_keys }}" | sed '/^$/d')
-echo "🔍 DEBUG: SEARCH_LIST (keys to search):"
-echo "$SEARCH_LIST"
-echo "🔍 DEBUG: FOUND=false initialized"
+        SEARCH_LIST=$(printf "%s\n%s" "${{ inputs.cache_key }}" "${{ inputs.restore_keys }}" | sed '/^$/d')
+        echo "🔍 DEBUG: SEARCH_LIST (keys to search):"
+        echo "$SEARCH_LIST"
+        echo "🔍 DEBUG: FOUND=false initialized"
 
         download_asset() {
           local filename="$1"
@@ -122,165 +122,165 @@ echo "🔍 DEBUG: FOUND=false initialized"
           local max_retries=3
           local attempt=1
 
-echo "🔍 DEBUG: download_asset() function called with filename=$filename, url=$url"
-echo "🔍 DEBUG: max_retries=$max_retries, current attempt=$attempt"
-while [ "$attempt" -le "$max_retries" ]; do
-  echo "🔍 DEBUG: Attempt $attempt: Downloading $filename..."
-  echo "🔍 DEBUG: Removing old file $filename if exists"
-  rm -f "$filename"
+          echo "🔍 DEBUG: download_asset() function called with filename=$filename, url=$url"
+          echo "🔍 DEBUG: max_retries=$max_retries, current attempt=$attempt"
+          while [ "$attempt" -le "$max_retries" ]; do
+            echo "🔍 DEBUG: Attempt $attempt: Downloading $filename..."
+            echo "🔍 DEBUG: Removing old file $filename if exists"
+            rm -f "$filename"
 
-if command -v gh >/dev/null 2>&1; then
-  echo "🔍 DEBUG: 'gh' command available, attempting download via gh CLI"
-  if timeout 10m gh release download "$TAG_NAME" --repo "$TARGET_REPO" --pattern "$filename" -D . >/dev/null 2>&1; then
-    echo "🔍 DEBUG: gh CLI download succeeded, checking file size"
-    [ -s "$filename" ] && { echo "🔍 DEBUG: File $filename is non-empty, returning success"; return 0; }
-    echo "🔍 DEBUG: File $filename is empty after gh download"
-  else
-    echo "🔍 DEBUG: gh CLI download failed or timed out"
-  fi
-else
-  echo "🔍 DEBUG: 'gh' command not available, skipping gh CLI download"
-fi
+            if command -v gh >/dev/null 2>&1; then
+              echo "🔍 DEBUG: 'gh' command available, attempting download via gh CLI"
+              if timeout 10m gh release download "$TAG_NAME" --repo "$TARGET_REPO" --pattern "$filename" -D . >/dev/null 2>&1; then
+                echo "🔍 DEBUG: gh CLI download succeeded, checking file size"
+                [ -s "$filename" ] && { echo "🔍 DEBUG: File $filename is non-empty, returning success"; return 0; }
+                echo "🔍 DEBUG: File $filename is empty after gh download"
+              else
+                echo "🔍 DEBUG: gh CLI download failed or timed out"
+              fi
+            else
+              echo "🔍 DEBUG: 'gh' command not available, skipping gh CLI download"
+            fi
 
-echo "🔍 DEBUG: Trying aria2c download with URL=$url"
-echo "🔍 DEBUG: aria2c options: ${ARIA2_OPTS[*]}"
-if timeout 10m aria2c "${ARIA2_OPTS[@]}" --retry-wait=10 --max-tries=10 -o "$filename" "$url"; then
-  echo "🔍 DEBUG: aria2c download succeeded, checking file size"
-  [ -s "$filename" ] && { echo "🔍 DEBUG: File $filename is non-empty, returning success"; return 0; }
-  echo "  ⚠️ Downloaded file is empty. Retrying..."
-  echo "🔍 DEBUG: File $filename is empty after aria2c download"
-  rm -f "$filename"
-else
-  echo "🔍 DEBUG: aria2c download failed or timed out"
-fi
+            echo "🔍 DEBUG: Trying aria2c download with URL=$url"
+            echo "🔍 DEBUG: aria2c options: ${ARIA2_OPTS[*]}"
+            if timeout 10m aria2c "${ARIA2_OPTS[@]}" --retry-wait=10 --max-tries=10 -o "$filename" "$url"; then
+              echo "🔍 DEBUG: aria2c download succeeded, checking file size"
+              [ -s "$filename" ] && { echo "🔍 DEBUG: File $filename is non-empty, returning success"; return 0; }
+              echo "  ⚠️ Downloaded file is empty. Retrying..."
+              echo "🔍 DEBUG: File $filename is empty after aria2c download"
+              rm -f "$filename"
+            else
+              echo "🔍 DEBUG: aria2c download failed or timed out"
+            fi
 
-echo "  ⚠️ Download failed or timed out. Retrying in 5s..."
-echo "🔍 DEBUG: Sleeping 5 seconds before retry"
-sleep 5
-attempt=$((attempt + 1))
-echo "🔍 DEBUG: Incremented attempt to $attempt"
+            echo "  ⚠️ Download failed or timed out. Retrying in 5s..."
+            echo "🔍 DEBUG: Sleeping 5 seconds before retry"
+            sleep 5
+            attempt=$((attempt + 1))
+            echo "🔍 DEBUG: Incremented attempt to $attempt"
           done
 
           return 1
         }
 
-while read -r KEY; do
-  echo "🔍 DEBUG: Reading KEY from SEARCH_LIST: KEY=$KEY"
-  [ -z "$KEY" ] && { echo "🔍 DEBUG: KEY is empty, skipping"; continue; }
-  echo "::group:: Searching Prefix: $KEY"
-  echo "🔍 DEBUG: Searching for assets matching prefix: cache-$KEY"
+        while read -r KEY; do
+          echo "🔍 DEBUG: Reading KEY from SEARCH_LIST: KEY=$KEY"
+          [ -z "$KEY" ] && { echo "🔍 DEBUG: KEY is empty, skipping"; continue; }
+          echo "::group:: Searching Prefix: $KEY"
+          echo "🔍 DEBUG: Searching for assets matching prefix: cache-$KEY"
 
-MATCH=$(echo "$ALL_ASSETS" | grep -E "^cache-$KEY.*\.(tzst|tar)(\.part[a-z]{2})?$" | sort -r | head -n 1 || true)
-echo "🔍 DEBUG: MATCH result for KEY=$KEY: MATCH=$MATCH"
+          MATCH=$(echo "$ALL_ASSETS" | grep -E "^cache-$KEY.*\.(tzst|tar)(\.part[a-z]{2})?$" | sort -r | head -n 1 || true)
+          echo "🔍 DEBUG: MATCH result for KEY=$KEY: MATCH=$MATCH"
 
-if [ -z "$MATCH" ]; then
-  echo "🔍 DEBUG: No match found for KEY=$KEY, continuing to next key"
-  echo "Not found."
-  echo "::endgroup::"
-  continue
-fi
+          if [ -z "$MATCH" ]; then
+            echo "🔍 DEBUG: No match found for KEY=$KEY, continuing to next key"
+            echo "Not found."
+            echo "::endgroup::"
+            continue
+          fi
 
-BASE_FILENAME=$(echo "$MATCH" | sed -E 's/\.(tzst|tar)(\.part[a-z]{2})?$//')
-EXT=$(echo "$MATCH" | grep -oE '\.(tzst|tar)' | head -n 1)
-IS_SPLIT=false
-COMPRESSED=false
-echo "🔍 DEBUG: Parsed MATCH: BASE_FILENAME=$BASE_FILENAME, EXT=$EXT"
+          BASE_FILENAME=$(echo "$MATCH" | sed -E 's/\.(tzst|tar)(\.part[a-z]{2})?$//')
+          EXT=$(echo "$MATCH" | grep -oE '\.(tzst|tar)' | head -n 1)
+          IS_SPLIT=false
+          COMPRESSED=false
+          echo "🔍 DEBUG: Parsed MATCH: BASE_FILENAME=$BASE_FILENAME, EXT=$EXT"
 
-case "$MATCH" in
-  *.part*) IS_SPLIT=true ;;
-esac
-echo "🔍 DEBUG: IS_SPLIT=$IS_SPLIT (based on .part* suffix)"
+          case "$MATCH" in
+            *.part*) IS_SPLIT=true ;;
+          esac
+          echo "🔍 DEBUG: IS_SPLIT=$IS_SPLIT (based on .part* suffix)"
 
-[ "$EXT" = ".tzst" ] && COMPRESSED=true
-echo "🔍 DEBUG: COMPRESSED=$COMPRESSED (EXT=$EXT)"
+          [ "$EXT" = ".tzst" ] && COMPRESSED=true
+          echo "🔍 DEBUG: COMPRESSED=$COMPRESSED (EXT=$EXT)"
 
           FOUND=true
           echo "✅ Hit! Restoring $BASE_FILENAME$EXT"
           echo "::endgroup::"
 
-echo "::group:: Downloading Cache"
-echo "🔍 DEBUG: Download mode: IS_SPLIT=$IS_SPLIT, COMPRESSED=$COMPRESSED"
-if [ "$IS_SPLIT" = "true" ]; then
-  echo "🔍 DEBUG: Downloading split archive parts"
-  for part in {a..z}{a..z}; do
-    PART_NAME="$BASE_FILENAME$EXT.part$part"
-    echo "🔍 DEBUG: Checking if PART_NAME=$PART_NAME exists in ALL_ASSETS"
-    if echo "$ALL_ASSETS" | grep -q "^$PART_NAME$"; then
-      echo "🔍 DEBUG: PART_NAME=$PART_NAME found, downloading..."
-      if ! download_asset "$PART_NAME" "$BASE_URL/$PART_NAME"; then
-        echo "::error::Failed to download $PART_NAME after multiple retries."
-        echo "🔍 DEBUG: CRITICAL: Failed to download $PART_NAME"
-        exit 1
-      fi
-      echo "🔍 DEBUG: Successfully downloaded $PART_NAME"
-    else
-      echo "🔍 DEBUG: PART_NAME=$PART_NAME not found, breaking loop"
-      break
-    fi
-  done
-else
-  echo "🔍 DEBUG: Downloading single file: $BASE_FILENAME$EXT"
-  if ! download_asset "$BASE_FILENAME$EXT" "$BASE_URL/$BASE_FILENAME$EXT"; then
-    echo "::error::Failed to download $BASE_FILENAME$EXT after multiple retries."
-    echo "🔍 DEBUG: CRITICAL: Failed to download $BASE_FILENAME$EXT"
-    exit 1
-  fi
-  echo "🔍 DEBUG: Successfully downloaded $BASE_FILENAME$EXT"
-fi
-echo "::endgroup::"
+          echo "::group:: Downloading Cache"
+          echo "🔍 DEBUG: Download mode: IS_SPLIT=$IS_SPLIT, COMPRESSED=$COMPRESSED"
+          if [ "$IS_SPLIT" = "true" ]; then
+            echo "🔍 DEBUG: Downloading split archive parts"
+            for part in {a..z}{a..z}; do
+              PART_NAME="$BASE_FILENAME$EXT.part$part"
+              echo "🔍 DEBUG: Checking if PART_NAME=$PART_NAME exists in ALL_ASSETS"
+              if echo "$ALL_ASSETS" | grep -q "^$PART_NAME$"; then
+                echo "🔍 DEBUG: PART_NAME=$PART_NAME found, downloading..."
+                if ! download_asset "$PART_NAME" "$BASE_URL/$PART_NAME"; then
+                  echo "::error::Failed to download $PART_NAME after multiple retries."
+                  echo "🔍 DEBUG: CRITICAL: Failed to download $PART_NAME"
+                  exit 1
+                fi
+                echo "🔍 DEBUG: Successfully downloaded $PART_NAME"
+              else
+                echo "🔍 DEBUG: PART_NAME=$PART_NAME not found, breaking loop"
+                break
+              fi
+            done
+          else
+            echo "🔍 DEBUG: Downloading single file: $BASE_FILENAME$EXT"
+            if ! download_asset "$BASE_FILENAME$EXT" "$BASE_URL/$BASE_FILENAME$EXT"; then
+              echo "::error::Failed to download $BASE_FILENAME$EXT after multiple retries."
+              echo "🔍 DEBUG: CRITICAL: Failed to download $BASE_FILENAME$EXT"
+              exit 1
+            fi
+            echo "🔍 DEBUG: Successfully downloaded $BASE_FILENAME$EXT"
+          fi
+          echo "::endgroup::"
 
-echo "::group:: Extracting Cache"
-echo "🔍 DEBUG: Starting extraction process"
-echo "🔍 DEBUG: cache_path=${{ inputs.cache_path }}"
-mkdir -p "${{ inputs.cache_path }}"
-echo "🔍 DEBUG: Created/verified cache_path directory"
-FINAL_ARCHIVE="$BASE_FILENAME$EXT"
-EXTRACT_DIR="$(dirname "${{ inputs.cache_path }}")"
-echo "🔍 DEBUG: FINAL_ARCHIVE=$FINAL_ARCHIVE"
-echo "🔍 DEBUG: EXTRACT_DIR=$EXTRACT_DIR"
-echo "🔍 DEBUG: IS_SPLIT=$IS_SPLIT, COMPRESSED=$COMPRESSED"
+          echo "::group:: Extracting Cache"
+          echo "🔍 DEBUG: Starting extraction process"
+          echo "🔍 DEBUG: cache_path=${{ inputs.cache_path }}"
+          mkdir -p "${{ inputs.cache_path }}"
+          echo "🔍 DEBUG: Created/verified cache_path directory"
+          FINAL_ARCHIVE="$BASE_FILENAME$EXT"
+          EXTRACT_DIR="$(dirname "${{ inputs.cache_path }}")"
+          echo "🔍 DEBUG: FINAL_ARCHIVE=$FINAL_ARCHIVE"
+          echo "🔍 DEBUG: EXTRACT_DIR=$EXTRACT_DIR"
+          echo "🔍 DEBUG: IS_SPLIT=$IS_SPLIT, COMPRESSED=$COMPRESSED"
 
-if [ "$IS_SPLIT" = "true" ]; then
-  echo "🔍 DEBUG: Extracting split archive"
-  PARTS=$(ls "$FINAL_ARCHIVE.part"* | sort)
-  echo "🔍 DEBUG: Found parts: $PARTS"
-  echo "🔍 DEBUG: Parts list size: $(echo "$PARTS" | wc -w)"
-  if [ "$COMPRESSED" = "true" ]; then
-    echo "🔍 DEBUG: Using zstd decompression"
-    cat $PARTS | tar -I 'zstd -d -T0' -xf - -C "$EXTRACT_DIR"
-  else
-    echo "🔍 DEBUG: Using plain tar extraction"
-    cat $PARTS | tar -xf - -C "$EXTRACT_DIR"
-  fi
-  echo "🔍 DEBUG: Removing part files"
-  rm -f $PARTS
-else
-  echo "🔍 DEBUG: Extracting single archive"
-  if [ "$COMPRESSED" = "true" ]; then
-    echo "🔍 DEBUG: Using zstd decompression for single file"
-    tar -I 'zstd -d -T0' -xf "$FINAL_ARCHIVE" -C "$EXTRACT_DIR"
-  else
-    echo "🔍 DEBUG: Using plain tar extraction for single file"
-    tar -xf "$FINAL_ARCHIVE" -C "$EXTRACT_DIR"
-  fi
-  echo "🔍 DEBUG: Removing archive file"
-  rm -f "$FINAL_ARCHIVE"
-fi
+          if [ "$IS_SPLIT" = "true" ]; then
+            echo "🔍 DEBUG: Extracting split archive"
+            PARTS=$(ls "$FINAL_ARCHIVE.part"* | sort)
+            echo "🔍 DEBUG: Found parts: $PARTS"
+            echo "🔍 DEBUG: Parts list size: $(echo "$PARTS" | wc -w)"
+            if [ "$COMPRESSED" = "true" ]; then
+              echo "🔍 DEBUG: Using zstd decompression"
+              cat $PARTS | tar -I 'zstd -d -T0' -xf - -C "$EXTRACT_DIR"
+            else
+              echo "🔍 DEBUG: Using plain tar extraction"
+              cat $PARTS | tar -xf - -C "$EXTRACT_DIR"
+            fi
+            echo "🔍 DEBUG: Removing part files"
+            rm -f $PARTS
+          else
+            echo "🔍 DEBUG: Extracting single archive"
+            if [ "$COMPRESSED" = "true" ]; then
+              echo "🔍 DEBUG: Using zstd decompression for single file"
+              tar -I 'zstd -d -T0' -xf "$FINAL_ARCHIVE" -C "$EXTRACT_DIR"
+            else
+              echo "🔍 DEBUG: Using plain tar extraction for single file"
+              tar -xf "$FINAL_ARCHIVE" -C "$EXTRACT_DIR"
+            fi
+            echo "🔍 DEBUG: Removing archive file"
+            rm -f "$FINAL_ARCHIVE"
+          fi
 
-echo "🔍 DEBUG: Verifying extracted contents"
-ls -la "${{ inputs.cache_path }}" || true
-echo "✅ Restore complete."
-echo "::endgroup::"
-break
-done <<< "$SEARCH_LIST"
+          echo "🔍 DEBUG: Verifying extracted contents"
+          ls -la "${{ inputs.cache_path }}" || true
+          echo "✅ Restore complete."
+          echo "::endgroup::"
+          break
+        done <<< "$SEARCH_LIST"
 
-echo "🔍 DEBUG: Final check - FOUND=$FOUND"
-if [ "$FOUND" = "false" ]; then
-  echo "⚠️ No cache matches found. Proceeding with fresh run."
-  echo "🔍 DEBUG: Setting cache-hit=false"
-  echo "cache-hit=false" >> "$GITHUB_OUTPUT"
-else
-  echo "🔍 DEBUG: Cache was found and restored"
-  echo "cache-hit=true" >> "$GITHUB_OUTPUT"
-fi
-echo "🔍 DEBUG: Cache restore process finished. cache-hit=$(cat $GITHUB_OUTPUT | grep cache-hit | cut -d= -f2)"
+        echo "🔍 DEBUG: Final check - FOUND=$FOUND"
+        if [ "$FOUND" = "false" ]; then
+          echo "⚠️ No cache matches found. Proceeding with fresh run."
+          echo "🔍 DEBUG: Setting cache-hit=false"
+          echo "cache-hit=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "🔍 DEBUG: Cache was found and restored"
+          echo "cache-hit=true" >> "$GITHUB_OUTPUT"
+        fi
+        echo "🔍 DEBUG: Cache restore process finished. cache-hit=$(cat $GITHUB_OUTPUT | grep cache-hit | cut -d= -f2)"

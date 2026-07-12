@@ -25,119 +25,119 @@ runs:
         inputs.version == 'android13-5.15'
       working-directory: ${{ github.workspace }}
       run: |
-set -euo pipefail
-echo "🔍 DEBUG: cache-setup action started"
-echo "🔍 DEBUG: inputs.version=${{ inputs.version }}"
-echo "🔍 DEBUG: inputs.kernel_version=${{ inputs.kernel_version }}"
-echo "🔍 DEBUG: inputs.android_version=${{ inputs.android_version }}"
-echo "🔍 DEBUG: inputs.sublevel=${{ inputs.sublevel }}"
-echo "🔍 DEBUG: github.workspace=${{ github.workspace }}"
+        set -euo pipefail
+        echo "🔍 DEBUG: cache-setup action started"
+        echo "🔍 DEBUG: inputs.version=${{ inputs.version }}"
+        echo "🔍 DEBUG: inputs.kernel_version=${{ inputs.kernel_version }}"
+        echo "🔍 DEBUG: inputs.android_version=${{ inputs.android_version }}"
+        echo "🔍 DEBUG: inputs.sublevel=${{ inputs.sublevel }}"
+        echo "🔍 DEBUG: github.workspace=${{ github.workspace }}"
 
-# Install ccache from shared artifact (downloaded once by prepare-ccache job)
-echo "🔍 DEBUG: Starting ccache installation"
-echo "Installing ccache..."
-echo "🔍 DEBUG: Checking for shared ccache artifact at ${{ github.workspace }}/ccache-dl/ccache"
-if [ -s "${{ github.workspace }}/ccache-dl/ccache" ]; then
-  echo "🔍 DEBUG: Shared ccache artifact found, installing from artifact"
-  sudo cp -f "${{ github.workspace }}/ccache-dl/ccache" /usr/bin/ccache || { echo "❌ Failed to install ccache"; exit 1; }
-  sudo chmod +x /usr/bin/ccache
-  rm -rf "${{ github.workspace }}/ccache-dl"
-  echo "✅ installed custom ccache from shared artifact"
-  echo "🔍 DEBUG: Installed ccache from shared artifact"
-else
-  # Fallback: download directly (prepare-ccache may have failed)
-  echo "🔍 DEBUG: Shared ccache artifact NOT found, downloading directly"
-  echo "⚠️ shared ccache artifact unavailable; downloading directly..."
-  echo "🔍 DEBUG: Downloading ccache from https://github.com/WildKernels/kernel_patches/raw/refs/heads/main/ccache/ccache-x86-64"
-  curl -LfsS --retry 5 --retry-delay 5 --retry-all-errors --connect-timeout 30 --tcp-fastopen -H "User-Agent: Mozilla/5.0" "https://github.com/WildKernels/kernel_patches/raw/refs/heads/main/ccache/ccache-x86-64" -o ccache || { echo "❌ Failed to download ccache"; exit 1; }
-  echo "🔍 DEBUG: ccache downloaded successfully"
-  sudo cp -f ./ccache /usr/bin/ccache || { echo "❌ Failed to install ccache"; exit 1; }
-  sudo chmod +x /usr/bin/ccache
-  rm -f ./ccache
-  echo "🔍 DEBUG: Installed ccache from download"
-fi
+        # Install ccache from shared artifact (downloaded once by prepare-ccache job)
+        echo "🔍 DEBUG: Starting ccache installation"
+        echo "Installing ccache..."
+        echo "🔍 DEBUG: Checking for shared ccache artifact at ${{ github.workspace }}/ccache-dl/ccache"
+        if [ -s "${{ github.workspace }}/ccache-dl/ccache" ]; then
+          echo "🔍 DEBUG: Shared ccache artifact found, installing from artifact"
+          sudo cp -f "${{ github.workspace }}/ccache-dl/ccache" /usr/bin/ccache || { echo "❌ Failed to install ccache"; exit 1; }
+          sudo chmod +x /usr/bin/ccache
+          rm -rf "${{ github.workspace }}/ccache-dl"
+          echo "✅ installed custom ccache from shared artifact"
+          echo "🔍 DEBUG: Installed ccache from shared artifact"
+        else
+          # Fallback: download directly (prepare-ccache may have failed)
+          echo "🔍 DEBUG: Shared ccache artifact NOT found, downloading directly"
+          echo "⚠️ shared ccache artifact unavailable; downloading directly..."
+          echo "🔍 DEBUG: Downloading ccache from https://github.com/WildKernels/kernel_patches/raw/refs/heads/main/ccache/ccache-x86-64"
+          curl -LfsS --retry 5 --retry-delay 5 --retry-all-errors --connect-timeout 30 --tcp-fastopen -H "User-Agent: Mozilla/5.0" "https://github.com/WildKernels/kernel_patches/raw/refs/heads/main/ccache/ccache-x86-64" -o ccache || { echo "❌ Failed to download ccache"; exit 1; }
+          echo "🔍 DEBUG: ccache downloaded successfully"
+          sudo cp -f ./ccache /usr/bin/ccache || { echo "❌ Failed to install ccache"; exit 1; }
+          sudo chmod +x /usr/bin/ccache
+          rm -f ./ccache
+          echo "🔍 DEBUG: Installed ccache from download"
+        fi
 
-# Verify ccache
-echo "🔍 DEBUG: Verifying ccache installation"
-if ! /usr/bin/ccache --version > /dev/null 2>&1; then
-  echo "🔍 DEBUG: ccache version check FAILED"
-  echo "❌ ccache installation failed or binary is corrupted"
-  exit 1
-fi
-echo "🔍 DEBUG: ccache binary verified successfully"
-echo "✅ ccache binary verified: $(/usr/bin/ccache --version | head -1)"
+        # Verify ccache
+        echo "🔍 DEBUG: Verifying ccache installation"
+        if ! /usr/bin/ccache --version > /dev/null 2>&1; then
+          echo "🔍 DEBUG: ccache version check FAILED"
+          echo "❌ ccache installation failed or binary is corrupted"
+          exit 1
+        fi
+        echo "🔍 DEBUG: ccache binary verified successfully"
+        echo "✅ ccache binary verified: $(/usr/bin/ccache --version | head -1)"
 
-# Setup cache directories
-echo "🔍 DEBUG: Setting up ccache directories and environment"
-export CCACHE_DIR="/home/runner/.ccache"
-echo "🔍 DEBUG: CCACHE_DIR=$CCACHE_DIR"
-echo "CCACHE_DIR=$CCACHE_DIR" >> $GITHUB_ENV
-mkdir -p "$CCACHE_DIR"
-echo "🔍 DEBUG: Created CCACHE_DIR directory"
-echo "🔍 DEBUG: CCACHE_DIR contents: $(ls -la $CCACHE_DIR 2>/dev/null | head -5 || echo 'empty')"
+        # Setup cache directories
+        echo "🔍 DEBUG: Setting up ccache directories and environment"
+        export CCACHE_DIR="/home/runner/.ccache"
+        echo "🔍 DEBUG: CCACHE_DIR=$CCACHE_DIR"
+        echo "CCACHE_DIR=$CCACHE_DIR" >> $GITHUB_ENV
+        mkdir -p "$CCACHE_DIR"
+        echo "🔍 DEBUG: Created CCACHE_DIR directory"
+        echo "🔍 DEBUG: CCACHE_DIR contents: $(ls -la $CCACHE_DIR 2>/dev/null | head -5 || echo 'empty')"
 
-export CCACHE_MAXSIZE="12G"
-echo "🔍 DEBUG: CCACHE_MAXSIZE=$CCACHE_MAXSIZE"
-echo CCACHE_MAXSIZE="$CCACHE_MAXSIZE" >> $GITHUB_ENV
-export CCACHE_COMPILERCHECK="content"
-echo "🔍 DEBUG: CCACHE_COMPILERCHECK=$CCACHE_COMPILERCHECK"
-echo CCACHE_COMPILERCHECK="$CCACHE_COMPILERCHECK" >> $GITHUB_ENV
-export CCACHE_BASEDIR="${{ github.workspace }}"
-echo "🔍 DEBUG: CCACHE_BASEDIR=$CCACHE_BASEDIR"
-echo CCACHE_BASEDIR="${{ github.workspace }}" >> $GITHUB_ENV
-export CCACHE_NOHASHDIR="true"
-echo "🔍 DEBUG: CCACHE_NOHASHDIR=$CCACHE_NOHASHDIR"
-echo CCACHE_NOHASHDIR="true" >> $GITHUB_ENV
-export CCACHE_IGNOREOPTIONS="--sysroot*"
-echo "🔍 DEBUG: CCACHE_IGNOREOPTIONS=$CCACHE_IGNOREOPTIONS"
-echo CCACHE_IGNOREOPTIONS="--sysroot*" >> $GITHUB_ENV
-export CCACHE_COMPRESSION="true"
-echo "🔍 DEBUG: CCACHE_COMPRESSION=$CCACHE_COMPRESSION"
-echo CCACHE_COMPRESSION="true" >> $GITHUB_ENV
-export CCACHE_COMPRESSLEVEL="3"
-echo "🔍 DEBUG: CCACHE_COMPRESSLEVEL=$CCACHE_COMPRESSLEVEL"
-echo CCACHE_COMPRESSION_LEVEL="3" >> $GITHUB_ENV
-export CCACHE_DIRECT="true"
-echo "🔍 DEBUG: CCACHE_DIRECT=$CCACHE_DIRECT"
-echo CCACHE_DIRECT="true" >> "$GITHUB_ENV"
-export CCACHE_FILE_CLONE="true"
-echo "🔍 DEBUG: CCACHE_FILE_CLONE=$CCACHE_FILE_CLONE"
-echo CCACHE_FILE_CLONE="true" >> "$GITHUB_ENV"
-export CCACHE_INODE_CACHE="true"
-echo "🔍 DEBUG: CCACHE_INODE_CACHE=$CCACHE_INODE_CACHE"
-echo CCACHE_INODE_CACHE="true" >> "$GITHUB_ENV"
-export CCACHE_IS_KERNEL_COMPILING="true"
-echo "🔍 DEBUG: CCACHE_IS_KERNEL_COMPILING=$CCACHE_IS_KERNEL_COMPILING"
-echo CCACHE_IS_KERNEL_COMPILING="true" >> $GITHUB_ENV
-export CCACHE_UMASK="002"
-echo "🔍 DEBUG: CCACHE_UMASK=$CCACHE_UMASK"
-echo CCACHE_UMASK="002" >> $GITHUB_ENV
-export CCACHE_SLOPPINESS="file_macro,time_macros,include_file_mtime,include_file_ctime,pch_defines,system_headers,locale"
-echo "🔍 DEBUG: CCACHE_SLOPPINESS=$CCACHE_SLOPPINESS"
-echo CCACHE_SLOPPINESS="file_macro,time_macros,include_file_mtime,include_file_ctime,pch_defines,system_headers,locale" >> $GITHUB_ENV
-#export CCACHE_HARDLINK="true"
-#echo CCACHE_HARDLINK="$CCACHE_HARDLINK" >> $GITHUB_ENV
+        export CCACHE_MAXSIZE="12G"
+        echo "🔍 DEBUG: CCACHE_MAXSIZE=$CCACHE_MAXSIZE"
+        echo CCACHE_MAXSIZE="$CCACHE_MAXSIZE" >> $GITHUB_ENV
+        export CCACHE_COMPILERCHECK="content"
+        echo "🔍 DEBUG: CCACHE_COMPILERCHECK=$CCACHE_COMPILERCHECK"
+        echo CCACHE_COMPILERCHECK="$CCACHE_COMPILERCHECK" >> $GITHUB_ENV
+        export CCACHE_BASEDIR="${{ github.workspace }}"
+        echo "🔍 DEBUG: CCACHE_BASEDIR=$CCACHE_BASEDIR"
+        echo CCACHE_BASEDIR="${{ github.workspace }}" >> $GITHUB_ENV
+        export CCACHE_NOHASHDIR="true"
+        echo "🔍 DEBUG: CCACHE_NOHASHDIR=$CCACHE_NOHASHDIR"
+        echo CCACHE_NOHASHDIR="true" >> $GITHUB_ENV
+        export CCACHE_IGNOREOPTIONS="--sysroot*"
+        echo "🔍 DEBUG: CCACHE_IGNOREOPTIONS=$CCACHE_IGNOREOPTIONS"
+        echo CCACHE_IGNOREOPTIONS="--sysroot*" >> $GITHUB_ENV
+        export CCACHE_COMPRESSION="true"
+        echo "🔍 DEBUG: CCACHE_COMPRESSION=$CCACHE_COMPRESSION"
+        echo CCACHE_COMPRESSION="true" >> $GITHUB_ENV
+        export CCACHE_COMPRESSLEVEL="3"
+        echo "🔍 DEBUG: CCACHE_COMPRESSLEVEL=$CCACHE_COMPRESSLEVEL"
+        echo CCACHE_COMPRESSION_LEVEL="3" >> $GITHUB_ENV
+        export CCACHE_DIRECT="true"
+        echo "🔍 DEBUG: CCACHE_DIRECT=$CCACHE_DIRECT"
+        echo CCACHE_DIRECT="true" >> "$GITHUB_ENV"
+        export CCACHE_FILE_CLONE="true"
+        echo "🔍 DEBUG: CCACHE_FILE_CLONE=$CCACHE_FILE_CLONE"
+        echo CCACHE_FILE_CLONE="true" >> "$GITHUB_ENV"
+        export CCACHE_INODE_CACHE="true"
+        echo "🔍 DEBUG: CCACHE_INODE_CACHE=$CCACHE_INODE_CACHE"
+        echo CCACHE_INODE_CACHE="true" >> "$GITHUB_ENV"
+        export CCACHE_IS_KERNEL_COMPILING="true"
+        echo "🔍 DEBUG: CCACHE_IS_KERNEL_COMPILING=$CCACHE_IS_KERNEL_COMPILING"
+        echo CCACHE_IS_KERNEL_COMPILING="true" >> $GITHUB_ENV
+        export CCACHE_UMASK="002"
+        echo "🔍 DEBUG: CCACHE_UMASK=$CCACHE_UMASK"
+        echo CCACHE_UMASK="002" >> $GITHUB_ENV
+        export CCACHE_SLOPPINESS="file_macro,time_macros,include_file_mtime,include_file_ctime,pch_defines,system_headers,locale"
+        echo "🔍 DEBUG: CCACHE_SLOPPINESS=$CCACHE_SLOPPINESS"
+        echo CCACHE_SLOPPINESS="file_macro,time_macros,include_file_mtime,include_file_ctime,pch_defines,system_headers,locale" >> $GITHUB_ENV
+        #export CCACHE_HARDLINK="true"
+        #echo CCACHE_HARDLINK="$CCACHE_HARDLINK" >> $GITHUB_ENV
 
-echo "🔍 DEBUG: Checking if depend_mode is available"
-if ccache --help 2>&1 | grep -q 'depend_mode'; then
-  export CCACHE_DEPEND=true
-  echo "🔍 DEBUG: depend_mode available, setting CCACHE_DEPEND=true"
-  echo "CCACHE_DEPEND=true" >> "$GITHUB_ENV"
-else
-  echo "🔍 DEBUG: depend_mode NOT available"
-fi
+        echo "🔍 DEBUG: Checking if depend_mode is available"
+        if ccache --help 2>&1 | grep -q 'depend_mode'; then
+          export CCACHE_DEPEND=true
+          echo "🔍 DEBUG: depend_mode available, setting CCACHE_DEPEND=true"
+          echo "CCACHE_DEPEND=true" >> "$GITHUB_ENV"
+        else
+          echo "🔍 DEBUG: depend_mode NOT available"
+        fi
         
-echo "🔍 DEBUG: Displaying ccache configuration"
-echo "=== ccache config ==="
-echo "====================="
-ccache -p
-echo "====================="
-echo "🔍 DEBUG: ccache config displayed successfully"
+        echo "🔍 DEBUG: Displaying ccache configuration"
+        echo "=== ccache config ==="
+        echo "====================="
+        ccache -p
+        echo "====================="
+        echo "🔍 DEBUG: ccache config displayed successfully"
 
-echo "✅ ccache ready"
-echo "🔍 DEBUG: CCACHE_DIR=$CCACHE_DIR"
-echo "CCACHE_DIR: $CCACHE_DIR"
-echo "🔍 DEBUG: cache-setup ccache step complete"
+        echo "✅ ccache ready"
+        echo "🔍 DEBUG: CCACHE_DIR=$CCACHE_DIR"
+        echo "CCACHE_DIR: $CCACHE_DIR"
+        echo "🔍 DEBUG: cache-setup ccache step complete"
 
     - name: Setup Bazel Cache
       shell: bash
@@ -148,59 +148,58 @@ echo "🔍 DEBUG: cache-setup ccache step complete"
         inputs.version == 'android16-6.12'
       working-directory: ${{ github.workspace }}
       run: |
-set -euo pipefail
-echo "🔍 DEBUG: Setup Bazel Cache started"
-export BAZEL_CACHE_DIR="/home/runner/.cache/bazel"
-echo "🔍 DEBUG: BAZEL_CACHE_DIR=$BAZEL_CACHE_DIR"
-mkdir -p "$BAZEL_CACHE_DIR"
-echo "🔍 DEBUG: Created Bazel cache directory"
-echo "🔍 DEBUG: Bazel cache directory contents: $(ls -la $BAZEL_CACHE_DIR 2>/dev/null | head -5 || echo 'empty')"
+        set -euo pipefail
+        echo "🔍 DEBUG: Setup Bazel Cache started"
+        export BAZEL_CACHE_DIR="/home/runner/.cache/bazel"
+        echo "🔍 DEBUG: BAZEL_CACHE_DIR=$BAZEL_CACHE_DIR"
+        mkdir -p "$BAZEL_CACHE_DIR"
+        echo "🔍 DEBUG: Created Bazel cache directory"
+        echo "🔍 DEBUG: Bazel cache directory contents: $(ls -la $BAZEL_CACHE_DIR 2>/dev/null | head -5 || echo 'empty')"
 
-# Set bazel disk cache size limit to 8GB
-#export BAZEL_DISK_CACHE_SIZE="8589934592"
-#echo "BAZEL_DISK_CACHE_SIZE=$BAZEL_DISK_CACHE_SIZE" >> $GITHUB_ENV
+        # Set bazel disk cache size limit to 8GB
+        #export BAZEL_DISK_CACHE_SIZE="8589934592"
+        #echo "BAZEL_DISK_CACHE_SIZE=$BAZEL_DISK_CACHE_SIZE" >> $GITHUB_ENV
 
-#echo "✅ Bazel Cache ready (max 8GB)"
-echo "BAZEL_CACHE_DIR: $BAZEL_CACHE_DIR"
-echo "🔍 DEBUG: Setup Bazel Cache complete"
+        #echo "✅ Bazel Cache ready (max 8GB)"
+        echo "BAZEL_CACHE_DIR: $BAZEL_CACHE_DIR"
+        echo "🔍 DEBUG: Setup Bazel Cache complete"
 
     - name: Setup ld cache
       shell: bash
       working-directory: ${{ github.workspace }}
       run: |
-set -euo pipefail
-echo "🔍 DEBUG: Setup ld cache started"
-export LDCACHE_DIR="/home/runner/.ld_cache"
-echo "🔍 DEBUG: LDCACHE_DIR=$LDCACHE_DIR"
-echo "LDCACHE_DIR=$LDCACHE_DIR" >> $GITHUB_ENV
-mkdir -p "$LDCACHE_DIR"
-echo "🔍 DEBUG: Created ld cache directory"
-echo "🔍 DEBUG: LDCACHE_DIR contents: $(ls -la $LDCACHE_DIR 2>/dev/null | head -5 || echo 'empty')"
-  
-# Create LD wrapper for thin-LTO caching
-echo "🔍 DEBUG: Creating LD wrapper script at ${{ github.workspace }}/kernel/common/ld-wrapper"
-cat > "${{ github.workspace }}/kernel/common/ld-wrapper" << 'EOF'
-#!/bin/bash
-ld.lld "$@" --thinlto-cache-dir="$LDCACHE_DIR" --thinlto-jobs="$(nproc --all)"
-EOF
-chmod +x "${{ github.workspace }}/kernel/common/ld-wrapper"
-echo "🔍 DEBUG: LD wrapper created and made executable"
+        set -euo pipefail
+        echo "🔍 DEBUG: Setup ld cache started"
+        export LDCACHE_DIR="/home/runner/.ld_cache"
+        echo "🔍 DEBUG: LDCACHE_DIR=$LDCACHE_DIR"
+        echo "LDCACHE_DIR=$LDCACHE_DIR" >> $GITHUB_ENV
+        mkdir -p "$LDCACHE_DIR"
+        echo "🔍 DEBUG: Created ld cache directory"
+        echo "🔍 DEBUG: LDCACHE_DIR contents: $(ls -la $LDCACHE_DIR 2>/dev/null | head -5 || echo 'empty')"
+      
+        # Create LD wrapper for thin-LTO caching
+        echo "🔍 DEBUG: Creating LD wrapper script at ${{ github.workspace }}/kernel/common/ld-wrapper"
+        cat > "${{ github.workspace }}/kernel/common/ld-wrapper" << 'EOF'
+        #!/bin/bash
+        ld.lld "$@" --thinlto-cache-dir="$LDCACHE_DIR" --thinlto-jobs="$(nproc --all)"
+        EOF
+        chmod +x "${{ github.workspace }}/kernel/common/ld-wrapper"
+        echo "🔍 DEBUG: LD wrapper created and made executable"
 
-# Verify LD wrapper exists
-if [ -f "${{ github.workspace }}/kernel/common/ld-wrapper" ]; then
-  echo "🔍 DEBUG: LD wrapper verified at ${{ github.workspace }}/kernel/common/ld-wrapper"
-  echo "🔍 DEBUG: LD wrapper contents:"
-  cat "${{ github.workspace }}/kernel/common/ld-wrapper"
-else
-  echo "🔍 DEBUG: WARNING - LD wrapper not found after creation!"
-fi
+        # Verify LD wrapper exists
+        if [ -f "${{ github.workspace }}/kernel/common/ld-wrapper" ]; then
+          echo "🔍 DEBUG: LD wrapper verified at ${{ github.workspace }}/kernel/common/ld-wrapper"
+          echo "🔍 DEBUG: LD wrapper contents:"
+          cat "${{ github.workspace }}/kernel/common/ld-wrapper"
+        else
+          echo "🔍 DEBUG: WARNING - LD wrapper not found after creation!"
+        fi
 
-# Set size limit via environment (4GB)
-echo "LDCACHE_MAX_SIZE=4294967296" >> "$GITHUB_ENV"
-echo "🔍 DEBUG: LDCACHE_MAX_SIZE=4294967296 set"
+        # Set size limit via environment (4GB)
+        echo "LDCACHE_MAX_SIZE=4294967296" >> "$GITHUB_ENV"
+        echo "🔍 DEBUG: LDCACHE_MAX_SIZE=4294967296 set"
 
-echo "✅ LD Cache ready (max 4GB)"
-echo "🔍 DEBUG: LDCACHE_DIR=$LDCACHE_DIR"
-echo "LDCACHE_DIR: $LDCACHE_DIR"
-echo "🔍 DEBUG: Setup ld cache complete"
-        
+        echo "✅ LD Cache ready (max 4GB)"
+        echo "🔍 DEBUG: LDCACHE_DIR=$LDCACHE_DIR"
+        echo "LDCACHE_DIR: $LDCACHE_DIR"
+        echo "🔍 DEBUG: Setup ld cache complete"
