@@ -86,7 +86,7 @@ runs:
       with:
         config_list: |
           CONFIG_WIREGUARD=y
-        
+
     - name: Apply Kernel Config for 5.10
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
@@ -142,7 +142,7 @@ runs:
           CONFIG_KEYS=y
           CONFIG_CIFS_XATTR=ys
           CONFIG_CIFS_POSIX=y
-   
+
     - name: Fix CIFS on android16-6.12
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
