@@ -60,41 +60,31 @@ runs:
         HOSTCC="/usr/bin/ccache clang" \
         HOSTCXX="/usr/bin/ccache clang+"
       else
-        if [[ ${{ inputs.version }} == "android16-6.12" ]]; then
-          if [ "${{ inputs.bypass }}" = "false" ]; then
-            sed -i '/name = "kernel_aarch64",/a\    check_defconfig = "disabled",' common/BUILD.bazel
-          fi
-          tools/bazel run \
-            --config=fast \
-            --config=stamp \
-            --disk_cache=/home/runner/.cache/bazel \
-            //common:kernel_aarch64_dist \
-            -- --destdir=/home/runner/out
-        else
-          tools/bazel run \
-            --config=fast \
-            --config=stamp \
-            --disk_cache=/home/runner/.cache/bazel \
-            //common:kernel_aarch64_dist \
-            -- --dist_dir=/home/runner/out
+        if [ "${{ inputs.bypass }}" = "false" ]; then
+          sed -i '/name = "kernel_aarch64",/a\    check_defconfig = "disabled",' common/BUILD.bazel
         fi
+        tools/bazel build \
+          --config=fast \
+          --config=stamp \
+          --disk_cache=/home/james/.cache/bazel \
+          //common:kernel_aarch64/Image
       fi
 
       cat /home/runner/out/common/.config || true
 
   - name: 'Gather Build Artifacts'
     shell: bash
-    working-directory: ${{ github.workspace }}
+    working-directory: ${{ github.workspace }}/kernel
     run: |
       set -euo pipefail
-      if [ -f "/home/runner/out/dist/Image" ]; then
+      if [ -f "bazel-bin/common/kernel_aarch64" ]; then
         echo "Found Image at /home/runner/out/dist/Image"
         if [[ ${{ inputs.bypass }} == "true" ]]; then
-          cp "/home/runner/out/dist/Image" "${{ github.workspace }}/AnyKernel3/Bypass-Image"
+          cp "bazel-bin/common/kernel_aarch64/Image" "${{ github.workspace }}/AnyKernel3/Bypass-Image"
         else
-          cp "/home/runner/out/dist/Image" "${{ github.workspace }}/AnyKernel3/Image"
+          cp "bazel-bin/common/kernel_aarch64" "${{ github.workspace }}/AnyKernel3/Image"
           echo "Kernel Version:"
-          strings "/home/runner/out/dist/Image" | grep -m1 "^Linux version "
+          strings "bazel-bin/common/kernel_aarch64/Image" | grep -m1 "^Linux version "
         fi
           exit 0
         fi
