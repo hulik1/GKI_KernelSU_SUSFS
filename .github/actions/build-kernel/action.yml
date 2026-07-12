@@ -42,7 +42,6 @@ runs:
     shell: bash
     working-directory: ${{ github.workspace }}/kernel
     run: |
-      cat common/arch/arm64/configs/gki_defconfig
       sed -i 's/check_defconfig//' ./common/build.config.gki
       if [ -f "build/build.sh" ]; then
         BUILD_GKI_ARTIFACTS= \
@@ -70,21 +69,17 @@ runs:
           //common:kernel_aarch64/Image
       fi
 
-      cat /home/runner/out/common/.config || true
-
   - name: 'Gather Build Artifacts'
     shell: bash
     working-directory: ${{ github.workspace }}/kernel
     run: |
       set -euo pipefail
-      if [ -f "bazel-bin/common/kernel_aarch64" ]; then
-        echo "Found Image at /home/runner/out/dist/Image"
+      if [ -f "bazel-bin/common/kernel_aarch64/Image" ]; then
+        echo "Found Image at bazel-bin/common/kernel_aarch64/Image"
         if [[ ${{ inputs.bypass }} == "true" ]]; then
           cp "bazel-bin/common/kernel_aarch64/Image" "${{ github.workspace }}/AnyKernel3/Bypass-Image"
         else
-          cp "bazel-bin/common/kernel_aarch64" "${{ github.workspace }}/AnyKernel3/Image"
-          echo "Kernel Version:"
-          strings "bazel-bin/common/kernel_aarch64/Image" | grep -m1 "^Linux version "
+          cp "bazel-bin/common/kernel_aarch64/Image" "${{ github.workspace }}/AnyKernel3/Image"
         fi
           exit 0
         fi
