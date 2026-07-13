@@ -44,7 +44,7 @@ runs:
     run: |
       sed -i 's/check_defconfig//' ./common/build.config.gki
       if [ -f "build/build.sh" ]; then
-        BUILD_GKI_ARTIFACTS= \
+        BUILD_GKI_ARTIFACTS="" \
         BUILD_GKI_CERTIFICATION_TOOLS=0 \
         BUILD_SYSTEM_DLKM=0 \
         SKIP_VENDOR_BOOT=1 \
@@ -81,14 +81,14 @@ runs:
         else
           cp "bazel-bin/common/kernel_aarch64/Image" "${{ github.workspace }}/AnyKernel3/Image"
         fi
-          exit 0
+        exit 0
         fi
-      if [ -f "/home/runner/out/Image" ]; then
-        echo "Found Image at /home/runner/out/Image"
+      if [ -f "/home/runner/out/dist/Image" ]; then
+        echo "Found Image at /home/runner/out/dist/Image"
         if [[ ${{ inputs.bypass }} == "true" ]]; then
-          cp "/home/runner/out/Image" "${{ github.workspace }}/AnyKernel3/Bypass-Image"
+          cp "/home/runner/out/dist/Image" "${{ github.workspace }}/AnyKernel3/Bypass-Image"
         else
-          cp "/home/runner/out/Image" "${{ github.workspace }}/AnyKernel3/Image"
+          cp "/home/runner/out/dist/Image" "${{ github.workspace }}/AnyKernel3/Image"
         fi
         exit 0
       fi
