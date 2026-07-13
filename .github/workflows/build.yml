@@ -84,6 +84,14 @@ jobs:
         kernel_version: ${{ inputs.kernel_version }}
         os_patch_level: ${{ inputs.os_patch_level }}
 
+    - name: Build FUSE-BPF Userspace Daemon (Issue #211)
+      if: ${{ contains(inputs.version, 'lts') && inputs.version == 'android16-6.12' }}
+      uses: ./.github/actions/fuse-bpf
+      with:
+        version: ${{ inputs.version }}
+        kernel_version: ${{ inputs.kernel_version }}
+        android_version: ${{ inputs.android_version }}
+
     - name: Set Build Timestamp from Kernel Commit
       shell: bash
       run: |
