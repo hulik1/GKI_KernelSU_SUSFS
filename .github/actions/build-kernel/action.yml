@@ -81,7 +81,7 @@ runs:
         else
           cp "bazel-bin/common/kernel_aarch64/Image" "${{ github.workspace }}/AnyKernel3/Image"
         fi
-          exit 0
+        exit 0
         fi
       if [ -f "/home/runner/out/dist/Image" ]; then
         echo "Found Image at /home/runner/out/dist/Image"
