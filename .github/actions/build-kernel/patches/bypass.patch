@@ -15,20 +15,6 @@ diff --git a/tools/ak3-core.sh b/tools/ak3-core.sh
 index 9ba26e9..12165c5 100755
 --- a/tools/ak3-core.sh
 +++ b/tools/ak3-core.sh
-@@ -1008,10 +1008,10 @@ version_ge() {
- do_check_boot_version() {
-   ui_print " " "  -> Check kernel version compatibility..."
- 
--  # BYPASS: do.check_boot_version=0 in anykernel.sh skips check
-+  # SKIPPED: do.check_boot_version=0 in anykernel.sh skips check
-   if [ "$(file_getprop anykernel.sh do.check_boot_version)" != 1 ]; then
--    ui_print "  -> [BYPASS] do.check_boot_version=0: version check SKIPPED."
--    ui_print "  -> [BYPASS] Forced flash. Proceed with caution!"
-+    ui_print "  -> [SKIPPED] do.check_boot_version=0: version check SKIPPED."
-+    ui_print "  -> [SKIPPED] Forced flash. Proceed with caution!"
-     return 1
-   fi
- 
 @@ -1141,3 +1141,60 @@ handle_input() {
  setup_ak;
  

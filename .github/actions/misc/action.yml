@@ -29,4 +29,8 @@ runs:
           CONFIG_TMPFS_POSIX_ACL=y
           CONFIG_KALLSYMS=y
           CONFIG_KALLSYMS_ALL=y
+          # eBPF/BTF support (Issue #176)
+          CONFIG_BTF=y
+          CONFIG_BPF_EVENTS=y
+          CONFIG_FUSE_BPF=y
           
