@@ -77,6 +77,7 @@ A lightweight, LXC-inspired container runtime for Android and Linux. Run full Li
 - CAKE, fq, fq_codel - Traffic shaping and fair queuing for reduced lag and balanced bandwidth
 - connmark - Connection marking for packet classification
 - TCP congestion control - CUBIC, BIC, Westwood, and HTCP for optimized performance across different network conditions
+- CIFS - Network filesystem support (SMB/CIFS sharing)
 
 ## Other Features
 
@@ -91,6 +92,7 @@ Provide high-performance, low-latency synchronization primitives compatible with
 
 - Ptrace Leak Fix: For kernels < 5.16
 - Unicode Fix: Prevent path traversal and other detections using non-printable Unicode codepoints [Experimental]
+- BTF/eBPF Support: CONFIG_BTF, CONFIG_BPF_EVENTS, CONFIG_FUSE_BPF for debugging and eBPF tooling
 - TMPFS_XATTR: Extended attributes for tmpfs (Mountify support)
 - TMPFS_POSIX_ACL: POSIX ACLs for tmpfs
 
