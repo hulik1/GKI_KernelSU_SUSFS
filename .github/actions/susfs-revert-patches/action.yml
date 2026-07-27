@@ -49,9 +49,9 @@ runs:
       run: |
         if [ "${{ inputs.sublevel }}" -le "41" ]; then
           echo "Reverting namespace.c Android 13 5.15 Fake Patch"
-          sed -i '/#include <linux\\/mnt_idmapping.h>$/d' fs/namespace.c
+          sed -i '/#include <linux\/mnt_idmapping.h>$/d' fs/namespace.c
           echo "Reverting open.c Android 13 5.15 Fake Patch"
-          sed -i '/#include <linux\\/mnt_idmapping.h>$/d' fs/open.c
+          sed -i '/#include <linux\/mnt_idmapping.h>$/d' fs/open.c
           echo "Reverting fdinfo.c Android 13 5.15 Fake Patch"
           perl -i -pe 's/^(\\s+if \\(inode\\) \\{)/$1\n\t\t\\/\\*\n\t\t * IN_ALL_EVENTS represents all of the mask bits\n\t\t * that we expose to userspace.  There is at\n\t\t * least one bit (FS_EVENT_ON_CHILD) which is\n\t\t * used only internally to the kernel.\n\t\t * \\/\n\t\tu32 mask = mark->mask & IN_ALL_EVENTS;/m' fs/notify/fdinfo.c
           perl -i -pe 's/\\binotify_mark_user_mask\\(mark\\)/mask, mark->ignored_mask/g' fs/notify/fdinfo.c
@@ -65,7 +65,7 @@ runs:
         fi
         if [ "${{ inputs.sublevel }}" -ge "206" ]; then
           echo "Reverting task_mmu.c Android 13 5.15 Fake Patch"
-          sed -i '/^#include <linux\\/pkeys.h>$/a #include <trace/hooks/mm.h>' fs/proc/task_mmu.c
+          sed -i '/^#include <linux\/pkeys.h>$/a #include <trace/hooks/mm.h>' fs/proc/task_mmu.c
         fi
 
     - name: Revert Android 14 6.1 Fake Patches
@@ -74,11 +74,11 @@ runs:
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
         if [ "${{ inputs.sublevel }}" -le "25" ]; then
-          sed -i '/^#include <trace\\/hooks\\/sched.h>$/d' fs/proc/base.c
+          sed -i '/^#include <trace\/hooks\/sched.h>$/d' fs/proc/base.c
         fi
         if [ "${{ inputs.sublevel }}" -le "141" ]; then
           echo "Reverting base.c Android 14 6.1 Fake Patch"
-          sed -i '/^#include <linux\\/dma-buf.h>$/d' fs/proc/base.c
+          sed -i '/^#include <linux\/dma-buf.h>$/d' fs/proc/base.c
         fi
         if [ "${{ inputs.sublevel }}" -ge "157" ]; then
           echo "Reverting namespace.c Android 14 6.1 Fake Patch"
@@ -93,11 +93,11 @@ runs:
         echo "Reverting 6.6 Fake Patches"
         if [ "${{ inputs.sublevel }}" -le "92" ]; then
           echo "Reverting base.c Android 15 6.6 Fake Patch"
-          sed -i '/^#include <linux\\/dma-buf.h>$/d' fs/proc/base.c
+          sed -i '/^#include <linux\/dma-buf.h>$/d' fs/proc/base.c
         fi
         if [ "${{ inputs.sublevel }}" -le "57" ]; then
           echo "Reverting memory.c Android 15 6.6 Fake Patch"
-          sed -i '/^#include <linux\\/zswap.h>$/d' mm/memory.c
+          sed -i '/^#include <linux\/zswap.h>$/d' mm/memory.c
         fi
 
     - name: Revert Android 16 6.12 Fake Patches
