@@ -101,21 +101,10 @@ runs:
       working-directory: ${{ github.workspace }}/kernel/common
       run: |
         echo "Applying 6.6 SUSFS fixes"
-        # if [ "${{ inputs.sublevel }}" -le "30" ]; then
-        #   echo "Applying taskmmu.c Android 15 6.6 Fake Patch"
-        #   perl -0777 -i -pe '
-        #   s{
-        #     (\t+\t\tif\s*\(\s*vma->vm_end\s*>\s*last_vma_end\s*\))
-        #     (
-        #       \n\t+\t\t\tsmap_gather_stats\(vma,\s*&mss,\s*last_vma_end\);
-        #       \n\t+\t\t\tlast_vma_end\s*=\s*vma->vm_end;
-        #     )
-        #   }
-        #   {
-        #     $1 . " {" . $2 . "\n\t\t\t}"
-        #   }ex
-        #   ' fs/proc/task_mmu.c
-        # fi
+        if [ "${{ inputs.sublevel }}" -le "30" ]; then
+          echo "Applying taskmmu.c Android 15 6.6 Fake Patch"
+          python3 -c 'import re;c=open("fs/proc/task_mmu.c").read();c=re.sub(r"(\t+\t\tif\s*\(\s*vma->vm_end\s*>\s*last_vma_end\s*\))\n(\t+\t\t\tsmap_gather_stats\(vma,\s*&mss,\s*last_vma_end\);)\n(\t+)\}",lambda m:m.group(1)+" {\n"+m.group(2)+"\n"+m.group(3)+"\t\tlast_vma_end = vma->vm_end;\n"+m.group(3)+"\t}\n"+m.group(3)+"}",c,count=1);open("fs/proc/task_mmu.c","w").write(c)'
+        fi
         if [ "${{ inputs.sublevel }}" -le "92" ]; then
           echo "Applying base.c Android 15 6.6 Fake Patch"
           sed -i '/^#include <linux\/cpufreq_times.h>$/a #include <linux/dma-buf.h>' fs/proc/base.c
