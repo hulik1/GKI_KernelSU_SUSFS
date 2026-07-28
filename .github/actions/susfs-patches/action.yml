@@ -162,3 +162,13 @@ runs:
           sed -i '/#include <linux\/pkeys.h>/a #include <linux/page_size_compat.h>' fs/proc/task_mmu.c
           echo "Added page_size_compat.h include to fs/proc/task_mmu.c"
         fi
+
+        # Fix set_nameidata() calls for 5.10 kernels.
+        # The SUSFS patch adds set_nameidata(nd, old_dfd, fake_filename, NULL) with 4 args,
+        # but 5.10 kernels only have 3-param set_nameidata(p, dfd, name) — no root param.
+        if [[ "${{ inputs.version }}" == "android12-5.10" || "${{ inputs.version }}" == "android13-5.10" ]]; then
+          if grep -q 'set_nameidata(nd, old_dfd, fake_filename, NULL)' fs/namei.c; then
+            echo "Fixing set_nameidata calls for 5.10 (4-arg -> 3-arg)"
+            sed -i 's/set_nameidata(nd, old_dfd, fake_filename, NULL)/set_nameidata(nd, old_dfd, fake_filename)/g' fs/namei.c
+          fi
+        fi
