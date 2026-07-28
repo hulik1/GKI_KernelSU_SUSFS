@@ -67,6 +67,8 @@ runs:
           perl -0777 -i -pe 's{(if \(inode\) \{\n)\t\t/\*\n(\t\t \*[^\n]*\n)+\t\t \*/\n}{$1}g; s{^[[:space:]]*u32 mask = mark->mask & IN_ALL_EVENTS;\n}{}m' fs/notify/fdinfo.c
           perl -i -pe 's/\bmask,\s*mark->ignored_mask/inotify_mark_user_mask(mark)/g' fs/notify/fdinfo.c
           perl -i -pe 's/ignored_mask:%x/ignored_mask:0/g' fs/notify/fdinfo.c
+          echo "Adding inotify_mark_user_mask function definition"
+          sed -i '/^#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT$/{N;s/^#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\nstatic void inotify_fdinfo(/static inline u32 inotify_mark_user_mask(struct fsnotify_mark *mark)\n{\n\treturn mark->mask & IN_ALL_EVENTS;\n}\n\n#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\nstatic void inotify_fdinfo(/}' fs/notify/fdinfo.c
         fi
         if [ "${{ inputs.sublevel }}" -ge "197" ]; then
           echo "Applying namespace.c Android 13 5.15 Fake Patch"
