@@ -201,8 +201,7 @@ jobs:
     - name: Setup Misc Configs
       uses: ./.github/actions/misc
 
-    - name: Enable BTF (android13+ — android12 old build system lacks toolchain)
-      if: ${{ inputs.version != 'android12-5.10' }}
+    - name: Enable BTF
       uses: ./.github/actions/set-kernel-config
       with:
         config_list: |
