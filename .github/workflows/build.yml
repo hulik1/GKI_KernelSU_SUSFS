@@ -201,6 +201,13 @@ jobs:
     - name: Setup Misc Configs
       uses: ./.github/actions/misc
 
+    - name: Enable BTF (android14-6.1+ only — old build system lacks toolchain)
+      if: ${{ inputs.version == 'android14-5.15' || inputs.version == 'android14-6.1' || inputs.version == 'android15-6.6' || inputs.version == 'android16-6.12' }}
+      uses: ./.github/actions/set-kernel-config
+      with:
+        config_list: |
+          CONFIG_DEBUG_INFO_BTF=y
+
     - name: Apply Device-Specific Patches
       uses: ./.github/actions/apply-device-patches
       with:
