@@ -31,7 +31,7 @@ runs:
           patch -p1 -N < ${{ github.action_path }}/patches/0001-lockdep-detect-recursive-read.patch
         fi
 
-        if [[ ${{ inputs.version }} == "android12-5.10" && "${{ inputs.sublevel }}" -le "209" ]]; then
+        if [[ ( "${{ inputs.version }}" == "android12-5.10" && "${{ inputs.sublevel }}" -le "209" ) || ( "${{ inputs.version }}" == "android13-5.10" && "${{ inputs.sublevel }}" -le "210" ) ]]; then
           patch -p1 -N < ${{ github.action_path }}/patches/0002-lockdep-assert-none-held.patch
         fi
 
