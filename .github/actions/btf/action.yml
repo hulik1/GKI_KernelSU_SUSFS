@@ -20,7 +20,15 @@ runs:
       if: ${{ inputs.version == 'android12-5.10' }}
       run: |
         set -euo pipefail
-        patch -p1 < ${{ github.action_path }}/patches/0001-libbpf-remove-feature-detection-BTF.patch
+        patch -p1 -N < ${{ github.action_path }}/patches/0001-libbpf-remove-feature-detection-BTF.patch
+
+    - name: Apply resolve_btfids linker-flag fix (android12-5.10)
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel/common
+      if: ${{ inputs.version == 'android12-5.10' }}
+      run: |
+        set -euo pipefail
+        patch -p1 -N < ${{ github.action_path }}/patches/0002-resolve_btfids-inherit-host-linker-flags.patch
 
     - name: Enable BTF Config
       uses: ./.github/actions/set-kernel-config
