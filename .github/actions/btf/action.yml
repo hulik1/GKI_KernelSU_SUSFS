@@ -30,6 +30,22 @@ runs:
         set -euo pipefail
         patch -p1 -N < ${{ github.action_path }}/patches/0002-resolve_btfids-inherit-host-linker-flags.patch
 
+    - name: Expose host dd for hermetic BTF generation (android12-5.10)
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel/common
+      if: ${{ inputs.version == 'android12-5.10' }}
+      run: |
+        set -euo pipefail
+        # The hermetic toolchain PATH (build.config.common -> HERMETIC_TOOLCHAIN=1)
+        # has no /usr/bin, so coreutils 'dd' is missing. gen_btf in
+        # scripts/link-vmlinux.sh:253 does `printf ... | dd of=...`; without dd the
+        # pipeline fails and the build aborts with "Failed to generate BTF".
+        # ADDITIONAL_HOST_TOOLS is honored by build/_setup_env.sh (symlinked into
+        # the hermetic host_tools dir, which IS on the PATH). Echo it into the
+        # build config so both Normal and Bypass build.sh runs pick it up.
+        grep -q '^ADDITIONAL_HOST_TOOLS=' build.config.gki.aarch64 || \
+          echo 'ADDITIONAL_HOST_TOOLS="${ADDITIONAL_HOST_TOOLS} dd"' >> build.config.gki.aarch64
+
     - name: Enable BTF Config
       uses: ./.github/actions/set-kernel-config
       with:
