@@ -9,9 +9,13 @@
  
  OUTPUT ?= $(srctree)/tools/bpf/resolve_btfids/
  
-@@ -47,7 +49,7 @@
+@@ -45,9 +47,10 @@
+ 	$(Q)$(MAKE) -C $(SUBCMD_SRC) OUTPUT=$(abspath $(dir $@))/ $(abspath $@)
+ 
  $(BPFOBJ): $(wildcard $(LIBBPF_SRC)/*.[ch] $(LIBBPF_SRC)/Makefile) | $(OUTPUT)/libbpf
- 	$(Q)$(MAKE) $(submake_extras) -C $(LIBBPF_SRC)  OUTPUT=$(abspath $(dir $@))/ $(abspath $@)
+-	$(Q)$(MAKE) $(submake_extras) -C $(LIBBPF_SRC)  OUTPUT=$(abspath $(dir $@))/ $(abspath $@)
++	$(Q)$(MAKE) $(submake_extras) -C $(LIBBPF_SRC)  OUTPUT=$(abspath $(dir $@))/ \
++		EXTRA_CFLAGS="$(CFLAGS)" $(abspath $@)
  
 -CFLAGS := -g \
 +CFLAGS += -g \
