@@ -9,7 +9,7 @@
  
  OUTPUT ?= $(srctree)/tools/bpf/resolve_btfids/
  
-@@ -45,9 +47,10 @@
+@@ -45,13 +47,15 @@
  	$(Q)$(MAKE) -C $(SUBCMD_SRC) OUTPUT=$(abspath $(dir $@))/ $(abspath $@)
  
  $(BPFOBJ): $(wildcard $(LIBBPF_SRC)/*.[ch] $(LIBBPF_SRC)/Makefile) | $(OUTPUT)/libbpf
@@ -22,3 +22,9 @@
            -I$(srctree)/tools/include \
            -I$(srctree)/tools/include/uapi \
            -I$(LIBBPF_SRC) \
+-          -I$(SUBCMD_SRC)
++          -I$(SUBCMD_SRC) \
++          -std=gnu11
+ 
+ LIBS = -lelf -lz
+ 
