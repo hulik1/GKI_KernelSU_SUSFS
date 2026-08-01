@@ -1,0 +1,29 @@
+name: 'Enable BTF'
+description: 'Enable CONFIG_DEBUG_INFO_BTF and apply libbpf feature-detection fix for android12-5.10'
+inputs:
+  version:
+    description: 'Kernel config version (e.g., android12-5.10)'
+    required: true
+  kernel_version:
+    description: 'Kernel version (e.g., 5.10)'
+    required: true
+  sublevel:
+    description: 'Kernel sublevel'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Apply libbpf feature-detection fix (android12-5.10)
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel/common
+      if: ${{ inputs.version == 'android12-5.10' }}
+      run: |
+        set -euo pipefail
+        patch -p1 < ${{ github.action_path }}/patches/0001-libbpf-remove-feature-detection-BTF.patch
+
+    - name: Enable BTF Config
+      uses: ./.github/actions/set-kernel-config
+      with:
+        config_list: |
+          CONFIG_DEBUG_INFO_BTF=y
