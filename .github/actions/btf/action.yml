@@ -46,6 +46,27 @@ runs:
         grep -q '^ADDITIONAL_HOST_TOOLS=' build.config.gki.aarch64 || \
           echo 'ADDITIONAL_HOST_TOOLS="${ADDITIONAL_HOST_TOOLS} dd"' >> build.config.gki.aarch64
 
+    - name: Use apt pahole (>=1.23) for hermetic BTF generation (android12-5.10)
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel
+      if: ${{ inputs.version == 'android12-5.10' }}
+      run: |
+        set -euo pipefail
+        # android12-5.10 pins prebuilt pahole v1.19, which fails to recode the
+        # DWARF types and DROPS symbols (e.g. xdp_buff) from the emitted BTF.
+        # resolve_btfids then aborts with "FAILED unresolved symbol xdp_buff".
+        # a13-5.10 ships prebuilt pahole v1.23 which works. The runner installs
+        # apt pahole 1.25 (/usr/bin/pahole). Repoint the hermetic-path symlink
+        # (first dir on PATH) to it. This is the same dir that dd lives in.
+        HERMETIC_PAHOLE="build/build-tools/path/linux-x86/pahole"
+        if [ -L "$HERMETIC_PAHOLE" ]; then
+          ln -sf "$(command -v pahole)" "$HERMETIC_PAHOLE"
+          echo "Repointed $HERMETIC_PAHOLE -> $(readlink -f "$HERMETIC_PAHOLE")"
+          "$HERMETIC_PAHOLE" --version
+        else
+          echo "WARNING: $HERMETIC_PAHOLE not a symlink; leaving prebuilt pahole in place"
+        fi
+
     - name: Enable BTF Config
       uses: ./.github/actions/set-kernel-config
       with:
