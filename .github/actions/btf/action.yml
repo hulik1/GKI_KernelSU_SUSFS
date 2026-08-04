@@ -56,15 +56,28 @@ runs:
         # DWARF types and DROPS symbols (e.g. xdp_buff) from the emitted BTF.
         # resolve_btfids then aborts with "FAILED unresolved symbol xdp_buff".
         # a13-5.10 ships prebuilt pahole v1.23 which works. The runner installs
-        # apt pahole 1.25 (/usr/bin/pahole). Repoint the hermetic-path symlink
-        # (first dir on PATH) to it. This is the same dir that dd lives in.
+        # apt pahole 1.25 (/usr/bin/pahole). Replace the hermetic-path pahole
+        # (first dir on PATH, same dir dd lives in) with a WRAPPER that execs
+        # the apt binary.
+        #
+        # The wrapper also always injects --skip_encoding_btf_enum64 /
+        # decl_tag / type_tag. Sublevels <=149 have no scripts/pahole-flags.sh
+        # at all, so their link-vmlinux.sh calls pahole with no skip flags; the
+        # old in-tree libbpf there only handles BTF kinds 1-15 and EINVALs on
+        # enum64/decl_tag/type_tag. Newer sublevels pass --skip_encoding_btf_enum64
+        # via pahole-flags.sh already; duplicate skip flags are harmless.
         HERMETIC_PAHOLE="build/build-tools/path/linux-x86/pahole"
-        if [ -L "$HERMETIC_PAHOLE" ]; then
-          ln -sf "$(command -v pahole)" "$HERMETIC_PAHOLE"
-          echo "Repointed $HERMETIC_PAHOLE -> $(readlink -f "$HERMETIC_PAHOLE")"
+        REAL_PAHOLE="$(command -v pahole)"
+        if [ -L "$HERMETIC_PAHOLE" ] || [ -f "$HERMETIC_PAHOLE" ]; then
+          cat > "$HERMETIC_PAHOLE" <<EOF
+        #!/bin/sh
+        exec "$REAL_PAHOLE" --skip_encoding_btf_enum64 --skip_encoding_btf_decl_tag --skip_encoding_btf_type_tag "\$@"
+        EOF
+          chmod +x "$HERMETIC_PAHOLE"
+          echo "Wrote wrapper $HERMETIC_PAHOLE -> $REAL_PAHOLE (skip enum64/decl_tag/type_tag)"
           "$HERMETIC_PAHOLE" --version
         else
-          echo "WARNING: $HERMETIC_PAHOLE not a symlink; leaving prebuilt pahole in place"
+          echo "WARNING: $HERMETIC_PAHOLE not found; leaving prebuilt pahole in place"
         fi
 
     - name: Enable BTF Config
