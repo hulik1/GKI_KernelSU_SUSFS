@@ -30,6 +30,19 @@ runs:
         set -euo pipefail
         patch -p1 -N < ${{ github.action_path }}/patches/0002-resolve_btfids-inherit-host-linker-flags.patch
 
+    - name: Apply xdp_buff BTF-emit fix (android12-5.10)
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel/common
+      if: ${{ inputs.version == 'android12-5.10' }}
+      run: |
+        set -euo pipefail
+        # bpf_types.h references struct xdp_buff via
+        # BTF_ID_LIST_SINGLE(bpf_xdp_output_btf_ids) in net/core/filter.c, but
+        # the oldest sublevels (5.10.43) never emit xdp_buff into vmlinux BTF,
+        # so resolve_btfids aborts with "unresolved symbol xdp_buff". Force BTF
+        # emission with BTF_TYPE_EMIT. Idempotent/harmless on newer sublevels.
+        patch -p1 -N < ${{ github.action_path }}/patches/0003-btf-emit-xdp-buff.patch
+
     - name: Expose host dd for hermetic BTF generation (android12-5.10)
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
