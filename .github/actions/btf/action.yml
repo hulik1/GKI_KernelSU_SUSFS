@@ -40,7 +40,10 @@ runs:
         # BTF_ID_LIST_SINGLE(bpf_xdp_output_btf_ids) in net/core/filter.c, but
         # the oldest sublevels (5.10.43) never emit xdp_buff into vmlinux BTF,
         # so resolve_btfids aborts with "unresolved symbol xdp_buff". Force BTF
-        # emission with BTF_TYPE_EMIT. Idempotent/harmless on newer sublevels.
+        # emission with BTF_TYPE_EMIT in net/core/xdp.c, which includes
+        # <net/xdp.h> (the struct must be COMPLETE at the emit point, so it
+        # cannot live in filter.c where xdp_buff is only forward-declared).
+        # Idempotent/harmless on newer sublevels.
         patch -p1 -N < ${{ github.action_path }}/patches/0003-btf-emit-xdp-buff.patch
 
     - name: Expose host dd for hermetic BTF generation (android12-5.10)

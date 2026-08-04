@@ -1,14 +1,16 @@
---- a/net/core/filter.c
-+++ b/net/core/filter.c
-@@ -4630,6 +4630,11 @@
+--- a/net/core/xdp.c
++++ b/net/core/xdp.c
+@@ -387,6 +387,13 @@
+ void xdp_return_buff(struct xdp_buff *xdp)
  {
- 	u64 xdp_size = (flags & BPF_F_CTXLEN_MASK) >> 32;
- 
+ 	__xdp_return(xdp->data, &xdp->rxq->mem, true, xdp);
 +	/* xdp_buff is referenced via BTF_ID_LIST_SINGLE(bpf_xdp_output_btf_ids)
-+	 * below but is not otherwise emitted into vmlinux BTF, so resolve_btfids
-+	 * aborts with "unresolved symbol xdp_buff". Force BTF emission. */
++	 * in net/core/filter.c but is not otherwise emitted into vmlinux BTF,
++	 * so resolve_btfids aborts with "unresolved symbol xdp_buff". Force BTF
++	 * emission here where the struct is complete (this file includes
++	 * <net/xdp.h>). */
 +	BTF_TYPE_EMIT(struct xdp_buff);
 +
- 	if (unlikely(flags & ~(BPF_F_CTXLEN_MASK | BPF_F_INDEX_MASK)))
- 		return -EINVAL;
- 	if (unlikely(!xdp ||
+ }
+ 
+ /* Only called for MEM_TYPE_PAGE_POOL see xdp.h */
