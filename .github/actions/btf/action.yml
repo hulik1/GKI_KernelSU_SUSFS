@@ -43,6 +43,8 @@ runs:
         # emission with BTF_TYPE_EMIT in net/core/xdp.c, which includes
         # <net/xdp.h> (the struct must be COMPLETE at the emit point, so it
         # cannot live in filter.c where xdp_buff is only forward-declared).
+        # The patch also adds #include <linux/btf.h> so BTF_TYPE_EMIT is
+        # declared in xdp.c (filter.c already pulls it in).
         # Idempotent/harmless on newer sublevels.
         patch -p1 -N < ${{ github.action_path }}/patches/0003-btf-emit-xdp-buff.patch
 
