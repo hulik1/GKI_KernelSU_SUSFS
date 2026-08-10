@@ -33,7 +33,7 @@ runs:
 
     - name: Install build deps for BTF generation (android12-5.10, sublevel>43)
       shell: bash
-      if: ${{ inputs.version == 'android12-5.10' && (inputs.sublevel == 'X' || inputs.sublevel == 'lts' || fromJSON(inputs.sublevel) > 43) }}
+      if: ${{ inputs.version == 'android12-5.10' && (inputs.sublevel == 'X' || fromJSON(inputs.sublevel) > 43) }}
       run: |
         set -euo pipefail
         sudo apt-get update -qq
