@@ -88,7 +88,7 @@ runs:
     - name: Build and use pahole >=1.26 for hermetic BTF generation (android12-5.10)
       shell: bash
       working-directory: ${{ github.workspace }}/kernel
-      if: ${{ inputs.version == 'android12-5.10' && (inputs.sublevel == 'X' || fromJSON(inputs.sublevel) > 43) }}
+      if: ${{ inputs.version == 'android12-5.10' }}
       run: |
         set -euo pipefail
         # android12-5.10 pins prebuilt pahole v1.19, which fails to recode the
