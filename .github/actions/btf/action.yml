@@ -33,7 +33,7 @@ runs:
     - name: Apply xdp_buff BTF-emit fix (android12-5.10)
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
-      if: false
+      if: ${{ inputs.version == 'android12-5.10' }}
       run: |
         set -euo pipefail
         # bpf_types.h references struct xdp_buff via
@@ -51,7 +51,7 @@ runs:
     - name: Apply resolve_btfids ELF_T_WORD endian fix (android12-5.10)
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
-      if: ${{ inputs.version == 'android12-5.10' }}
+      if: false
       run: |
         set -euo pipefail
         # Backport of upstream 61e8aeda9398 ("bpf: Fix libelf endian handling
