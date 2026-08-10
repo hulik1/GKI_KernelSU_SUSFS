@@ -51,7 +51,7 @@ runs:
     - name: Apply resolve_btfids ELF_T_WORD endian fix (android12-5.10)
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
-      if: false
+      if: ${{ inputs.version == 'android12-5.10' }}
       run: |
         set -euo pipefail
         # Backport of upstream 61e8aeda9398 ("bpf: Fix libelf endian handling
@@ -121,6 +121,9 @@ runs:
         cmake -D__LIB=lib -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release .. >/dev/null
         make -j"$(nproc)" pahole
         sudo make install pahole
+        # pahole links against libdwarves*.so installed under /usr/local/lib;
+        # regenerate the dynamic linker cache so the binary can find them.
+        sudo ldconfig
         command -v pahole
         pahole --version
 
