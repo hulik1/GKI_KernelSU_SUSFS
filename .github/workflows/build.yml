@@ -73,6 +73,9 @@ jobs:
 
     - name: Setup Build Environment
       uses: ./.github/actions/setup-build-environment
+      with:
+        version: ${{ inputs.version }}
+        sublevel: ${{ inputs.sublevel }}
       env:
         BOOT_SIGN_KEY: ${{ secrets.BOOT_SIGN_KEY }}
           
