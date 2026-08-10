@@ -17,7 +17,7 @@ runs:
     - name: Apply libbpf feature-detection fix (android12-5.10)
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
-      if: ${{ inputs.version == 'android12-5.10' && (inputs.sublevel == 'X' || fromJSON(inputs.sublevel) > 43) }}
+      if: ${{ inputs.version == 'android12-5.10' }}
       run: |
         set -euo pipefail
         patch -p1 -N < ${{ github.action_path }}/patches/0001-libbpf-remove-feature-detection-BTF.patch
