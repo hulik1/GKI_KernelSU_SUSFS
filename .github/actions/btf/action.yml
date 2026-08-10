@@ -72,7 +72,7 @@ runs:
     - name: Expose host dd for hermetic BTF generation (android12-5.10)
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
-      if: ${{ inputs.version == 'android12-5.10' && (inputs.sublevel == 'X' || fromJSON(inputs.sublevel) > 43) }}
+      if: ${{ inputs.version == 'android12-5.10' }}
       run: |
         set -euo pipefail
         # The hermetic toolchain PATH (build.config.common -> HERMETIC_TOOLCHAIN=1)
