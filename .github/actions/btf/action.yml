@@ -30,10 +30,23 @@ runs:
         set -euo pipefail
         patch -p1 -N < ${{ github.action_path }}/patches/0002-resolve_btfids-inherit-host-linker-flags.patch
 
+    - name: Apply ANDROID_KABI_USE macro fix (android12-5.10, sublevel 43)
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel/common
+      if: ${{ inputs.version == 'android12-5.10' && inputs.sublevel == '43' }}
+      run: |
+        set -euo pipefail
+        # Rework ANDROID_KABI_USE() to drop __UNIQUE_ID(android_kabi_hide).
+        # __UNIQUE_ID relies on __COUNTER__ which is non-deterministic across
+        # compiler runs (differs between thin vs full LTO), breaking the ABI
+        # symbol naming. Only needed on the oldest sublevel-43 (2021-10) tree;
+        # newer sublevels already carry this change in-tree.
+        patch -p1 -N < ${{ github.action_path }}/patches/0001-ANDROID-GKI-rework-the-ANDROID_KABI_USE-macro-to-not.patch
+
     - name: Apply xdp_buff BTF-emit fix (android12-5.10)
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
-      if: ${{ inputs.version == 'android12-5.10' && (inputs.sublevel == 'X' || fromJSON(inputs.sublevel) > 43) }}
+      if: ${{ inputs.version == 'android12-5.10' }}
       run: |
         set -euo pipefail
         # bpf_types.h references struct xdp_buff via
@@ -51,7 +64,7 @@ runs:
     - name: Apply resolve_btfids ELF_T_WORD endian fix (android12-5.10)
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/common
-      if: ${{ inputs.version == 'android12-5.10' && (inputs.sublevel == 'X' || fromJSON(inputs.sublevel) > 43) }}
+      if: ${{ inputs.version == 'android12-5.10' }}
       run: |
         set -euo pipefail
         # Backport of upstream 61e8aeda9398 ("bpf: Fix libelf endian handling
