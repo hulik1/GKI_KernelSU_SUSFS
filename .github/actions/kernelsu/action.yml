@@ -15,6 +15,19 @@ runs:
       run: |
         set -euo pipefail
 
+        # Retry transient network errors (up to 5 attempts, 5s backoff).
+        # Diagnostics go to stderr so pipes to grep are not polluted.
+        retry() {
+          local n=0
+          until [ "$n" -ge 5 ]; do
+            "$@" && return 0
+            n=$((n+1))
+            echo "retry $n/5 failed for: $*" >&2
+            sleep 5
+          done
+          return 1
+        }
+
         KSU_REPO="https://github.com/pershoot/KernelSU-Next.git"
         KSU_INPUT="${{ inputs.ksu_branch }}"
         if [ -z "$KSU_INPUT" ]; then
@@ -22,15 +35,15 @@ runs:
         fi
 
         # Try as branch first, fall back to commit
-        if git ls-remote --heads "$KSU_REPO" "$KSU_INPUT" | grep -q .; then
+        if retry git ls-remote --heads "$KSU_REPO" "$KSU_INPUT" | grep -q .; then
           echo "Using KernelSU-Next branch: $KSU_INPUT"
-          curl -LSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
-          git -C KernelSU-Next/kernel fetch --depth=50 origin "$KSU_INPUT"
+          curl -LSs --retry 5 --retry-delay 5 --retry-all-errors "https://raw.githubusercontent.com/pershoot/KernelSU-Next/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
+          retry git -C KernelSU-Next/kernel fetch --depth=50 origin "$KSU_INPUT"
           git -C KernelSU-Next/kernel checkout "origin/$KSU_INPUT"
         else
           echo "Using KernelSU-Next commit: $KSU_INPUT"
-          curl -LSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
-          git -C KernelSU-Next/kernel fetch --depth=50 origin "$KSU_INPUT"
+          curl -LSs --retry 5 --retry-delay 5 --retry-all-errors "https://raw.githubusercontent.com/pershoot/KernelSU-Next/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
+          retry git -C KernelSU-Next/kernel fetch --depth=50 origin "$KSU_INPUT"
           git -C KernelSU-Next/kernel checkout "$KSU_INPUT"
         fi
 
