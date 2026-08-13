@@ -12,7 +12,7 @@ Join the telegram here: https://t.me/WildKernelsTG
 - [SUSFS v2.2.0](#susfs-v220)
 - [Baseband Guard (BBG)](#baseband-guard-bbg)
 - [DroidSpaces-OSS](#droidspaces-oss)
-- [Networking Improvements](#networking-improvements)
+- [Networking Improvements](#networking)
 - [NTSync](#ntsync)
 - [Misc](#misc)
 
