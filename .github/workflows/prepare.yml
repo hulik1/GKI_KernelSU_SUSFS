@@ -47,7 +47,7 @@ on:
         type: boolean
         default: true
       os_patch_level:
-        description: "Optional patch level filter; use latest for the latest dated target"
+        description: "Optional filter: patch date (YYYY-MM), kernel sublevel, latest, or all"
         required: false
         type: string
         default: ""
@@ -120,9 +120,16 @@ jobs:
             SELECTED_PATCH_LEVEL=$(jq -r '[.include[] | select(.date != "lts") | .date] | last // empty' "${{ inputs.config_file }}")
           fi
           if [ -n "$SELECTED_PATCH_LEVEL" ]; then
+            FULL_FINAL="$FINAL"
             FINAL=$(jq -c --arg patch_level "$SELECTED_PATCH_LEVEL" '
               {include: [.include[] | select(.os_patch_level == $patch_level)]}
             ' <<< "$FINAL")
+            # No date matched -- try interpreting the value as a kernel sublevel
+            if [ "$(jq '.include | length' <<< "$FINAL")" -eq 0 ]; then
+              FINAL=$(jq -c --arg sublevel "$SELECTED_PATCH_LEVEL" '
+                {include: [.include[] | select(.sublevel == $sublevel)]}
+              ' <<< "$FULL_FINAL")
+            fi
           fi
           if [ "$(jq '.include | length' <<< "$FINAL")" -eq 0 ]; then
             echo "Error: no build targets match patch level '${SELECTED_PATCH_LEVEL}'." >&2
