@@ -1,6 +1,6 @@
 name: Kernel Build Process
 permissions:
-  contents: write
+  contents: read
   actions: write
 
 on:
@@ -35,6 +35,26 @@ on:
         required: false
         type: string
         default: ""
+      root_flavor:
+        required: false
+        type: string
+        default: ""
+      root_commit:
+        required: false
+        type: string
+        default: ""
+      nomount_commit:
+        required: false
+        type: string
+        default: ""
+      preserve_abi:
+        required: false
+        type: boolean
+        default: false
+      build_bypass:
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   build-gki:
@@ -141,11 +161,30 @@ jobs:
         sublevel: ${{ steps.extract.outputs.sublevel }}
         os_patch_level: ${{ inputs.os_patch_level }}
 
+    - name: Capture source ABI/KMI safeguards
+      if: ${{ inputs.preserve_abi }}
+      uses: ./.github/actions/abi-kmi-safeguards
+      with:
+        mode: capture
+
+    - name: Setup Selected Root Implementation
+      if: ${{ inputs.root_flavor != '' }}
+      uses: ./.github/actions/root-setup
+      with:
+        flavor: ${{ inputs.root_flavor }}
+        commit: ${{ inputs.root_commit }}
+
     - name: Setup KernelSU-Next
-      if: contains(inputs.feature_set, 'KSUN') || inputs.feature_set == 'FULL'
+      if: ${{ inputs.root_flavor == '' && (contains(inputs.feature_set, 'KSUN') || inputs.feature_set == 'FULL') }}
       uses: ./.github/actions/kernelsu
       with:
         ksu_branch: ${{ inputs.ksu_branch }}
+
+    - name: Verify root ABI/KMI safeguards
+      if: ${{ inputs.preserve_abi }}
+      uses: ./.github/actions/abi-kmi-safeguards
+      with:
+        mode: verify
 
     - name: SUSFS
       if: contains(inputs.feature_set, 'SUSFS') || inputs.feature_set == 'FULL'
@@ -223,6 +262,26 @@ jobs:
         version: ${{ inputs.version }}
         kernel_version: ${{ inputs.kernel_version }}
 
+    - name: Capture approved feature ABI/KMI baseline
+      if: ${{ inputs.preserve_abi }}
+      uses: ./.github/actions/abi-kmi-safeguards
+      with:
+        mode: capture
+
+    - name: Integrate NoMount
+      if: ${{ inputs.nomount_commit != '' || contains(inputs.feature_set, 'NOMOUNT') || inputs.feature_set == 'FULL' }}
+      uses: ./.github/actions/nomount
+      with:
+        commit: ${{ inputs.nomount_commit }}
+        kernel_version: ${{ inputs.kernel_version }}
+
+    - name: Build matching NoMount metamodule
+      id: nomount-metamodule
+      if: ${{ inputs.root_flavor != '' && inputs.nomount_commit != '' }}
+      uses: ./.github/actions/nomount-metamodule
+      with:
+        commit: ${{ inputs.nomount_commit }}
+
     - name: Apply ABI Compare Bypass
       if: false
       working-directory: ${{ github.workspace }}/kernel
@@ -253,7 +312,14 @@ jobs:
         sublevel: ${{ steps.extract.outputs.sublevel }}
 
     - name: Remove Protected Exports
+      if: ${{ !inputs.preserve_abi }}
       uses: ./.github/actions/remove-protected-exports
+
+    - name: Verify NoMount ABI/KMI safeguards
+      if: ${{ inputs.preserve_abi }}
+      uses: ./.github/actions/abi-kmi-safeguards
+      with:
+        mode: verify
 
     - name: Clean Kernel Flags
       uses: ./.github/actions/clean-kernel-flags
@@ -387,6 +453,7 @@ jobs:
         github_token: ${{ secrets.MY_GITHUB_TOKEN }}
 
     - name: Build Bypass Kernel
+      if: ${{ inputs.build_bypass }}
       env:
         SOURCE_DATE_EPOCH: ${{ env.SOURCE_DATE_EPOCH }}
         KBUILD_BUILD_TIMESTAMP: ${{ env.KBUILD_BUILD_TIMESTAMP }}
@@ -419,6 +486,12 @@ jobs:
         # Get KSU version from env (set by kernelsu action)
         KSU_VER="${KSU_VERSION:-N/A}"
         KSU_TAG="${KSU_GIT_TAG:-N/A}"
+        ROOT_IMPL="${ROOT_IMPLEMENTATION:-KernelSU-Next (legacy path)}"
+        ROOT_MANAGER="${ROOT_MANAGER:-KernelSU-Next Manager}"
+        ROOT_VERSION="${ROOT_VERSION:-${KSU_TAG}}"
+        ROOT_SHA="${ROOT_COMMIT:-${KSU_COMMIT:-N/A}}"
+        NOMOUNT_SHA="${NOMOUNT_COMMIT:-N/A}"
+        SUSFS_SHA="${SUSFS_COMMIT:-N/A}"
         
         # Get SUSFS version from susfs.h if available
         SUSFS_VER="N/A"
@@ -447,7 +520,13 @@ jobs:
           fi
           echo "| **KSU Version** | ${KSU_VER} |"
           echo "| **KSU Tag** | ${KSU_TAG} |"
+          echo "| **Root Implementation** | ${ROOT_IMPL} |"
+          echo "| **Root Manager** | ${ROOT_MANAGER} |"
+          echo "| **Root Version** | ${ROOT_VERSION} |"
+          echo "| **Root Commit** | ${ROOT_SHA} |"
           echo "| **SUSFS Version** | ${SUSFS_VER} |"
+          echo "| **SUSFS Commit** | ${SUSFS_SHA} |"
+          echo "| **NoMount Commit** | ${NOMOUNT_SHA} |"
           echo "| **Feature Set** | ${{ inputs.feature_set }} |"
           echo "| **Variant** | ${{ inputs.variant }} |"
           echo
@@ -470,9 +549,134 @@ jobs:
         compression-level: 9
 
     - name: Upload Artifacts
+      id: kernel-artifact
       uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.extract.outputs.file_name }}-AnyKernel3
         path: ${{ github.workspace }}/AnyKernel3/**
         if-no-files-found: ignore
+        compression-level: 9
+
+    - name: Upload NoMount metamodule
+      id: nomount-metamodule-artifact
+      if: ${{ inputs.root_flavor != '' && inputs.nomount_commit != '' }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ steps.extract.outputs.file_name }}-NoMount-Metamodule
+        path: ${{ steps.nomount-metamodule.outputs.module_path }}
+        if-no-files-found: error
+        compression-level: 0
+
+    - name: Write Build-verified only artifact metadata
+      if: ${{ success() && inputs.root_flavor != '' && inputs.nomount_commit != '' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+
+        metadata_file="${{ github.workspace }}/${{ steps.extract.outputs.file_name }}-metadata.json"
+        artifacts_api="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100"
+        artifacts_json="$(curl --fail --silent --show-error \
+          --header "Authorization: Bearer ${GH_TOKEN}" \
+          --header "X-GitHub-Api-Version: 2022-11-28" \
+          "$artifacts_api")"
+
+        resolve_artifact() {
+          local artifact_name="$1"
+          local matches
+          matches="$(jq --arg name "$artifact_name" \
+            '[.artifacts[] | select(.name == $name and .expired == false)]' \
+            <<<"$artifacts_json")"
+          if [ "$(jq 'length' <<<"$matches")" -ne 1 ]; then
+            echo "Expected exactly one available artifact named ${artifact_name}." >&2
+            exit 1
+          fi
+          jq -r '.[0] | [.archive_download_url, .digest] | @tsv' <<<"$matches"
+        }
+
+        read -r kernel_artifact_url kernel_artifact_sha256 < <(
+          resolve_artifact "${{ steps.extract.outputs.file_name }}-AnyKernel3"
+        )
+        read -r nomount_module_url nomount_module_sha256 < <(
+          resolve_artifact "${{ steps.extract.outputs.file_name }}-NoMount-Metamodule"
+        )
+
+        jq -n \
+          --arg method "GKI source build with SHA-pinned root implementation, SUSFS, and NoMount" \
+          --arg root_implementation "${ROOT_IMPLEMENTATION:-KernelSU-Next (legacy path)}" \
+          --arg root_manager "${ROOT_MANAGER:-KernelSU-Next Manager}" \
+          --arg root_version "${ROOT_VERSION:-${KSU_GIT_TAG:-N/A}}" \
+          --arg root_commit "${ROOT_COMMIT:-${KSU_COMMIT:-N/A}}" \
+          --arg susfs_commit "${SUSFS_COMMIT:-N/A}" \
+          --arg nomount_commit "${NOMOUNT_COMMIT:-N/A}" \
+          --arg android_branch "${{ inputs.android_version }}-${{ inputs.kernel_version }}-${{ inputs.os_patch_level }}" \
+          --arg kmi "${{ inputs.android_version }}-${{ inputs.kernel_version }}" \
+          --arg kernel_source_commit "${KERNEL_SOURCE_COMMIT:-N/A}" \
+          --arg provenance_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+          --arg artifact_url "$kernel_artifact_url" \
+          --arg sha256 "$kernel_artifact_sha256" \
+          --arg nomount_module_commit "${{ steps.nomount-metamodule.outputs.commit }}" \
+          --arg nomount_module_url "$nomount_module_url" \
+          --arg nomount_module_sha256 "$nomount_module_sha256" \
+          --arg status "Build-verified only" \
+          --arg catalog_availability "eligible-with-provenance-and-checksums" \
+          --arg device_compatibility "not-validated" \
+          --arg flashability "not-guaranteed" \
+          --arg boot "not-guaranteed" \
+          '{
+            method: $method,
+            root: {
+              implementation: $root_implementation,
+              manager: $root_manager,
+              version: $root_version,
+              commit: $root_commit
+            },
+            susfs_revision: $susfs_commit,
+            nomount_commit: $nomount_commit,
+            android_branch: $android_branch,
+            kmi: $kmi,
+            kernel_source_commit: $kernel_source_commit,
+            provenance_url: $provenance_url,
+            artifact_url: $artifact_url,
+            sha256: $sha256,
+            nomount_metamodule: {
+              commit: $nomount_module_commit,
+              artifact_url: $nomount_module_url,
+              sha256: $nomount_module_sha256
+            },
+            catalog: {
+              availability: $catalog_availability,
+              device_compatibility: $device_compatibility,
+              flashability: $flashability,
+              boot: $boot
+            },
+            status: $status
+          }' > "$metadata_file"
+
+        jq -e '
+          .status == "Build-verified only" and
+          (.root.manager | length > 0) and
+          (.root.version | length > 0) and
+          (.susfs_revision | test("^[0-9a-f]{40}$")) and
+          (.nomount_commit | test("^[0-9a-f]{40}$")) and
+          (.kernel_source_commit | test("^[0-9a-f]{40}$")) and
+          (.artifact_url | startswith("https://")) and
+          (.sha256 | test("^sha256:[0-9a-f]{64}$")) and
+          (.nomount_metamodule.commit == .nomount_commit) and
+          (.nomount_metamodule.artifact_url | startswith("https://")) and
+          (.nomount_metamodule.sha256 | test("^sha256:[0-9a-f]{64}$")) and
+          .catalog.availability == "eligible-with-provenance-and-checksums" and
+          .catalog.device_compatibility == "not-validated" and
+          .catalog.flashability == "not-guaranteed" and
+          .catalog.boot == "not-guaranteed"
+        ' "$metadata_file" > /dev/null
+
+    - name: Upload Build-verified only artifact metadata
+      if: ${{ success() && inputs.root_flavor != '' && inputs.nomount_commit != '' }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ steps.extract.outputs.file_name }}-Metadata
+        path: ${{ github.workspace }}/${{ steps.extract.outputs.file_name }}-metadata.json
+        if-no-files-found: error
         compression-level: 9
