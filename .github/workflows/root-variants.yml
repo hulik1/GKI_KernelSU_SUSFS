@@ -32,11 +32,13 @@ jobs:
     outputs:
       config_file: ${{ steps.pins.outputs.config_file }}
       susfs_commit: ${{ steps.pins.outputs.susfs_commit }}
+      nomount_commit: ${{ steps.pins.outputs.nomount_commit }}
     steps:
       - id: pins
         shell: bash
         run: |
           set -euo pipefail
+          nomount_commit="c52936b229c25a4b0e41b6627f7d3bc5eaaaf2b5"
           case "${{ inputs.kernel_build_version }}" in
             android12-5.10) susfs_commit="3c14ad549f826b1f53878ec8c12253efebeed75a" ;;
             android13-5.10) susfs_commit="f81aaf10e9560282052bb61dd931315c2ca3e617" ;;
@@ -49,9 +51,29 @@ jobs:
           esac
           echo "config_file=.github/config/${{ inputs.kernel_build_version }}.json" >> "$GITHUB_OUTPUT"
           echo "susfs_commit=$susfs_commit" >> "$GITHUB_OUTPUT"
+          echo "nomount_commit=$nomount_commit" >> "$GITHUB_OUTPUT"
+
+  build-nomount-module:
+    needs: resolve-pins
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build NoMount metamodule
+        id: nomount-metamodule
+        uses: ./.github/actions/nomount-metamodule
+        with:
+          commit: ${{ needs.resolve-pins.outputs.nomount_commit }}
+
+      - name: Upload NoMount metamodule
+        uses: actions/upload-artifact@v7
+        with:
+          name: NoMount-Metamodule
+          path: ${{ steps.nomount-metamodule.outputs.module_path }}
+          if-no-files-found: error
 
   build:
-    needs: resolve-pins
+    needs: [resolve-pins, build-nomount-module]
     strategy:
       fail-fast: false
       matrix:
@@ -72,7 +94,7 @@ jobs:
       susfs_commit: ${{ needs.resolve-pins.outputs.susfs_commit }}
       root_flavor: ${{ matrix.flavor }}
       root_commit: ${{ matrix.commit }}
-      nomount_commit: c52936b229c25a4b0e41b6627f7d3bc5eaaaf2b5
+      nomount_commit: ${{ needs.resolve-pins.outputs.nomount_commit }}
       preserve_abi: true
       build_bypass: false
       os_patch_level: ${{ inputs.os_patch_level }}
