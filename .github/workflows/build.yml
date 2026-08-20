@@ -486,8 +486,8 @@ jobs:
         ROOT_MANAGER="${ROOT_MANAGER:-KernelSU-Next Manager}"
         ROOT_VERSION="${ROOT_VERSION:-${KSU_TAG}}"
         ROOT_SHA="${ROOT_COMMIT:-${KSU_COMMIT:-N/A}}"
-        NOMOUNT_SHA="${NOMOUNT_COMMIT:-N/A}"
-        SUSFS_SHA="${SUSFS_COMMIT:-N/A}"
+        NOMOUNT_SHA="${NOMOUNT_COMMIT:-${{ inputs.nomount_commit }}}"
+        SUSFS_SHA="${SUSFS_COMMIT:-${{ inputs.susfs_commit }}}"
         
         # Get SUSFS version from susfs.h if available
         SUSFS_VER="N/A"
