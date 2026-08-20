@@ -453,7 +453,16 @@ jobs:
       if: ${{ always() }}
       shell: bash
       run: |
-        SUMMARY_FILE="/tmp/build-summary-${{ steps.extract.outputs.file_name }}.md"
+        SUMMARY_BASE="${{ steps.extract.outputs.file_name }}"
+        if [ -z "${SUMMARY_BASE}" ]; then
+          SUMMARY_BASE="${{ inputs.kernel_version }}.${{ inputs.sublevel }}-${{ inputs.android_version }}-${{ inputs.os_patch_level }}"
+          VARIANT="${{ inputs.variant }}"
+          if [ -n "${VARIANT}" ] && [ "${VARIANT}" != "Normal" ]; then
+            SUMMARY_BASE="${SUMMARY_BASE}-${VARIANT}"
+          fi
+        fi
+        SUMMARY_FILE="/tmp/build-summary-${SUMMARY_BASE}.md"
+        echo "SUMMARY_BASE=${SUMMARY_BASE}" >> "$GITHUB_ENV"
         
         # Determine build status
         if [ "${{ job.status }}" = "success" ]; then
@@ -530,8 +539,8 @@ jobs:
       if: ${{ always() }}
       uses: actions/upload-artifact@v7
       with:
-        name: ${{ steps.extract.outputs.file_name }}-Summary
-        path: /tmp/build-summary-${{ steps.extract.outputs.file_name }}.md
+        name: ${{ env.SUMMARY_BASE }}-Summary
+        path: /tmp/build-summary-${{ env.SUMMARY_BASE }}.md
         if-no-files-found: ignore
         compression-level: 9
 
