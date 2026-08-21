@@ -126,7 +126,7 @@ jobs:
         os_patch_level: ${{ inputs.os_patch_level }}
 
     - name: Build FUSE-BPF Userspace Daemon (Issue #211)
-      if: ${{ contains(inputs.feature_set, 'FUSE_BPF') && contains(inputs.version, 'lts') && inputs.version == 'android16-6.12' }}
+      if: ${{ contains(inputs.feature_set, 'BPF') && contains(inputs.version, 'lts') && inputs.version == 'android16-6.12' }}
       uses: ./.github/actions/fuse-bpf
       with:
         version: ${{ inputs.version }}
@@ -265,16 +265,8 @@ jobs:
     - name: Setup Misc Configs
       uses: ./.github/actions/misc
 
-    - name: Enable eBPF Support
-      if: contains(inputs.feature_set, 'EBPF')
-      uses: ./.github/actions/ebpf
-
-    - name: Enable FUSE-BPF Kernel Support
-      if: contains(inputs.feature_set, 'FUSE_BPF')
-      uses: ./.github/actions/fuse-bpf-config
-
-    - name: Enable BTF
-      if: contains(inputs.feature_set, 'BTF')
+    - name: Enable BPF Stack (BTF + eBPF + FUSE-BPF)
+      if: contains(inputs.feature_set, 'BPF')
       uses: ./.github/actions/btf
       with:
         version: ${{ inputs.version }}
