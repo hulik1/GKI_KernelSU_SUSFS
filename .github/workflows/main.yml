@@ -226,6 +226,39 @@ jobs:
           echo "Resolved:"
           env | grep -E '^(nomount_commit|kernelsu_commit|kernelsu_branch|root_commit|susfs_commit_|kernel_patches_commit|anykernel3_commit|droidspaces_commit)' | sort
 
+      - name: Validate release manager build exists
+        if: ${{ inputs.release_type != 'Action' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # A Release/Pre-Release must link to the EXACT KernelSU-Next manager build
+          # for the stock commit this fork's branch is synced with. If that exact run
+          # can't be found, fail NOW (before any kernel is built) — a release without
+          # a matching manager is not shippable.
+          KSU_REPO="https://github.com/pershoot/KernelSU-Next.git"
+          OFFICIAL_KSU_REPO="https://github.com/KernelSU-Next/KernelSU-Next.git"
+
+          git clone --depth=1 --branch dev-susfs "$KSU_REPO" /tmp/ksu-manager-check
+          cd /tmp/ksu-manager-check
+          git remote add official "$OFFICIAL_KSU_REPO" || true
+          git fetch --depth=1 official dev
+          STOCK_COMMIT=$(git merge-base HEAD FETCH_HEAD)
+          echo "Stock (sync) commit for manager: $STOCK_COMMIT"
+
+          MANAGER_RUN_ID=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+            "https://api.github.com/repos/KernelSU-Next/KernelSU-Next/actions/workflows/build-manager-ci.yml/runs?head_sha=${STOCK_COMMIT}" \
+            | jq -r '.workflow_runs[0].id // empty')
+
+          if [[ -z "${MANAGER_RUN_ID:-}" ]]; then
+            echo "ERROR: no KernelSU-Next manager build exists for stock commit ${STOCK_COMMIT}" >&2
+            echo "A Release/Pre-Release must link to the exact matching manager build." >&2
+            echo "Wait for the official build-manager-ci run for this commit, or use Type 'Action'." >&2
+            exit 1
+          fi
+
+          echo "Exact manager build found: run ${MANAGER_RUN_ID} for ${STOCK_COMMIT}"
+
       - name: Compose requested feature set
         id: features
         shell: bash
@@ -843,18 +876,10 @@ jobs:
           KSU_MANAGER="https://github.com/KernelSU-Next/KernelSU-Next/actions/runs/${MANAGER_RUN_ID}"
           KSU_MANAGER_NOTE="built from stock dev commit ${STOCK_COMMIT:0:12} (exact match)"
         else
-          # No run indexed for the stock commit (e.g. official dev was force-pushed/rebase).
-          # Fall back to the build-manager run for the CURRENT official dev tip so the
-          # release still gets a real manager build to link to.
-          echo "No manager run found for stock commit ${STOCK_COMMIT}; falling back to latest dev tip." >&2
-          MANAGER_RUN_ID=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors "https://api.github.com/repos/KernelSU-Next/KernelSU-Next/actions/workflows/build-manager-ci.yml/runs?branch=dev" | jq -r '.workflow_runs[0].id // empty')
-          if [[ -n "${MANAGER_RUN_ID:-}" ]]; then
-            KSU_MANAGER="https://github.com/KernelSU-Next/KernelSU-Next/actions/runs/${MANAGER_RUN_ID}"
-            KSU_MANAGER_NOTE="built from the latest official dev branch (fallback, commit may differ)"
-          else
-            KSU_MANAGER="https://github.com/KernelSU-Next/KernelSU-Next/actions/workflows/build-manager-ci.yml"
-            KSU_MANAGER_NOTE="no manager build found"
-          fi
+          # Validated up-front in resolve-sources; a release cannot proceed without
+          # the exact manager run. Fail rather than link a mismatched manager.
+          echo "ERROR: exact manager build no longer available for ${STOCK_COMMIT}" >&2
+          exit 1
         fi
 
         echo "Commits count: $COMMITS_COUNT"
