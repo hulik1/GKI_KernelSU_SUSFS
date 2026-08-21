@@ -299,20 +299,23 @@ jobs:
       - uses: actions/checkout@v7
         if: ${{ inputs.use_bpf }}
 
-      - name: Prepare kernel workspace
+      - name: Sparse-checkout FUSE-BPF source from kernel/common (android16-6.12-lts)
+        if: ${{ inputs.use_bpf }}
         shell: bash
-        if: ${{ inputs.use_bpf }}
         run: |
-          mkdir -p "${{ github.workspace }}/kernel"
-
-      - name: Download Kernel Repository (android16-6.12-lts)
-        if: ${{ inputs.use_bpf }}
-        uses: ./.github/actions/download-kernel
-        with:
-          version: android16-6.12
-          android_version: android16
-          kernel_version: 6.12
-          os_patch_level: lts
+          set -euo pipefail
+          # Only the daemon source + the headers it compiles against are needed,
+          # NOT the full ~16GB kernel tree (which includes ~12GB of prebuilts).
+          git clone --depth 1 --filter=blob:none --sparse \
+            --branch android16-6.12-lts \
+            https://android.googlesource.com/kernel/common \
+            "${{ github.workspace }}/kernel/common"
+          cd "${{ github.workspace }}/kernel/common"
+          git sparse-checkout set \
+            tools/testing/selftests/filesystems/fuse \
+            include \
+            arch/arm64/include \
+            tools/testing/selftests
 
       - name: Build FUSE-BPF Userspace Daemon (Issue #211)
         if: ${{ inputs.use_bpf }}
