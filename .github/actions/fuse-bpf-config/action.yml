@@ -1,0 +1,13 @@
+name: 'Enable FUSE-BPF Kernel Support'
+description: 'Enable CONFIG_FUSE_BPF kernel-side support (Issue #211)'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Enable FUSE-BPF Kernel Config
+      uses: ./.github/actions/set-kernel-config
+      with:
+        config_list: |
+          # FUSE-BPF support (Issue #211) — FUSE filesystems backed by eBPF
+          # programs. Requires eBPF support (Issue #176) enabled underneath.
+          CONFIG_FUSE_BPF=y

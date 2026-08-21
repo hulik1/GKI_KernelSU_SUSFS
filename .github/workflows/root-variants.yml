@@ -115,7 +115,7 @@ jobs:
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: ${{ needs.resolve-pins.outputs.config_file }}
-      feature_set: SUSFS+NTSync+Ptrace+Unicode+BTF
+      feature_set: SUSFS+NTSync+Ptrace+Unicode+BTF+EBPF+FUSE_BPF
       susfs_commit: ${{ needs.resolve-pins.outputs.susfs_commit }}
       root_flavor: ${{ matrix.flavor }}
       root_commit: ${{ matrix.commit }}

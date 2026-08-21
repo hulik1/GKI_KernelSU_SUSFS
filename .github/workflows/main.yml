@@ -73,6 +73,14 @@ on:
         description: "BTF"
         type: boolean
         default: true
+      use_ebpf:
+        description: "eBPF"
+        type: boolean
+        default: true
+      use_fuse_bpf:
+        description: "FUSE-BPF"
+        type: boolean
+        default: true
       use_perf:
         description: "Performance"
         type: boolean
@@ -242,6 +250,8 @@ jobs:
           [ "${{ inputs.use_ptrace }}" = "true" ] && FEATURES="${FEATURES}Ptrace+"
           [ "${{ inputs.use_unicode }}" = "true" ] && FEATURES="${FEATURES}Unicode+"
           [ "${{ inputs.use_btf }}" = "true" ] && FEATURES="${FEATURES}BTF+"
+          [ "${{ inputs.use_ebpf }}" = "true" ] && FEATURES="${FEATURES}EBPF+"
+          [ "${{ inputs.use_fuse_bpf }}" = "true" ] && FEATURES="${FEATURES}FUSE_BPF+"
           [ "${{ inputs.use_perf }}" = "true" ] && FEATURES="${FEATURES}Perf+"
           echo "feature_set=${FEATURES%+}" >> "$GITHUB_OUTPUT"
 
