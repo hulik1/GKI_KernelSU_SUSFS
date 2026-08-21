@@ -46,46 +46,15 @@ on:
           - NONE
           - FULL
         default: FULL
-      ksu_branch:
-        description: "KernelSU branch or commit (empty = latest dev-susfs branch tip)"
-        type: string
-        required: false
-        default: ""
-      susfs_commit_android12-5-10:
-        description: "SUSFS commit for android12-5.10 (empty = latest branch tip)"
-        type: string
-        required: false
-        default: ""
-      susfs_commit_android13-5-10:
-        description: "SUSFS commit for android13-5.10 (empty = latest branch tip)"
-        type: string
-        required: false
-        default: ""
-      susfs_commit_android13-5-15:
-        description: "SUSFS commit for android13-5.15 (empty = latest branch tip)"
-        type: string
-        required: false
-        default: ""
-      susfs_commit_android14-5-15:
-        description: "SUSFS commit for android14-5.15 (empty = latest branch tip)"
-        type: string
-        required: false
-        default: ""
-      susfs_commit_android14-6-1:
-        description: "SUSFS commit for android14-6.1 (empty = latest branch tip)"
-        type: string
-        required: false
-        default: ""
-      susfs_commit_android15-6-6:
-        description: "SUSFS commit for android15-6.6 (empty = latest branch tip)"
-        type: string
-        required: false
-        default: ""
-      susfs_commit_android16-6-12:
-        description: "SUSFS commit for android16-6.12 (empty = latest branch tip)"
-        type: string
-        required: false
-        default: ""
+      root_flavor:
+        description: "Root implementation (classic/next/resukisu = pinned root-setup; none = legacy KernelSU-Next path)"
+        type: choice
+        options:
+          - none
+          - classic
+          - next
+          - resukisu
+        default: none
 
 jobs:
   prepare-ccache:
@@ -128,6 +97,7 @@ jobs:
       nomount_commit: ${{ steps.resolve.outputs.nomount_commit }}
       kernelsu_commit: ${{ steps.resolve.outputs.kernelsu_commit }}
       kernelsu_branch: ${{ steps.resolve.outputs.kernelsu_branch }}
+      root_commit: ${{ steps.resolve.outputs.root_commit }}
       susfs_commit_android12_5_10: ${{ steps.resolve.outputs.susfs_commit_android12_5_10 }}
       susfs_commit_android13_5_10: ${{ steps.resolve.outputs.susfs_commit_android13_5_10 }}
       susfs_commit_android13_5_15: ${{ steps.resolve.outputs.susfs_commit_android13_5_15 }}
@@ -135,6 +105,9 @@ jobs:
       susfs_commit_android14_6_1: ${{ steps.resolve.outputs.susfs_commit_android14_6_1 }}
       susfs_commit_android15_6_6: ${{ steps.resolve.outputs.susfs_commit_android15_6_6 }}
       susfs_commit_android16_6_12: ${{ steps.resolve.outputs.susfs_commit_android16_6_12 }}
+      kernel_patches_commit: ${{ steps.resolve.outputs.kernel_patches_commit }}
+      anykernel3_commit: ${{ steps.resolve.outputs.anykernel3_commit }}
+      droidspaces_commit: ${{ steps.resolve.outputs.droidspaces_commit }}
     steps:
       - name: Resolve latest component commits
         id: resolve
@@ -169,10 +142,7 @@ jobs:
           emit nomount_commit "$(resolve_sha https://github.com/maxsteeel/nomount.git refs/heads/dev)"
 
           # KernelSU-Next (pershoot dev-susfs; fall back to official dev for the manager)
-          KSU_INPUT="${{ inputs.ksu_branch }}"
-          if [ -z "$KSU_INPUT" ]; then
-            KSU_INPUT="dev-susfs"
-          fi
+          KSU_INPUT="dev-susfs"
           KSU_REF="refs/heads/$KSU_INPUT"
           if ! retry git ls-remote --heads https://github.com/KernelSU-Next/KernelSU-Next.git "$KSU_INPUT" | grep -q .; then
             # Treat the input as an official-dev commit SHA when it's not a fork branch
@@ -183,6 +153,23 @@ jobs:
             emit kernelsu_commit "$(resolve_sha https://github.com/KernelSU-Next/KernelSU-Next.git "$KSU_REF")"
             emit kernelsu_branch "$KSU_INPUT"
           fi
+
+          # Selected root implementation (classic / next / resukisu) at its branch tip.
+          # No need to resolve a commit for 'none' (uses legacy KernelSU-Next path).
+          case "${{ inputs.root_flavor }}" in
+            classic)
+              emit root_commit "$(resolve_sha https://github.com/tiann/KernelSU.git refs/heads/main)"
+              ;;
+            next)
+              emit root_commit "$(resolve_sha https://github.com/KernelSU-Next/KernelSU-Next.git refs/heads/dev)"
+              ;;
+            resukisu)
+              emit root_commit "$(resolve_sha https://github.com/ReSukiSU/ReSukiSU.git refs/heads/main)"
+              ;;
+            *)
+              echo "root_commit=" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
 
           # SUSFS per supported Android/kernel branch (gitlab simonpunk/susfs4ksu)
           declare -A SUSFS_BRANCHES=(
@@ -198,8 +185,13 @@ jobs:
             emit "$key" "$(resolve_sha https://gitlab.com/simonpunk/susfs4ksu.git refs/heads/${SUSFS_BRANCHES[$key]})"
           done
 
+          # Tracked build helpers (resolved automatically, before the run)
+          emit kernel_patches_commit "$(resolve_sha https://github.com/WildKernels/kernel_patches.git refs/heads/main)"
+          emit anykernel3_commit   "$(resolve_sha https://github.com/WildKernels/AnyKernel3.git refs/heads/gki-2.0)"
+          emit droidspaces_commit  "$(resolve_sha https://github.com/ravindu644/Droidspaces-OSS.git refs/heads/main)"
+
           echo "Resolved:"
-          env | grep -E '^(nomount_commit|kernelsu_commit|kernelsu_branch|susfs_commit_)' | sort
+          env | grep -E '^(nomount_commit|kernelsu_commit|kernelsu_branch|root_commit|susfs_commit_|kernel_patches_commit|anykernel3_commit|droidspaces_commit)' | sort
 
       - name: Clone shared source repos once
         if: ${{ contains(inputs.feature_set, 'NOMOUNT') || inputs.feature_set == 'FULL' }}
@@ -257,9 +249,13 @@ jobs:
     with:
       config_file: .github/config/android12-5.10.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
-      ksu_branch: ${{ inputs.ksu_branch }}
-      susfs_commit: ${{ inputs.susfs_commit_android12-5-10 || needs.resolve-sources.outputs.susfs_commit_android12_5_10 }}
+      susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android12_5_10 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
+      kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
+      root_flavor: ${{ inputs.root_flavor == 'none' && '' || inputs.root_flavor }}
+      root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
+      anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
+      droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
     secrets: inherit
 
   build-android13-5-10:
@@ -271,9 +267,13 @@ jobs:
     with:
       config_file: .github/config/android13-5.10.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
-      ksu_branch: ${{ inputs.ksu_branch }}
-      susfs_commit: ${{ inputs.susfs_commit_android13-5-10 || needs.resolve-sources.outputs.susfs_commit_android13_5_10 }}
+      susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_10 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
+      kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
+      root_flavor: ${{ inputs.root_flavor == 'none' && '' || inputs.root_flavor }}
+      root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
+      anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
+      droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
     secrets: inherit
 
   build-android13-5-15:
@@ -285,9 +285,13 @@ jobs:
     with:
       config_file: .github/config/android13-5.15.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
-      ksu_branch: ${{ inputs.ksu_branch }}
-      susfs_commit: ${{ inputs.susfs_commit_android13-5-15 || needs.resolve-sources.outputs.susfs_commit_android13_5_15 }}
+      susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_15 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
+      kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
+      root_flavor: ${{ inputs.root_flavor == 'none' && '' || inputs.root_flavor }}
+      root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
+      anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
+      droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
     secrets: inherit
 
   build-android14-5-15:
@@ -299,9 +303,13 @@ jobs:
     with:
       config_file: .github/config/android14-5.15.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
-      ksu_branch: ${{ inputs.ksu_branch }}
-      susfs_commit: ${{ inputs.susfs_commit_android14-5-15 || needs.resolve-sources.outputs.susfs_commit_android14_5_15 }}
+      susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android14_5_15 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
+      kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
+      root_flavor: ${{ inputs.root_flavor == 'none' && '' || inputs.root_flavor }}
+      root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
+      anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
+      droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
     secrets: inherit
 
   build-android14-6-1:
@@ -313,9 +321,13 @@ jobs:
     with:
       config_file: .github/config/android14-6.1.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
-      ksu_branch: ${{ inputs.ksu_branch }}
-      susfs_commit: ${{ inputs.susfs_commit_android14-6-1 || needs.resolve-sources.outputs.susfs_commit_android14_6_1 }}
+      susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android14_6_1 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
+      kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
+      root_flavor: ${{ inputs.root_flavor == 'none' && '' || inputs.root_flavor }}
+      root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
+      anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
+      droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
     secrets: inherit
 
   build-android15-6-6:
@@ -327,9 +339,13 @@ jobs:
     with:
       config_file: .github/config/android15-6.6.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
-      ksu_branch: ${{ inputs.ksu_branch }}
-      susfs_commit: ${{ inputs.susfs_commit_android15-6-6 || needs.resolve-sources.outputs.susfs_commit_android15_6_6 }}
+      susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android15_6_6 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
+      kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
+      root_flavor: ${{ inputs.root_flavor == 'none' && '' || inputs.root_flavor }}
+      root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
+      anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
+      droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
     secrets: inherit
 
   build-android16-6-12:
@@ -341,9 +357,13 @@ jobs:
     with:
       config_file: .github/config/android16-6.12.json
       feature_set: ${{ inputs.feature_set || 'FULL' }}
-      ksu_branch: ${{ inputs.ksu_branch }}
-      susfs_commit: ${{ inputs.susfs_commit_android16-6-12 || needs.resolve-sources.outputs.susfs_commit_android16_6_12 }}
+      susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android16_6_12 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
+      kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
+      root_flavor: ${{ inputs.root_flavor == 'none' && '' || inputs.root_flavor }}
+      root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
+      anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
+      droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
     secrets: inherit
 
   rej:
@@ -439,6 +459,7 @@ jobs:
       actions: write
       contents: read
     needs:
+    - resolve-sources
     - build-android12-5-10
     - build-android13-5-10
     - build-android13-5-15
@@ -461,7 +482,7 @@ jobs:
           echo "# 📋 Build Summary — $(date -u '+%Y-%m-%d %H:%M UTC')"
           echo
           echo "**Feature Set:** ${{ inputs.feature_set }}"
-          echo "**KSU Branch:** ${{ inputs.ksu_branch || 'latest dev' }}"
+          echo "**Root Flavor:** ${{ inputs.root_flavor || 'none' }}"
           echo
           
           # Count successes and failures
@@ -498,13 +519,13 @@ jobs:
           
           echo
           echo "> **SUSFS Commits:**"
-          echo "> - android12-5.10: ${{ inputs.susfs_commit_android12-5-10 || 'latest' }}"
-          echo "> - android13-5.10: ${{ inputs.susfs_commit_android13-5-10 || 'latest' }}"
-          echo "> - android13-5.15: ${{ inputs.susfs_commit_android13-5-15 || 'latest' }}"
-          echo "> - android14-5.15: ${{ inputs.susfs_commit_android14-5-15 || 'latest' }}"
-          echo "> - android14-6.1: ${{ inputs.susfs_commit_android14-6-1 || 'latest' }}"
-          echo "> - android15-6.6: ${{ inputs.susfs_commit_android15-6-6 || 'latest' }}"
-          echo "> - android16-6.12: ${{ inputs.susfs_commit_android16-6-12 || 'latest' }}"
+          echo "> - android12-5.10: ${{ needs.resolve-sources.outputs.susfs_commit_android12_5_10 }}"
+          echo "> - android13-5.10: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_10 }}"
+          echo "> - android13-5.15: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_15 }}"
+          echo "> - android14-5.15: ${{ needs.resolve-sources.outputs.susfs_commit_android14_5_15 }}"
+          echo "> - android14-6.1: ${{ needs.resolve-sources.outputs.susfs_commit_android14_6_1 }}"
+          echo "> - android15-6.6: ${{ needs.resolve-sources.outputs.susfs_commit_android15_6_6 }}"
+          echo "> - android16-6.12: ${{ needs.resolve-sources.outputs.susfs_commit_android16_6_12 }}"
         } >> "$GITHUB_STEP_SUMMARY"
 
     - name: 🧹 Cleanup Summary Files
@@ -646,10 +667,7 @@ jobs:
         set -euo pipefail
 
         KSU_REPO="https://github.com/pershoot/KernelSU-Next.git"
-        KSU_INPUT="${{ inputs.ksu_branch }}"
-        if [ -z "$KSU_INPUT" ]; then
-          KSU_INPUT="dev-susfs"
-        fi
+        KSU_INPUT="dev-susfs"
 
         # Try as branch first, fall back to commit
         if git ls-remote --heads "$KSU_REPO" "$KSU_INPUT" | grep -q .; then

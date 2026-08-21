@@ -47,6 +47,18 @@ on:
         required: false
         type: string
         default: ""
+      kernel_patches_commit:
+        required: false
+        type: string
+        default: ""
+      anykernel3_commit:
+        required: false
+        type: string
+        default: ""
+      droidspaces_commit:
+        required: false
+        type: string
+        default: ""
       preserve_abi:
         required: false
         type: boolean
@@ -96,6 +108,8 @@ jobs:
       with:
         version: ${{ inputs.version }}
         sublevel: ${{ inputs.sublevel }}
+        kernel_patches_commit: ${{ inputs.kernel_patches_commit }}
+        anykernel3_commit: ${{ inputs.anykernel3_commit }}
       env:
         BOOT_SIGN_KEY: ${{ secrets.BOOT_SIGN_KEY }}
           
@@ -216,6 +230,7 @@ jobs:
       with:
         version: ${{ inputs.version }}
         kernel_version: ${{ inputs.kernel_version }}
+        droidspaces_commit: ${{ inputs.droidspaces_commit }}
 
     - name: Apply NTSync Patches
       uses: ./.github/actions/ntsync
