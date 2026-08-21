@@ -28,6 +28,10 @@ on:
           - android15-6.6
           - android16-6.12
         default: All
+      brand_name:
+        description: "Kernel Branding"
+        type: string
+        default: Wild
       root_flavor:
         description: "Root Flavor"
         type: choice
@@ -77,10 +81,6 @@ on:
         description: "Performance"
         type: boolean
         default: false
-      brand_name:
-        description: "Kernel Branding"
-        type: string
-        default: Wild
 
 jobs:
   prepare-ccache:
