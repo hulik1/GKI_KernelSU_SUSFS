@@ -252,18 +252,27 @@ jobs:
           set -euo pipefail
 
           # Each selected root must ship ALL manager APK builds. KernelSU-Next publishes
-          # its manager APKs as GitHub release assets (normal + spoofed); classic
-          # KernelSU and ReSukiSU expose them as CI-run artifacts. Enumerate the
-          # right source per flavor.
+          # its manager APKs (manager + manager-spoofed) from the official dev-tip
+          # build-manager-ci run; classic KernelSU and ReSukiSU expose theirs as
+          # CI-run artifacts. All three are pinned to an exact commit.
           resolve_one() { # flavor
             local flavor="$1"
             local owner repo wf stock
             case "$flavor" in
               next)
-                owner="KernelSU-Next"; repo="KernelSU-Next"
-                # Grab every *.apk from the latest release.
-                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"release"}' \
-                  "$flavor" "$owner" "$repo"
+                owner="KernelSU-Next"; repo="KernelSU-Next"; wf="build-manager-ci.yml"
+                # Manager is built from the official dev-tip commit (grabbed at run start).
+                stock="${{ steps.resolve.outputs.kernelsu_commit }}"
+                run_id=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                  -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
+                  "https://api.github.com/repos/${owner}/${repo}/actions/workflows/${wf}/runs?head_sha=${stock}" \
+                  | jq -r '.workflow_runs[0].id // empty')
+                if [[ -z "${run_id}" ]]; then
+                  echo "ERROR: no ${repo} manager build exists for dev commit ${stock}" >&2
+                  exit 1
+                fi
+                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s","want":["manager","manager-spoofed"]}' \
+                  "$flavor" "$owner" "$repo" "$run_id" "$stock"
                 ;;
               classic)
                 owner="tiann"; repo="KernelSU"; wf="build-manager.yml"
@@ -343,7 +352,17 @@ jobs:
                 ARTIFACTS_JSON=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
                   -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
                   "https://api.github.com/repos/${OWNER}/${REPO}/actions/runs/${RUN_ID}/artifacts")
-                echo "$ARTIFACTS_JSON" | jq -r '.artifacts[].id' | while read -r AID; do
+                # If a `want` name-list is given (e.g. manager, manager-spoofed), download only those artifacts.
+                WANT="$(echo "$M" | jq -r '.want | if . then join(",") else "" end')"
+                if [ -z "$WANT" ]; then
+                  ARTIFACT_IDS=$(echo "$ARTIFACTS_JSON" | jq -r '.artifacts[].id')
+                else
+                  ARTIFACT_IDS=$(echo "$ARTIFACTS_JSON" | jq -r --arg want "$WANT" '
+                    ($want | split(",")) as $wl |
+                    .artifacts[] | select(.name as $n | any($wl[]; $n == .)) | .id')
+                fi
+                echo "$ARTIFACT_IDS" | while read -r AID; do
+                  [ -n "$AID" ] || continue
                   curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
                     -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
                     -o "manager-${AID}.zip" \
