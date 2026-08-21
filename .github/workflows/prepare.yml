@@ -51,6 +51,11 @@ on:
         required: false
         type: string
         default: ""
+      brand_name:
+        description: "Kernel branding text appended to the version string"
+        required: false
+        type: string
+        default: Wild
       preserve_abi:
         description: "Keep ABI/KMI protection files intact and verify their hashes"
         required: false
@@ -173,6 +178,7 @@ jobs:
       kernel_patches_commit: ${{ inputs.kernel_patches_commit }}
       anykernel3_commit: ${{ inputs.anykernel3_commit }}
       droidspaces_commit: ${{ inputs.droidspaces_commit }}
+      brand_name: ${{ inputs.brand_name }}
       preserve_abi: ${{ inputs.preserve_abi }}
       build_bypass: ${{ inputs.build_bypass }}
     secrets: inherit

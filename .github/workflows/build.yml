@@ -59,6 +59,10 @@ on:
         required: false
         type: string
         default: ""
+      brand_name:
+        required: false
+        type: string
+        default: Wild
       preserve_abi:
         required: false
         type: boolean
@@ -312,6 +316,7 @@ jobs:
         android_version: ${{ inputs.android_version }}
         version: ${{ inputs.version }}
         sublevel: ${{ steps.extract.outputs.sublevel }}
+        brand_name: ${{ inputs.brand_name }}
 
     - name: Remove Protected Exports
       if: ${{ !inputs.preserve_abi }}

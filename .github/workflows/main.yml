@@ -37,23 +37,30 @@ on:
           - KernelSU
           - ReSukiSU
         default: KernelSU-Next
-      feature_set:
-        description: "Feature Set"
-        type: choice
-        options:
-          - SUSFS+NoMount
-          - SUSFS+BBG+NET+DS
-          - SUSFS+BBG
-          - SUSFS+NET
-          - SUSFS+DS
-          - SUSFS
-          - BBG
-          - NET
-          - DS
-          - NoMount
-          - NONE
-          - All
-        default: All
+      brand_name:
+        description: "Kernel Branding text (appended to version, e.g. Wild)"
+        type: string
+        default: Wild
+      use_susfs:
+        description: "SUSFS root-hiding patches + module"
+        type: boolean
+        default: true
+      use_nomount:
+        description: "NoMount kernel integration + metamodule"
+        type: boolean
+        default: true
+      use_bbg:
+        description: "Baseband-guard (SUSFS addon)"
+        type: boolean
+        default: true
+      use_net:
+        description: "Networking patches"
+        type: boolean
+        default: true
+      use_ds:
+        description: "DroidSpaces-OSS patches"
+        type: boolean
+        default: true
 
 jobs:
   prepare-ccache:
@@ -108,6 +115,7 @@ jobs:
       kernel_patches_commit: ${{ steps.resolve.outputs.kernel_patches_commit }}
       anykernel3_commit: ${{ steps.resolve.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ steps.resolve.outputs.droidspaces_commit }}
+      feature_set: ${{ steps.features.outputs.feature_set }}
     steps:
       - name: Resolve latest component commits
         id: resolve
@@ -199,8 +207,21 @@ jobs:
           echo "Resolved:"
           env | grep -E '^(nomount_commit|kernelsu_commit|kernelsu_branch|root_commit|susfs_commit_|kernel_patches_commit|anykernel3_commit|droidspaces_commit)' | sort
 
+      - name: Compose requested feature set
+        id: features
+        shell: bash
+        run: |
+          set -euo pipefail
+          FEATURES=""
+          [ "${{ inputs.use_susfs }}" = "true" ] && FEATURES="${FEATURES}SUSFS+"
+          [ "${{ inputs.use_nomount }}" = "true" ] && FEATURES="${FEATURES}NoMount+"
+          [ "${{ inputs.use_bbg }}" = "true" ] && FEATURES="${FEATURES}BBG+"
+          [ "${{ inputs.use_net }}" = "true" ] && FEATURES="${FEATURES}NET+"
+          [ "${{ inputs.use_ds }}" = "true" ] && FEATURES="${FEATURES}DS+"
+          echo "feature_set=${FEATURES%+}" >> "$GITHUB_OUTPUT"
+
       - name: Clone shared source repos once
-        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'All' }}
+        if: ${{ inputs.use_nomount }}
         shell: bash
         run: |
           set -euo pipefail
@@ -214,7 +235,7 @@ jobs:
           echo "sources_dir=$PWD/sources" >> "$GITHUB_ENV"
 
       - name: Upload sources artifact
-        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'All' }}
+        if: ${{ inputs.use_nomount }}
         uses: actions/upload-artifact@v7
         with:
           name: sources
@@ -228,17 +249,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'All' }}
+        if: ${{ inputs.use_nomount }}
 
       - name: Build NoMount metamodule
         id: nomount-metamodule
-        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'All' }}
+        if: ${{ inputs.use_nomount }}
         uses: ./.github/actions/nomount-metamodule
         with:
           commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
 
       - name: Upload NoMount metamodule
-        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'All' }}
+        if: ${{ inputs.use_nomount }}
         uses: actions/upload-artifact@v7
         with:
           name: NoMount-Metamodule
@@ -254,7 +275,7 @@ jobs:
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android12-5.10.json
-      feature_set: ${{ inputs.feature_set || 'All' }}
+      feature_set: ${{ needs.resolve-sources.outputs.feature_set }}
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android12_5_10 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
@@ -262,6 +283,7 @@ jobs:
       root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
+      brand_name: ${{ inputs.brand_name }}
     secrets: inherit
 
   build-android13-5-10:
@@ -272,7 +294,7 @@ jobs:
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android13-5.10.json
-      feature_set: ${{ inputs.feature_set || 'All' }}
+      feature_set: ${{ needs.resolve-sources.outputs.feature_set }}
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_10 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
@@ -280,6 +302,7 @@ jobs:
       root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
+      brand_name: ${{ inputs.brand_name }}
     secrets: inherit
 
   build-android13-5-15:
@@ -290,7 +313,7 @@ jobs:
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android13-5.15.json
-      feature_set: ${{ inputs.feature_set || 'All' }}
+      feature_set: ${{ needs.resolve-sources.outputs.feature_set }}
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_15 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
@@ -298,6 +321,7 @@ jobs:
       root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
+      brand_name: ${{ inputs.brand_name }}
     secrets: inherit
 
   build-android14-5-15:
@@ -308,7 +332,7 @@ jobs:
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android14-5.15.json
-      feature_set: ${{ inputs.feature_set || 'All' }}
+      feature_set: ${{ needs.resolve-sources.outputs.feature_set }}
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android14_5_15 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
@@ -316,6 +340,7 @@ jobs:
       root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
+      brand_name: ${{ inputs.brand_name }}
     secrets: inherit
 
   build-android14-6-1:
@@ -326,7 +351,7 @@ jobs:
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android14-6.1.json
-      feature_set: ${{ inputs.feature_set || 'All' }}
+      feature_set: ${{ needs.resolve-sources.outputs.feature_set }}
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android14_6_1 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
@@ -334,6 +359,7 @@ jobs:
       root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
+      brand_name: ${{ inputs.brand_name }}
     secrets: inherit
 
   build-android15-6-6:
@@ -344,7 +370,7 @@ jobs:
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android15-6.6.json
-      feature_set: ${{ inputs.feature_set || 'All' }}
+      feature_set: ${{ needs.resolve-sources.outputs.feature_set }}
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android15_6_6 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
@@ -352,6 +378,7 @@ jobs:
       root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
+      brand_name: ${{ inputs.brand_name }}
     secrets: inherit
 
   build-android16-6-12:
@@ -362,7 +389,7 @@ jobs:
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android16-6.12.json
-      feature_set: ${{ inputs.feature_set || 'All' }}
+      feature_set: ${{ needs.resolve-sources.outputs.feature_set }}
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android16_6_12 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
@@ -370,6 +397,7 @@ jobs:
       root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
+      brand_name: ${{ inputs.brand_name }}
     secrets: inherit
 
   rej:
@@ -487,8 +515,9 @@ jobs:
         {
           echo "# 📋 Build Summary — $(date -u '+%Y-%m-%d %H:%M UTC')"
           echo
-          echo "**Feature Set:** ${{ inputs.feature_set }}"
+          echo "**Feature Set:** ${{ needs.resolve-sources.outputs.feature_set }}"
           echo "**Root Flavor:** ${{ inputs.root_flavor || 'none' }}"
+          echo "**Brand:** ${{ inputs.brand_name || 'Wild' }}"
           echo
           
           # Count successes and failures
