@@ -52,8 +52,8 @@ on:
           - DS
           - NoMount
           - NONE
-          - FULL
-        default: FULL
+          - All
+        default: All
 
 jobs:
   prepare-ccache:
@@ -200,7 +200,7 @@ jobs:
           env | grep -E '^(nomount_commit|kernelsu_commit|kernelsu_branch|root_commit|susfs_commit_|kernel_patches_commit|anykernel3_commit|droidspaces_commit)' | sort
 
       - name: Clone shared source repos once
-        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'FULL' }}
+        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'All' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -214,7 +214,7 @@ jobs:
           echo "sources_dir=$PWD/sources" >> "$GITHUB_ENV"
 
       - name: Upload sources artifact
-        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'FULL' }}
+        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'All' }}
         uses: actions/upload-artifact@v7
         with:
           name: sources
@@ -228,17 +228,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'FULL' }}
+        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'All' }}
 
       - name: Build NoMount metamodule
         id: nomount-metamodule
-        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'FULL' }}
+        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'All' }}
         uses: ./.github/actions/nomount-metamodule
         with:
           commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
 
       - name: Upload NoMount metamodule
-        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'FULL' }}
+        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'All' }}
         uses: actions/upload-artifact@v7
         with:
           name: NoMount-Metamodule
@@ -254,7 +254,7 @@ jobs:
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android12-5.10.json
-      feature_set: ${{ inputs.feature_set || 'FULL' }}
+      feature_set: ${{ inputs.feature_set || 'All' }}
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android12_5_10 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
@@ -272,7 +272,7 @@ jobs:
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android13-5.10.json
-      feature_set: ${{ inputs.feature_set || 'FULL' }}
+      feature_set: ${{ inputs.feature_set || 'All' }}
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_10 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
@@ -290,7 +290,7 @@ jobs:
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android13-5.15.json
-      feature_set: ${{ inputs.feature_set || 'FULL' }}
+      feature_set: ${{ inputs.feature_set || 'All' }}
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_15 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
@@ -308,7 +308,7 @@ jobs:
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android14-5.15.json
-      feature_set: ${{ inputs.feature_set || 'FULL' }}
+      feature_set: ${{ inputs.feature_set || 'All' }}
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android14_5_15 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
@@ -326,7 +326,7 @@ jobs:
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android14-6.1.json
-      feature_set: ${{ inputs.feature_set || 'FULL' }}
+      feature_set: ${{ inputs.feature_set || 'All' }}
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android14_6_1 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
@@ -344,7 +344,7 @@ jobs:
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android15-6.6.json
-      feature_set: ${{ inputs.feature_set || 'FULL' }}
+      feature_set: ${{ inputs.feature_set || 'All' }}
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android15_6_6 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
@@ -362,7 +362,7 @@ jobs:
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android16-6.12.json
-      feature_set: ${{ inputs.feature_set || 'FULL' }}
+      feature_set: ${{ inputs.feature_set || 'All' }}
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android16_6_12 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
