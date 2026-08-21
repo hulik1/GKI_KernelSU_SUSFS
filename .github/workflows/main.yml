@@ -40,6 +40,7 @@ on:
           - KernelSU-Next
           - KernelSU
           - ReSukiSU
+          - All
         default: KernelSU-Next
       use_susfs:
         description: "SUSFS"
@@ -125,6 +126,7 @@ jobs:
       kernelsu_branch: ${{ steps.resolve.outputs.kernelsu_branch }}
       root_flavor: ${{ steps.resolve.outputs.root_flavor }}
       root_commit: ${{ steps.resolve.outputs.root_commit }}
+      root_matrix: ${{ steps.resolve.outputs.root_matrix }}
       susfs_commit_android12_5_10: ${{ steps.resolve.outputs.susfs_commit_android12_5_10 }}
       susfs_commit_android13_5_10: ${{ steps.resolve.outputs.susfs_commit_android13_5_10 }}
       susfs_commit_android13_5_15: ${{ steps.resolve.outputs.susfs_commit_android13_5_15 }}
@@ -175,34 +177,55 @@ jobs:
           emit kernelsu_commit "$(resolve_sha https://github.com/KernelSU-Next/KernelSU-Next.git refs/heads/dev)"
           echo "kernelsu_branch=dev" >> "$GITHUB_OUTPUT"
 
-          # Selected root implementation at its branch tip. Maps the human-facing
-          # choice (KernelSU-Next / KernelSU / ReSukiSU) to the internal root-setup
-          # flavor (next / classic / resukisu). 'none' leaves both empty so build.yml
-          # falls back to its legacy KernelSU-Next path.
+          # Selected root implementation(s). Maps the human-facing choice
+          # (KernelSU-Next / KernelSU / ReSukiSU / All) to internal root-setup
+          # flavors (next / classic / resukisu). 'none' leaves them empty so
+          # build.yml falls back to its legacy KernelSU-Next path. 'All' emits a
+          # matrix of all three root flavors plus each pinned commit.
+          #
+          # Always resolve all three branch-tip commits so 'All' can fan out.
+          CLASSIC_COMMIT="$(resolve_sha https://github.com/tiann/KernelSU.git refs/heads/main)"
+          RESUKISU_COMMIT="$(resolve_sha https://github.com/ReSukiSU/ReSukiSU.git refs/heads/main)"
+          if [ "${{ inputs.use_susfs }}" = "true" ]; then
+            NEXT_COMMIT="$(resolve_sha https://github.com/pershoot/KernelSU-Next.git refs/heads/dev-susfs)"
+          else
+            NEXT_COMMIT="$(resolve_sha https://github.com/KernelSU-Next/KernelSU-Next.git refs/heads/dev)"
+          fi
+
+          mk_entry() { # flavor variant commit
+            printf '{"root_flavor":"%s","variant":"%s","root_commit":"%s"}' "$1" "$2" "$3"
+          }
+
           case "${{ inputs.root_flavor }}" in
             KernelSU)
               emit root_flavor "classic"
-              emit root_commit "$(resolve_sha https://github.com/tiann/KernelSU.git refs/heads/main)"
+              emit root_commit "$CLASSIC_COMMIT"
+              ROOT_MATRIX="[$(mk_entry classic KernelSU "$CLASSIC_COMMIT")]"
               ;;
             KernelSU-Next)
               emit root_flavor "next"
-              if [ "${{ inputs.use_susfs }}" = "true" ]; then
-                # SUSFS on: kernel source from pershoot's dev-susfs fork
-                emit root_commit "$(resolve_sha https://github.com/pershoot/KernelSU-Next.git refs/heads/dev-susfs)"
-              else
-                # SUSFS off: plain KernelSU-Next official dev
-                emit root_commit "$(resolve_sha https://github.com/KernelSU-Next/KernelSU-Next.git refs/heads/dev)"
-              fi
+              emit root_commit "$NEXT_COMMIT"
+              ROOT_MATRIX="[$(mk_entry next KernelSU-Next "$NEXT_COMMIT")]"
               ;;
             ReSukiSU)
               emit root_flavor "resukisu"
-              emit root_commit "$(resolve_sha https://github.com/ReSukiSU/ReSukiSU.git refs/heads/main)"
+              emit root_commit "$RESUKISU_COMMIT"
+              ROOT_MATRIX="[$(mk_entry resukisu ReSukiSU "$RESUKISU_COMMIT")]"
               ;;
-            *)
+            All)
+              # Fan out to all three root variants, each with its pinned commit.
+              ROOT_MATRIX="[$(mk_entry next KernelSU-Next "$NEXT_COMMIT"),$(mk_entry classic KernelSU "$CLASSIC_COMMIT"),$(mk_entry resukisu ReSukiSU "$RESUKISU_COMMIT")]"
               echo "root_flavor=" >> "$GITHUB_OUTPUT"
               echo "root_commit=" >> "$GITHUB_OUTPUT"
               ;;
+            *)
+              # none: legacy path, no explicit root variant
+              echo "root_flavor=" >> "$GITHUB_OUTPUT"
+              echo "root_commit=" >> "$GITHUB_OUTPUT"
+              ROOT_MATRIX="[{\"root_flavor\":\"\",\"variant\":\"\",\"root_commit\":\"\"}]"
+              ;;
           esac
+          echo "root_matrix=$ROOT_MATRIX" >> "$GITHUB_OUTPUT"
 
           # SUSFS per supported Android/kernel branch (gitlab simonpunk/susfs4ksu)
           declare -A SUSFS_BRANCHES=(
@@ -226,100 +249,99 @@ jobs:
           echo "Resolved:"
           env | grep -E '^(nomount_commit|kernelsu_commit|kernelsu_branch|root_commit|susfs_commit_|kernel_patches_commit|anykernel3_commit|droidspaces_commit)' | sort
 
-      - name: Resolve manager build for selected root flavor
+      - name: Resolve manager builds for selected root flavor(s)
         id: manager
         shell: bash
         run: |
           set -euo pipefail
 
-          # Every run must ship the EXACT manager build matching the selected root's
-          # stock/sync commit, downloaded as an artifact. If that exact run can't be
-          # found, fail NOW (before any kernel builds). This applies to test AND release.
-          FLAVOR="${{ inputs.root_flavor }}"
-          echo "Root flavor: ${FLAVOR}"
+          # Every run must ship the EXACT manager build(s) matching the selected
+          # root's stock/sync commit, downloaded as artifacts. If any exact run
+          # can't be found, fail NOW (before any kernel builds). For 'All' this
+          # enumerates all three flavors; otherwise just the one selected.
+          resolve_one() { # flavor
+            local flavor="$1"
+            local owner repo wf stock
+            case "$flavor" in
+              next)
+                owner="KernelSU-Next"; repo="KernelSU-Next"; wf="build-manager-ci.yml"
+                git clone --depth=1 --branch dev-susfs "https://github.com/pershoot/KernelSU-Next.git" /tmp/ksu-manager-check
+                cd /tmp/ksu-manager-check
+                git remote add official "https://github.com/KernelSU-Next/KernelSU-Next.git" || true
+                git fetch --depth=1 official dev
+                stock=$(git merge-base HEAD FETCH_HEAD)
+                ;;
+              classic)
+                owner="tiann"; repo="KernelSU"; wf="build-manager.yml"
+                stock=$(git ls-remote https://github.com/tiann/KernelSU.git refs/heads/main | awk '{print $1; exit}')
+                ;;
+              resukisu)
+                owner="ReSukiSU"; repo="ReSukiSU"; wf="build-manager.yml"
+                stock=$(git ls-remote https://github.com/ReSukiSU/ReSukiSU.git refs/heads/main | awk '{print $1; exit}')
+                ;;
+              *)
+                echo "skipping unknown flavor: $flavor" >&2
+                return 0
+                ;;
+            esac
+            run_id=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+              "https://api.github.com/repos/${owner}/${repo}/actions/workflows/${wf}/runs?head_sha=${stock}" \
+              | jq -r '.workflow_runs[0].id // empty')
+            if [[ -z "${run_id}" ]]; then
+              echo "ERROR: no ${repo} manager build exists for stock commit ${stock}" >&2
+              exit 1
+            fi
+            printf '{"flavor":"%s","owner":"%s","repo":"%s","wf":"%s","stock":"%s","run_id":%s}' \
+              "$flavor" "$owner" "$repo" "$wf" "$stock" "$run_id"
+          }
 
-          case "${FLAVOR}" in
-            KernelSU-Next)
-              # Manager: KernelSU-Next, synced at merge-base(pershoot dev-susfs, official dev)
-              MANAGER_OWNER="KernelSU-Next"
-              MANAGER_REPO="KernelSU-Next"
-              MANAGER_WF="build-manager-ci.yml"
-              KSU_REPO="https://github.com/pershoot/KernelSU-Next.git"
-              OFFICIAL_KSU_REPO="https://github.com/KernelSU-Next/KernelSU-Next.git"
-              git clone --depth=1 --branch dev-susfs "$KSU_REPO" /tmp/ksu-manager-check
-              cd /tmp/ksu-manager-check
-              git remote add official "$OFFICIAL_KSU_REPO" || true
-              git fetch --depth=1 official dev
-              STOCK_COMMIT=$(git merge-base HEAD FETCH_HEAD)
-              ;;
-            KernelSU)
-              # Manager: tiann/KernelSU, at main tip (the root source commit)
-              MANAGER_OWNER="tiann"
-              MANAGER_REPO="KernelSU"
-              MANAGER_WF="build-manager.yml"
-              STOCK_COMMIT=$(git ls-remote https://github.com/tiann/KernelSU.git refs/heads/main | awk '{print $1; exit}')
-              git clone --depth=1 --branch main https://github.com/tiann/KernelSU.git /tmp/ksu-manager-check
-              cd /tmp/ksu-manager-check
-              ;;
-            ReSukiSU)
-              # Manager: ReSukiSU, at main tip
-              MANAGER_OWNER="ReSukiSU"
-              MANAGER_REPO="ReSukiSU"
-              MANAGER_WF="build-manager.yml"
-              STOCK_COMMIT=$(git ls-remote https://github.com/ReSukiSU/ReSukiSU.git refs/heads/main | awk '{print $1; exit}')
-              git clone --depth=1 --branch main https://github.com/ReSukiSU/ReSukiSU.git /tmp/ksu-manager-check
-              cd /tmp/ksu-manager-check
-              ;;
-            *)
-              echo "FLAVOR=${FLAVOR}"
-              echo "manager_run_id=" >> "$GITHUB_OUTPUT"
-              echo "manager_stock_commit=" >> "$GITHUB_OUTPUT"
-              echo "Skipping manager resolution (no root flavor / unsupported)."
-              exit 0
-              ;;
+          FLAVORS="${{ inputs.root_flavor }}"
+          echo "Root flavor: ${FLAVORS}"
+          LIST=""
+          case "${FLAVORS}" in
+            All) LIST="$(resolve_one next),$(resolve_one classic),$(resolve_one resukisu)" ;;
+            KernelSU-Next) LIST="$(resolve_one next)" ;;
+            KernelSU) LIST="$(resolve_one classic)" ;;
+            ReSukiSU) LIST="$(resolve_one resukisu)" ;;
+            *) echo "Skipping manager resolution (no root flavor / none)." ;;
           esac
-
-          echo "Stock (sync) commit for manager: ${STOCK_COMMIT}"
-          echo "stock_commit=${STOCK_COMMIT}" >> "$GITHUB_OUTPUT"
-
-          MANAGER_RUN_ID=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
-            "https://api.github.com/repos/${MANAGER_OWNER}/${MANAGER_REPO}/actions/workflows/${MANAGER_WF}/runs?head_sha=${STOCK_COMMIT}" \
-            | jq -r '.workflow_runs[0].id // empty')
-
-          if [[ -z "${MANAGER_RUN_ID:-}" ]]; then
-            echo "ERROR: no ${MANAGER_REPO} manager build exists for stock commit ${STOCK_COMMIT}" >&2
-            echo "Every run must ship the exact matching manager build as an artifact." >&2
-            echo "Wait for the official manager workflow run for this commit, or pick another root." >&2
-            exit 1
+          if [ -n "$LIST" ]; then
+            echo "manager_list=[$LIST]" >> "$GITHUB_OUTPUT"
+            echo "Exact manager builds resolved."
+          else
+            echo "manager_list=" >> "$GITHUB_OUTPUT"
           fi
 
-          echo "manager_run_id=${MANAGER_RUN_ID}" >> "$GITHUB_OUTPUT"
-          echo "manager_owner=${MANAGER_OWNER}" >> "$GITHUB_OUTPUT"
-          echo "manager_repo=${MANAGER_REPO}" >> "$GITHUB_OUTPUT"
-          echo "manager_wf=${MANAGER_WF}" >> "$GITHUB_OUTPUT"
-          echo "Exact manager build found: run ${MANAGER_RUN_ID} for ${STOCK_COMMIT}"
-
-      - name: Download manager APK artifact
-        if: ${{ steps.manager.outputs.manager_run_id != '' }}
+      - name: Download manager APK artifacts
+        if: ${{ steps.manager.outputs.manager_list != '' }}
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p release-assets/manager
-          cd release-assets/manager
-          ARTIFACTS_JSON=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
-            "https://api.github.com/repos/${{ steps.manager.outputs.manager_owner }}/${{ steps.manager.outputs.manager_repo }}/actions/runs/${{ steps.manager.outputs.manager_run_id }}/artifacts")
-          echo "$ARTIFACTS_JSON" | jq -r '.artifacts[].id' | while read -r AID; do
-            curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
-              -o "manager-${AID}.zip" \
-              "https://api.github.com/repos/${{ steps.manager.outputs.manager_owner }}/${{ steps.manager.outputs.manager_repo }}/actions/artifacts/${AID}/zip"
-            unzip -o "manager-${AID}.zip" >/dev/null 2>&1 || true
-            rm -f "manager-${AID}.zip"
-          done
-          find . -type f \( -iname '*.apk' -o -iname '*.zip' \) -print
-          ls -la
+          echo '${{ steps.manager.outputs.manager_list }}' \
+            | jq -c '.[]' | while read -r M; do
+              OWNER=$(echo "$M" | jq -r .owner)
+              REPO=$(echo "$M" | jq -r .repo)
+              RUN_ID=$(echo "$M" | jq -r .run_id)
+              echo "Downloading $REPO manager from run $RUN_ID"
+              mkdir -p "release-assets/manager/$REPO"
+              cd "release-assets/manager/$REPO"
+              ARTIFACTS_JSON=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                "https://api.github.com/repos/${OWNER}/${REPO}/actions/runs/${RUN_ID}/artifacts")
+              echo "$ARTIFACTS_JSON" | jq -r '.artifacts[].id' | while read -r AID; do
+                curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                  -o "manager-${AID}.zip" \
+                  "https://api.github.com/repos/${OWNER}/${REPO}/actions/artifacts/${AID}/zip"
+                unzip -o "manager-${AID}.zip" >/dev/null 2>&1 || true
+                rm -f "manager-${AID}.zip"
+              done
+              cd "$(git rev-parse --show-toplevel 2>/dev/null || echo /github/workspace)"
+              find "release-assets/manager/$REPO" -type f \( -iname '*.apk' -o -iname '*.zip' \) -print
+            done
+          ls -la release-assets/manager
 
       - name: Upload manager APK as artifact
-        if: ${{ steps.manager.outputs.manager_run_id != '' }}
+        if: ${{ steps.manager.outputs.manager_list != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: manager-apk
@@ -342,16 +364,10 @@ jobs:
             exit 1
           fi
 
-          # A Release/Pre-Release always links the KernelSU-Next manager built on the
-          # official repo (build-manager-ci). If a different root was selected, the
-          # release notes would reference a manager link that doesn't match the
-          # kernel's actual root implementation.
-          if { [ "${{ inputs.release_type }}" = "Release" ] || [ "${{ inputs.release_type }}" = "Pre-Release" ]; } && [ "${{ inputs.root_flavor }}" != "KernelSU-Next" ]; then
-            echo "ERROR: Release/Pre-Release requires Root Implementation 'KernelSU-Next'." >&2
-            echo "Releases link the official KernelSU-Next manager; select KernelSU-Next" >&2
-            echo "(or use Release Type 'Action' for other root flavors)." >&2
-            exit 1
-          fi
+          # A Release/Pre-Release ships whichever manger build(s) were resolved
+          # in the manager step above (exact match per root flavor). No root
+          # restriction applies here anymore -- KernelSU-Next, KernelSU, ReSukiSU,
+          # or 'All' are all valid release targets.
 
           FEATURES=""
           [ "${{ inputs.use_susfs }}" = "true" ] && FEATURES="${FEATURES}SUSFS+"
@@ -451,6 +467,10 @@ jobs:
     - prepare-ccache
     - resolve-sources
     if: ${{ !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == 'android12-5.10') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        root: ${{ fromJson(needs.resolve-sources.outputs.root_matrix) }}
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android12-5.10.json
@@ -458,8 +478,9 @@ jobs:
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android12_5_10 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
-      root_flavor: ${{ needs.resolve-sources.outputs.root_flavor }}
-      root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
+      root_flavor: ${{ matrix.root.root_flavor }}
+      root_commit: ${{ matrix.root.root_commit }}
+      variant: ${{ matrix.root.variant }}
       ksu_branch: ${{ needs.resolve-sources.outputs.kernelsu_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
@@ -471,6 +492,10 @@ jobs:
     - prepare-ccache
     - resolve-sources
     if: ${{ !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == 'android13-5.10') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        root: ${{ fromJson(needs.resolve-sources.outputs.root_matrix) }}
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android13-5.10.json
@@ -478,8 +503,9 @@ jobs:
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_10 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
-      root_flavor: ${{ needs.resolve-sources.outputs.root_flavor }}
-      root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
+      root_flavor: ${{ matrix.root.root_flavor }}
+      root_commit: ${{ matrix.root.root_commit }}
+      variant: ${{ matrix.root.variant }}
       ksu_branch: ${{ needs.resolve-sources.outputs.kernelsu_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
@@ -491,6 +517,10 @@ jobs:
     - prepare-ccache
     - resolve-sources
     if: ${{ !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == 'android13-5.15') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        root: ${{ fromJson(needs.resolve-sources.outputs.root_matrix) }}
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android13-5.15.json
@@ -498,8 +528,9 @@ jobs:
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_15 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
-      root_flavor: ${{ needs.resolve-sources.outputs.root_flavor }}
-      root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
+      root_flavor: ${{ matrix.root.root_flavor }}
+      root_commit: ${{ matrix.root.root_commit }}
+      variant: ${{ matrix.root.variant }}
       ksu_branch: ${{ needs.resolve-sources.outputs.kernelsu_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
@@ -511,6 +542,10 @@ jobs:
     - prepare-ccache
     - resolve-sources
     if: ${{ !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == 'android14-5.15') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        root: ${{ fromJson(needs.resolve-sources.outputs.root_matrix) }}
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android14-5.15.json
@@ -518,8 +553,9 @@ jobs:
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android14_5_15 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
-      root_flavor: ${{ needs.resolve-sources.outputs.root_flavor }}
-      root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
+      root_flavor: ${{ matrix.root.root_flavor }}
+      root_commit: ${{ matrix.root.root_commit }}
+      variant: ${{ matrix.root.variant }}
       ksu_branch: ${{ needs.resolve-sources.outputs.kernelsu_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
@@ -531,6 +567,10 @@ jobs:
     - prepare-ccache
     - resolve-sources
     if: ${{ !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == 'android14-6.1') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        root: ${{ fromJson(needs.resolve-sources.outputs.root_matrix) }}
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android14-6.1.json
@@ -538,8 +578,9 @@ jobs:
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android14_6_1 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
-      root_flavor: ${{ needs.resolve-sources.outputs.root_flavor }}
-      root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
+      root_flavor: ${{ matrix.root.root_flavor }}
+      root_commit: ${{ matrix.root.root_commit }}
+      variant: ${{ matrix.root.variant }}
       ksu_branch: ${{ needs.resolve-sources.outputs.kernelsu_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
@@ -551,6 +592,10 @@ jobs:
     - prepare-ccache
     - resolve-sources
     if: ${{ !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == 'android15-6.6') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        root: ${{ fromJson(needs.resolve-sources.outputs.root_matrix) }}
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android15-6.6.json
@@ -558,8 +603,9 @@ jobs:
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android15_6_6 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
-      root_flavor: ${{ needs.resolve-sources.outputs.root_flavor }}
-      root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
+      root_flavor: ${{ matrix.root.root_flavor }}
+      root_commit: ${{ matrix.root.root_commit }}
+      variant: ${{ matrix.root.variant }}
       ksu_branch: ${{ needs.resolve-sources.outputs.kernelsu_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
@@ -571,6 +617,10 @@ jobs:
     - prepare-ccache
     - resolve-sources
     if: ${{ !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == 'android16-6.12') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        root: ${{ fromJson(needs.resolve-sources.outputs.root_matrix) }}
     uses: ./.github/workflows/prepare.yml
     with:
       config_file: .github/config/android16-6.12.json
@@ -578,8 +628,9 @@ jobs:
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android16_6_12 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
-      root_flavor: ${{ needs.resolve-sources.outputs.root_flavor }}
-      root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
+      root_flavor: ${{ matrix.root.root_flavor }}
+      root_commit: ${{ matrix.root.root_commit }}
+      variant: ${{ matrix.root.variant }}
       ksu_branch: ${{ needs.resolve-sources.outputs.kernelsu_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
