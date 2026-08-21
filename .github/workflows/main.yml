@@ -323,9 +323,11 @@ jobs:
               mkdir -p "release-assets/manager/$REPO"
               cd "release-assets/manager/$REPO"
               ARTIFACTS_JSON=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
                 "https://api.github.com/repos/${OWNER}/${REPO}/actions/runs/${RUN_ID}/artifacts")
               echo "$ARTIFACTS_JSON" | jq -r '.artifacts[].id' | while read -r AID; do
                 curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                  -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
                   -o "manager-${AID}.zip" \
                   "https://api.github.com/repos/${OWNER}/${REPO}/actions/artifacts/${AID}/zip"
                 unzip -o "manager-${AID}.zip" >/dev/null 2>&1 || true
