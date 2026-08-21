@@ -337,14 +337,16 @@ jobs:
               SRC=$(echo "$M" | jq -r .source)
               mkdir -p "release-assets/manager/$REPO"
               cd "release-assets/manager/$REPO"
+              # Keep each manager artifact as its own zip, named after the manager it
+              # represents (e.g. KernelSU-Next_manager.zip, ReSukiSU_<artifact>.zip).
               if [ "$SRC" = "release" ]; then
                 echo "Downloading all $REPO manager APKs from latest release"
                 curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
                   "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest" \
                   > /tmp/manager-rel.json
                 for URL in $(jq -r '.assets[] | select(.name | endswith(".apk")) | .browser_download_url' /tmp/manager-rel.json); do
-                  curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
-                    -O "$URL"
+                  NAME="${URL##*/}"
+                  curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o "${NAME}" "$URL"
                 done
               else
                 RUN_ID=$(echo "$M" | jq -r .run_id)
@@ -352,27 +354,31 @@ jobs:
                 ARTIFACTS_JSON=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
                   -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
                   "https://api.github.com/repos/${OWNER}/${REPO}/actions/runs/${RUN_ID}/artifacts")
-                # If a `want` name-list is given (e.g. manager, manager-spoofed), download only those artifacts.
+                # Include either the `want` name-list or every artifact. Preserve each artifact
+                # zip under its own name rather than unzipping them.
                 WANT="$(echo "$M" | jq -r '.want | if . then join(",") else "" end')"
                 if [ -z "$WANT" ]; then
-                  ARTIFACT_IDS=$(echo "$ARTIFACTS_JSON" | jq -r '.artifacts[].id')
+                  echo "$ARTIFACTS_JSON" | jq -r '.artifacts[] | .id + " " + (.name|gsub(" "; "_"))' \
+                  | while read -r AID ART_NAME; do
+                    curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                      -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
+                      -o "${REPO}_${ART_NAME}.zip" \
+                      "https://api.github.com/repos/${OWNER}/${REPO}/actions/artifacts/${AID}/zip"
+                  done
                 else
-                  ARTIFACT_IDS=$(echo "$ARTIFACTS_JSON" | jq -r --arg want "$WANT" '
+                  echo "$ARTIFACTS_JSON" | jq -r --arg want "$WANT" '
                     ($want | split(",")) as $wl |
-                    .artifacts[] | select(.name as $n | any($wl[]; $n == .)) | .id')
+                    .artifacts[] | select(.name as $n | any($wl[]; $n == .)) | .id + " " + (.name|gsub(" "; "_"))' \
+                  | while read -r AID ART_NAME; do
+                    curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                      -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
+                      -o "${REPO}_${ART_NAME}.zip" \
+                      "https://api.github.com/repos/${OWNER}/${REPO}/actions/artifacts/${AID}/zip"
+                  done
                 fi
-                echo "$ARTIFACT_IDS" | while read -r AID; do
-                  [ -n "$AID" ] || continue
-                  curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
-                    -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
-                    -o "manager-${AID}.zip" \
-                    "https://api.github.com/repos/${OWNER}/${REPO}/actions/artifacts/${AID}/zip"
-                  unzip -o "manager-${AID}.zip" >/dev/null 2>&1 || true
-                  rm -f "manager-${AID}.zip"
-                done
               fi
               cd "${GITHUB_WORKSPACE:-$HOME}"
-              find "release-assets/manager/$REPO" -type f \( -iname '*.apk' -o -iname '*.zip' \) -print
+              find "release-assets/manager/$REPO" -type f -iname '*.zip' -print
             done
           ls -la release-assets/manager
 
@@ -1107,30 +1113,13 @@ jobs:
           cat release_body.md
         } >> "$GITHUB_STEP_SUMMARY"
 
-    - name: Download KernelSU-Next Manager APK
-      run: |
-        set -euo pipefail
-        echo "Downloading manager artifacts from run ${MANAGER_RUN_ID}"
-        mkdir -p release-assets/manager
-        # Official KernelSU-Next repo is public: list the build's artifacts,
-        # download each zip, and include any APK as a release asset.
-        curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
-          "https://api.github.com/repos/KernelSU-Next/KernelSU-Next/actions/runs/${MANAGER_RUN_ID}/artifacts" \
-          | jq -r '.artifacts[]? | .id + " " + (.name|gsub(" "; "_"))' > /tmp/mgr_arts.txt
-        if [[ ! -s /tmp/mgr_arts.txt ]]; then
-          echo "ERROR: no artifacts found on manager run ${MANAGER_RUN_ID}" >&2
-          exit 1
-        fi
-        while read -r ART_ID ART_NAME; do
-          echo "-- downloading ${ART_NAME}
-          curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
-            -L "https://api.github.com/repos/KernelSU-Next/KernelSU-Next/actions/artifacts/${ART_ID}/zip" \
-            -o "/tmp/${ART_NAME}.zip"
-          unzip -o -q "/tmp/${ART_NAME}.zip" -d "release-assets/manager/${ART_NAME}" || true
-        done < /tmp/mgr_arts.txt
-        # Normalize APKs so gh-release picks them up via *.apk glob
-        find release-assets/manager -iname '*.apk' -exec cp -f {} release-assets/ \; 
-        find release-assets -maxdepth 1 -iname '*.apk' -printf 'staged: %f\n'
+    - name: Download Manager APK zips
+      uses: actions/download-artifact@v7
+      with:
+        path: release-assets/manager
+        pattern: 'manager-apk'
+        merge-multiple: true
+        if-no-files-found: ignore
 
     - name: Download AnyKernel3 Artifacts
       uses: actions/download-artifact@v7
