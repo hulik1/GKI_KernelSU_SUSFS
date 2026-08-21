@@ -176,10 +176,11 @@ jobs:
             # Treat the input as an official-dev commit SHA when it's not a fork branch
             official_sha="$(resolve_sha https://github.com/KernelSU-Next/KernelSU-Next.git refs/heads/dev)"
             emit kernelsu_commit "$official_sha"
-            emit kernelsu_branch "dev"
+            # kernelsu_branch is a branch name, not a SHA — write it directly
+            echo "kernelsu_branch=dev" >> "$GITHUB_OUTPUT"
           else
             emit kernelsu_commit "$(resolve_sha https://github.com/KernelSU-Next/KernelSU-Next.git "$KSU_REF")"
-            emit kernelsu_branch "$KSU_INPUT"
+            echo "kernelsu_branch=$KSU_INPUT" >> "$GITHUB_OUTPUT"
           fi
 
           # Selected root implementation at its branch tip. Maps the human-facing
