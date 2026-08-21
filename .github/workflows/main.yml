@@ -242,6 +242,17 @@ jobs:
             exit 1
           fi
 
+          # A Release/Pre-Release always links the KernelSU-Next manager built on the
+          # official repo (build-manager-ci). If a different root was selected, the
+          # release notes would reference a manager link that doesn't match the
+          # kernel's actual root implementation.
+          if { [ "${{ inputs.release_type }}" = "Release" ] || [ "${{ inputs.release_type }}" = "Pre-Release" ]; } && [ "${{ inputs.root_flavor }}" != "KernelSU-Next" ]; then
+            echo "ERROR: Release/Pre-Release requires Root Implementation 'KernelSU-Next'." >&2
+            echo "Releases link the official KernelSU-Next manager; select KernelSU-Next" >&2
+            echo "(or use Release Type 'Action' for other root flavors)." >&2
+            exit 1
+          fi
+
           FEATURES=""
           [ "${{ inputs.use_susfs }}" = "true" ] && FEATURES="${FEATURES}SUSFS+"
           [ "${{ inputs.use_nomount }}" = "true" ] && FEATURES="${FEATURES}NoMount+"
