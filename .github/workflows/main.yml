@@ -169,19 +169,11 @@ jobs:
           # NoMount (dev tip)
           emit nomount_commit "$(resolve_sha https://github.com/maxsteeel/nomount.git refs/heads/dev)"
 
-          # KernelSU-Next (pershoot dev-susfs; fall back to official dev for the manager)
-          KSU_INPUT="dev-susfs"
-          KSU_REF="refs/heads/$KSU_INPUT"
-          if ! retry git ls-remote --heads https://github.com/KernelSU-Next/KernelSU-Next.git "$KSU_INPUT" | grep -q .; then
-            # Treat the input as an official-dev commit SHA when it's not a fork branch
-            official_sha="$(resolve_sha https://github.com/KernelSU-Next/KernelSU-Next.git refs/heads/dev)"
-            emit kernelsu_commit "$official_sha"
-            # kernelsu_branch is a branch name, not a SHA — write it directly
-            echo "kernelsu_branch=dev" >> "$GITHUB_OUTPUT"
-          else
-            emit kernelsu_commit "$(resolve_sha https://github.com/KernelSU-Next/KernelSU-Next.git "$KSU_REF")"
-            echo "kernelsu_branch=$KSU_INPUT" >> "$GITHUB_OUTPUT"
-          fi
+          # KernelSU-Next manager — always built from the official repo's dev branch.
+          # pershoot's fork is used only for the kernel SUSFS integration (root_commit below),
+          # never for the manager.
+          emit kernelsu_commit "$(resolve_sha https://github.com/KernelSU-Next/KernelSU-Next.git refs/heads/dev)"
+          echo "kernelsu_branch=dev" >> "$GITHUB_OUTPUT"
 
           # Selected root implementation at its branch tip. Maps the human-facing
           # choice (KernelSU-Next / KernelSU / ReSukiSU) to the internal root-setup
