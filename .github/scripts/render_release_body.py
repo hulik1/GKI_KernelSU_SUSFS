@@ -10,6 +10,7 @@ PLACEHOLDERS = {
     "{{KSUN_BRANCH}}": lambda: os.environ.get("KSUN_BRANCH", "dev"),
     "{{KSUN_COMMIT}}": lambda: os.environ.get("KSUN_COMMIT", "unknown"),
     "{{KSU_MANAGER}}": lambda: os.environ.get("KSU_MANAGER", "Placeholder"),
+    "{{KSU_MANAGER_NOTE}}": lambda: os.environ.get("KSU_MANAGER_NOTE", ""),
     "{{SUSFS_BRANCHES}}": lambda: os.environ.get("SUSFS_COMMIT", "latest on auto-derived gki-{version} branch"),
     "{{SUSFS_BRANCHS}}": lambda: os.environ.get("SUSFS_COMMIT", "latest on auto-derived gki-{version} branch"),
 }
