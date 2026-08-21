@@ -895,6 +895,7 @@ jobs:
         echo "KSU_GIT_TAG=$KSU_GIT_TAG" >> $GITHUB_ENV
         echo "KSU_MANAGER=$KSU_MANAGER" >> $GITHUB_ENV
         echo "KSU_MANAGER_NOTE=${KSU_MANAGER_NOTE:-}" >> $GITHUB_ENV
+        echo "MANAGER_RUN_ID=$MANAGER_RUN_ID" >> $GITHUB_ENV
 
     - name: Set release body
       run: |
@@ -912,6 +913,31 @@ jobs:
           echo
           cat release_body.md
         } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Download KernelSU-Next Manager APK
+      run: |
+        set -euo pipefail
+        echo "Downloading manager artifacts from run ${MANAGER_RUN_ID}"
+        mkdir -p release-assets/manager
+        # Official KernelSU-Next repo is public: list the build's artifacts,
+        # download each zip, and include any APK as a release asset.
+        curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+          "https://api.github.com/repos/KernelSU-Next/KernelSU-Next/actions/runs/${MANAGER_RUN_ID}/artifacts" \
+          | jq -r '.artifacts[]? | .id + " " + (.name|gsub(" "; "_"))' > /tmp/mgr_arts.txt
+        if [[ ! -s /tmp/mgr_arts.txt ]]; then
+          echo "ERROR: no artifacts found on manager run ${MANAGER_RUN_ID}" >&2
+          exit 1
+        fi
+        while read -r ART_ID ART_NAME; do
+          echo "-- downloading ${ART_NAME}
+          curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+            -L "https://api.github.com/repos/KernelSU-Next/KernelSU-Next/actions/artifacts/${ART_ID}/zip" \
+            -o "/tmp/${ART_NAME}.zip"
+          unzip -o -q "/tmp/${ART_NAME}.zip" -d "release-assets/manager/${ART_NAME}" || true
+        done < /tmp/mgr_arts.txt
+        # Normalize APKs so gh-release picks them up via *.apk glob
+        find release-assets/manager -iname '*.apk' -exec cp -f {} release-assets/ \; 
+        find release-assets -maxdepth 1 -iname '*.apk' -printf 'staged: %f\n'
 
     - name: Download AnyKernel3 Artifacts
       uses: actions/download-artifact@v7
@@ -952,3 +978,4 @@ jobs:
         files: |
           release-assets/**/*.zip
           release-assets/**/*-boot*.img
+          release-assets/*.apk
