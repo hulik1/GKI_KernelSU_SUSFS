@@ -1160,4 +1160,3 @@ jobs:
         files: |
           release-assets/**/*.zip
           release-assets/**/*-boot*.img
-          release-assets/*.apk
