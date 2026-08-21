@@ -251,44 +251,51 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Every run must ship the EXACT manager build(s) matching the selected
-          # root's stock/sync commit, downloaded as artifacts. If any exact run
-          # can't be found, fail NOW (before any kernel builds). For 'All' this
-          # enumerates all three flavors; otherwise just the one selected.
+          # Each selected root must ship ALL manager APK builds. KernelSU-Next publishes
+          # its manager APKs as GitHub release assets (normal + spoofed); classic
+          # KernelSU and ReSukiSU expose them as CI-run artifacts. Enumerate the
+          # right source per flavor.
           resolve_one() { # flavor
             local flavor="$1"
             local owner repo wf stock
             case "$flavor" in
               next)
-                owner="KernelSU-Next"; repo="KernelSU-Next"; wf="build-manager-ci.yml"
-                git clone --depth=1 --branch dev-susfs "https://github.com/pershoot/KernelSU-Next.git" /tmp/ksu-manager-check
-                cd /tmp/ksu-manager-check
-                git remote add official "https://github.com/KernelSU-Next/KernelSU-Next.git" || true
-                git fetch --depth=1 official dev
-                stock=$(git merge-base HEAD FETCH_HEAD)
+                owner="KernelSU-Next"; repo="KernelSU-Next"
+                # Grab every *.apk from the latest release.
+                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"release"}' \
+                  "$flavor" "$owner" "$repo"
                 ;;
               classic)
                 owner="tiann"; repo="KernelSU"; wf="build-manager.yml"
                 stock=$(git ls-remote https://github.com/tiann/KernelSU.git refs/heads/main | awk '{print $1; exit}')
+                run_id=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                  "https://api.github.com/repos/${owner}/${repo}/actions/workflows/${wf}/runs?head_sha=${stock}" \
+                  | jq -r '.workflow_runs[0].id // empty')
+                if [[ -z "${run_id}" ]]; then
+                  echo "ERROR: no ${repo} manager build exists for stock commit ${stock}" >&2
+                  exit 1
+                fi
+                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s"}' \
+                  "$flavor" "$owner" "$repo" "$run_id" "$stock"
                 ;;
               resukisu)
                 owner="ReSukiSU"; repo="ReSukiSU"; wf="build-manager.yml"
                 stock=$(git ls-remote https://github.com/ReSukiSU/ReSukiSU.git refs/heads/main | awk '{print $1; exit}')
+                run_id=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                  "https://api.github.com/repos/${owner}/${repo}/actions/workflows/${wf}/runs?head_sha=${stock}" \
+                  | jq -r '.workflow_runs[0].id // empty')
+                if [[ -z "${run_id}" ]]; then
+                  echo "ERROR: no ${repo} manager build exists for stock commit ${stock}" >&2
+                  exit 1
+                fi
+                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s"}' \
+                  "$flavor" "$owner" "$repo" "$run_id" "$stock"
                 ;;
               *)
                 echo "skipping unknown flavor: $flavor" >&2
                 return 0
                 ;;
             esac
-            run_id=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
-              "https://api.github.com/repos/${owner}/${repo}/actions/workflows/${wf}/runs?head_sha=${stock}" \
-              | jq -r '.workflow_runs[0].id // empty')
-            if [[ -z "${run_id}" ]]; then
-              echo "ERROR: no ${repo} manager build exists for stock commit ${stock}" >&2
-              exit 1
-            fi
-            printf '{"flavor":"%s","owner":"%s","repo":"%s","wf":"%s","stock":"%s","run_id":%s}' \
-              "$flavor" "$owner" "$repo" "$wf" "$stock" "$run_id"
           }
 
           FLAVORS="${{ inputs.root_flavor }}"
@@ -303,7 +310,7 @@ jobs:
           esac
           if [ -n "$LIST" ]; then
             echo "manager_list=[$LIST]" >> "$GITHUB_OUTPUT"
-            echo "Exact manager builds resolved."
+            echo "Manager sources resolved."
           else
             echo "manager_list=" >> "$GITHUB_OUTPUT"
           fi
@@ -318,21 +325,33 @@ jobs:
             | jq -c '.[]' | while read -r M; do
               OWNER=$(echo "$M" | jq -r .owner)
               REPO=$(echo "$M" | jq -r .repo)
-              RUN_ID=$(echo "$M" | jq -r .run_id)
-              echo "Downloading $REPO manager from run $RUN_ID"
+              SRC=$(echo "$M" | jq -r .source)
               mkdir -p "release-assets/manager/$REPO"
               cd "release-assets/manager/$REPO"
-              ARTIFACTS_JSON=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
-                -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
-                "https://api.github.com/repos/${OWNER}/${REPO}/actions/runs/${RUN_ID}/artifacts")
-              echo "$ARTIFACTS_JSON" | jq -r '.artifacts[].id' | while read -r AID; do
+              if [ "$SRC" = "release" ]; then
+                echo "Downloading all $REPO manager APKs from latest release"
                 curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                  "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest" \
+                  > /tmp/manager-rel.json
+                for URL in $(jq -r '.assets[] | select(.name | endswith(".apk")) | .browser_download_url' /tmp/manager-rel.json); do
+                  curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                    -O "$URL"
+                done
+              else
+                RUN_ID=$(echo "$M" | jq -r .run_id)
+                echo "Downloading $REPO manager from run $RUN_ID"
+                ARTIFACTS_JSON=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
                   -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
-                  -o "manager-${AID}.zip" \
-                  "https://api.github.com/repos/${OWNER}/${REPO}/actions/artifacts/${AID}/zip"
-                unzip -o "manager-${AID}.zip" >/dev/null 2>&1 || true
-                rm -f "manager-${AID}.zip"
-              done
+                  "https://api.github.com/repos/${OWNER}/${REPO}/actions/runs/${RUN_ID}/artifacts")
+                echo "$ARTIFACTS_JSON" | jq -r '.artifacts[].id' | while read -r AID; do
+                  curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                    -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
+                    -o "manager-${AID}.zip" \
+                    "https://api.github.com/repos/${OWNER}/${REPO}/actions/artifacts/${AID}/zip"
+                  unzip -o "manager-${AID}.zip" >/dev/null 2>&1 || true
+                  rm -f "manager-${AID}.zip"
+                done
+              fi
               cd "${GITHUB_WORKSPACE:-$HOME}"
               find "release-assets/manager/$REPO" -type f \( -iname '*.apk' -o -iname '*.zip' \) -print
             done
