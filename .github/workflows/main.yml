@@ -28,33 +28,32 @@ on:
           - android15-6.6
           - android16-6.12
         default: All
+      root_flavor:
+        description: "Root Implementation"
+        type: choice
+        options:
+          - none
+          - KernelSU-Next
+          - KernelSU
+          - ReSukiSU
+        default: KernelSU-Next
       feature_set:
         description: "Feature Set"
         type: choice
         options:
-          - KSUN+SUSFS+NOMOUNT
-          - KSUN+SUSFS+BBG+NET+DS
-          - KSUN+SUSFS+BBG
-          - KSUN+SUSFS+NET
-          - KSUN+SUSFS+DS
-          - KSUN+SUSFS
-          - KSUN+BBG
-          - KSUN+NET
-          - KSUN+DS
-          - KSUN
-          - NOMOUNT
+          - SUSFS+NoMount
+          - SUSFS+BBG+NET+DS
+          - SUSFS+BBG
+          - SUSFS+NET
+          - SUSFS+DS
+          - SUSFS
+          - BBG
+          - NET
+          - DS
+          - NoMount
           - NONE
           - FULL
         default: FULL
-      root_flavor:
-        description: "Root implementation (classic/next/resukisu = pinned root-setup; none = legacy KernelSU-Next path)"
-        type: choice
-        options:
-          - none
-          - classic
-          - next
-          - resukisu
-        default: none
 
 jobs:
   prepare-ccache:
@@ -97,6 +96,7 @@ jobs:
       nomount_commit: ${{ steps.resolve.outputs.nomount_commit }}
       kernelsu_commit: ${{ steps.resolve.outputs.kernelsu_commit }}
       kernelsu_branch: ${{ steps.resolve.outputs.kernelsu_branch }}
+      root_flavor: ${{ steps.resolve.outputs.root_flavor }}
       root_commit: ${{ steps.resolve.outputs.root_commit }}
       susfs_commit_android12_5_10: ${{ steps.resolve.outputs.susfs_commit_android12_5_10 }}
       susfs_commit_android13_5_10: ${{ steps.resolve.outputs.susfs_commit_android13_5_10 }}
@@ -154,19 +154,25 @@ jobs:
             emit kernelsu_branch "$KSU_INPUT"
           fi
 
-          # Selected root implementation (classic / next / resukisu) at its branch tip.
-          # No need to resolve a commit for 'none' (uses legacy KernelSU-Next path).
+          # Selected root implementation at its branch tip. Maps the human-facing
+          # choice (KernelSU-Next / KernelSU / ReSukiSU) to the internal root-setup
+          # flavor (next / classic / resukisu). 'none' leaves both empty so build.yml
+          # falls back to its legacy KernelSU-Next path.
           case "${{ inputs.root_flavor }}" in
-            classic)
+            KernelSU)
+              emit root_flavor "classic"
               emit root_commit "$(resolve_sha https://github.com/tiann/KernelSU.git refs/heads/main)"
               ;;
-            next)
+            KernelSU-Next)
+              emit root_flavor "next"
               emit root_commit "$(resolve_sha https://github.com/KernelSU-Next/KernelSU-Next.git refs/heads/dev)"
               ;;
-            resukisu)
+            ReSukiSU)
+              emit root_flavor "resukisu"
               emit root_commit "$(resolve_sha https://github.com/ReSukiSU/ReSukiSU.git refs/heads/main)"
               ;;
             *)
+              echo "root_flavor=" >> "$GITHUB_OUTPUT"
               echo "root_commit=" >> "$GITHUB_OUTPUT"
               ;;
           esac
@@ -194,7 +200,7 @@ jobs:
           env | grep -E '^(nomount_commit|kernelsu_commit|kernelsu_branch|root_commit|susfs_commit_|kernel_patches_commit|anykernel3_commit|droidspaces_commit)' | sort
 
       - name: Clone shared source repos once
-        if: ${{ contains(inputs.feature_set, 'NOMOUNT') || inputs.feature_set == 'FULL' }}
+        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'FULL' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -208,7 +214,7 @@ jobs:
           echo "sources_dir=$PWD/sources" >> "$GITHUB_ENV"
 
       - name: Upload sources artifact
-        if: ${{ contains(inputs.feature_set, 'NOMOUNT') || inputs.feature_set == 'FULL' }}
+        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'FULL' }}
         uses: actions/upload-artifact@v7
         with:
           name: sources
@@ -222,17 +228,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        if: ${{ contains(inputs.feature_set, 'NOMOUNT') || inputs.feature_set == 'FULL' }}
+        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'FULL' }}
 
       - name: Build NoMount metamodule
         id: nomount-metamodule
-        if: ${{ contains(inputs.feature_set, 'NOMOUNT') || inputs.feature_set == 'FULL' }}
+        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'FULL' }}
         uses: ./.github/actions/nomount-metamodule
         with:
           commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
 
       - name: Upload NoMount metamodule
-        if: ${{ contains(inputs.feature_set, 'NOMOUNT') || inputs.feature_set == 'FULL' }}
+        if: ${{ contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'FULL' }}
         uses: actions/upload-artifact@v7
         with:
           name: NoMount-Metamodule
@@ -252,7 +258,7 @@ jobs:
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android12_5_10 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
-      root_flavor: ${{ inputs.root_flavor == 'none' && '' || inputs.root_flavor }}
+      root_flavor: ${{ needs.resolve-sources.outputs.root_flavor }}
       root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
@@ -270,7 +276,7 @@ jobs:
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_10 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
-      root_flavor: ${{ inputs.root_flavor == 'none' && '' || inputs.root_flavor }}
+      root_flavor: ${{ needs.resolve-sources.outputs.root_flavor }}
       root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
@@ -288,7 +294,7 @@ jobs:
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_15 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
-      root_flavor: ${{ inputs.root_flavor == 'none' && '' || inputs.root_flavor }}
+      root_flavor: ${{ needs.resolve-sources.outputs.root_flavor }}
       root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
@@ -306,7 +312,7 @@ jobs:
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android14_5_15 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
-      root_flavor: ${{ inputs.root_flavor == 'none' && '' || inputs.root_flavor }}
+      root_flavor: ${{ needs.resolve-sources.outputs.root_flavor }}
       root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
@@ -324,7 +330,7 @@ jobs:
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android14_6_1 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
-      root_flavor: ${{ inputs.root_flavor == 'none' && '' || inputs.root_flavor }}
+      root_flavor: ${{ needs.resolve-sources.outputs.root_flavor }}
       root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
@@ -342,7 +348,7 @@ jobs:
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android15_6_6 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
-      root_flavor: ${{ inputs.root_flavor == 'none' && '' || inputs.root_flavor }}
+      root_flavor: ${{ needs.resolve-sources.outputs.root_flavor }}
       root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
@@ -360,7 +366,7 @@ jobs:
       susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android16_6_12 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
-      root_flavor: ${{ inputs.root_flavor == 'none' && '' || inputs.root_flavor }}
+      root_flavor: ${{ needs.resolve-sources.outputs.root_flavor }}
       root_commit: ${{ needs.resolve-sources.outputs.root_commit }}
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}

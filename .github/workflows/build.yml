@@ -188,8 +188,8 @@ jobs:
         flavor: ${{ inputs.root_flavor }}
         commit: ${{ inputs.root_commit }}
 
-    - name: Setup KernelSU-Next
-      if: ${{ inputs.root_flavor == '' && (contains(inputs.feature_set, 'KSUN') || inputs.feature_set == 'FULL') }}
+    - name: Setup KernelSU-Next (legacy)
+      if: ${{ inputs.root_flavor == '' }}
       uses: ./.github/actions/kernelsu
       with:
         ksu_branch: ${{ inputs.ksu_branch }}
@@ -278,7 +278,7 @@ jobs:
         mode: capture
 
     - name: Integrate NoMount
-      if: ${{ inputs.nomount_commit != '' || contains(inputs.feature_set, 'NOMOUNT') || inputs.feature_set == 'FULL' }}
+      if: ${{ inputs.nomount_commit != '' || contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'FULL' }}
       uses: ./.github/actions/nomount
       with:
         commit: ${{ inputs.nomount_commit }}
