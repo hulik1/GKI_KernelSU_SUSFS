@@ -193,7 +193,13 @@ jobs:
               ;;
             KernelSU-Next)
               emit root_flavor "next"
-              emit root_commit "$(resolve_sha https://github.com/KernelSU-Next/KernelSU-Next.git refs/heads/dev)"
+              if [ "${{ inputs.use_susfs }}" = "true" ]; then
+                # SUSFS on: kernel source from pershoot's dev-susfs fork
+                emit root_commit "$(resolve_sha https://github.com/pershoot/KernelSU-Next.git refs/heads/dev-susfs)"
+              else
+                # SUSFS off: plain KernelSU-Next official dev
+                emit root_commit "$(resolve_sha https://github.com/KernelSU-Next/KernelSU-Next.git refs/heads/dev)"
+              fi
               ;;
             ReSukiSU)
               emit root_flavor "resukisu"
