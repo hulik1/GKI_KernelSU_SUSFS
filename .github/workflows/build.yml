@@ -237,6 +237,7 @@ jobs:
         droidspaces_commit: ${{ inputs.droidspaces_commit }}
 
     - name: Apply NTSync Patches
+      if: contains(inputs.feature_set, 'NTSync')
       uses: ./.github/actions/ntsync
       with:
         version: ${{ inputs.version }}
@@ -244,18 +245,20 @@ jobs:
         sublevel: ${{ steps.extract.outputs.sublevel }}
 
     - name: Apply Ptrace Patch
+      if: contains(inputs.feature_set, 'Ptrace')
       uses: ./.github/actions/ptrace
       with:
         kernel_version: ${{ inputs.kernel_version }}
 
     - name: Apply Unicode Fix Patch
+      if: contains(inputs.feature_set, 'Unicode')
       uses: ./.github/actions/unicode-fix
       with:
         kernel_version: ${{ inputs.kernel_version }}
 
     - name: Apply Performance Patches
       uses: ./.github/actions/performance
-      if: false
+      if: contains(inputs.feature_set, 'Perf')
       with:
         kernel_version: ${{ inputs.kernel_version }}
 
@@ -263,6 +266,7 @@ jobs:
       uses: ./.github/actions/misc
 
     - name: Enable BTF
+      if: contains(inputs.feature_set, 'BTF')
       uses: ./.github/actions/btf
       with:
         version: ${{ inputs.version }}

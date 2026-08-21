@@ -37,10 +37,6 @@ on:
           - KernelSU
           - ReSukiSU
         default: KernelSU-Next
-      brand_name:
-        description: "Kernel Branding text (appended to version, e.g. Wild)"
-        type: string
-        default: Wild
       use_susfs:
         description: "SUSFS root-hiding patches + module"
         type: boolean
@@ -61,6 +57,30 @@ on:
         description: "DroidSpaces-OSS patches"
         type: boolean
         default: true
+      use_ntsync:
+        description: "NTSync game-sync patches"
+        type: boolean
+        default: true
+      use_ptrace:
+        description: "Ptrace patch"
+        type: boolean
+        default: true
+      use_unicode:
+        description: "Unicode filename fix patch"
+        type: boolean
+        default: true
+      use_btf:
+        description: "Enable BTF (DWARF/BTF type info)"
+        type: boolean
+        default: true
+      use_perf:
+        description: "Performance patches"
+        type: boolean
+        default: false
+      brand_name:
+        description: "Kernel Branding text (appended to version, e.g. Wild)"
+        type: string
+        default: Wild
 
 jobs:
   prepare-ccache:
@@ -218,6 +238,11 @@ jobs:
           [ "${{ inputs.use_bbg }}" = "true" ] && FEATURES="${FEATURES}BBG+"
           [ "${{ inputs.use_net }}" = "true" ] && FEATURES="${FEATURES}NET+"
           [ "${{ inputs.use_ds }}" = "true" ] && FEATURES="${FEATURES}DS+"
+          [ "${{ inputs.use_ntsync }}" = "true" ] && FEATURES="${FEATURES}NTSync+"
+          [ "${{ inputs.use_ptrace }}" = "true" ] && FEATURES="${FEATURES}Ptrace+"
+          [ "${{ inputs.use_unicode }}" = "true" ] && FEATURES="${FEATURES}Unicode+"
+          [ "${{ inputs.use_btf }}" = "true" ] && FEATURES="${FEATURES}BTF+"
+          [ "${{ inputs.use_perf }}" = "true" ] && FEATURES="${FEATURES}Perf+"
           echo "feature_set=${FEATURES%+}" >> "$GITHUB_OUTPUT"
 
       - name: Clone shared source repos once
