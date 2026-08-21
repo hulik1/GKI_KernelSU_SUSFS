@@ -292,6 +292,36 @@ jobs:
           if-no-files-found: error
           compression-level: 0
 
+  build-fuse-bpf:
+    needs: resolve-sources
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        if: ${{ inputs.use_bpf }}
+
+      - name: Prepare kernel workspace
+        shell: bash
+        if: ${{ inputs.use_bpf }}
+        run: |
+          mkdir -p "${{ github.workspace }}/kernel"
+
+      - name: Download Kernel Repository (android16-6.12-lts)
+        if: ${{ inputs.use_bpf }}
+        uses: ./.github/actions/download-kernel
+        with:
+          version: android16-6.12
+          android_version: android16
+          kernel_version: 6.12
+          os_patch_level: lts
+
+      - name: Build FUSE-BPF Userspace Daemon (Issue #211)
+        if: ${{ inputs.use_bpf }}
+        uses: ./.github/actions/fuse-bpf
+        with:
+          version: android16-6.12
+          kernel_version: 6.12
+          android_version: android16
+
   build-android12-5-10:
     needs:
     - prepare-ccache
