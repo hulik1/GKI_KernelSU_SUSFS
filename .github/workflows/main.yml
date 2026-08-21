@@ -232,6 +232,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          # SUSFS needs a root implementation (KernelSU / KernelSU-Next / ReSukiSU)
+          # to hook into. Without one the kernel wouldn't actually exercise the
+          # SUSFS root-hiding patches, so fail fast instead of building a useless kernel.
+          if [ "${{ inputs.use_susfs }}" = "true" ] && [ "${{ inputs.root_flavor }}" = "none" ]; then
+            echo "ERROR: SUSFS requires a root implementation, but root_flavor is 'none'." >&2
+            echo "Pick KernelSU-Next, KernelSU, or ReSukiSU in the Root Implementation box" >&2
+            echo "(SUSFS patches SUSFS's root-hiding on top of the root solution)." >&2
+            exit 1
+          fi
+
           FEATURES=""
           [ "${{ inputs.use_susfs }}" = "true" ] && FEATURES="${FEATURES}SUSFS+"
           [ "${{ inputs.use_nomount }}" = "true" ] && FEATURES="${FEATURES}NoMount+"
