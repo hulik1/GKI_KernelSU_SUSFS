@@ -243,7 +243,7 @@ jobs:
           emit droidspaces_commit  "$(resolve_sha https://github.com/ravindu644/Droidspaces-OSS.git refs/heads/main)"
 
           echo "Resolved:"
-          env | grep -E '^(nomount_commit|kernelsu_commit|kernelsu_branch|root_commit|susfs_commit_|kernel_patches_commit|anykernel3_commit|droidspaces_commit)' | sort
+          env | grep -E '^(nomount_commit|kernelsu_commit|kernelsu_branch|root_commit|susfs_commit_|kernel_patches_commit|anykernel3_commit|droidspaces_commit)' | sort || true
 
       - name: Resolve manager builds for selected root flavor(s)
         id: manager
