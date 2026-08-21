@@ -333,7 +333,7 @@ jobs:
                 unzip -o "manager-${AID}.zip" >/dev/null 2>&1 || true
                 rm -f "manager-${AID}.zip"
               done
-              cd "$(git rev-parse --show-toplevel 2>/dev/null || echo /github/workspace)"
+              cd "${GITHUB_WORKSPACE:-$HOME}"
               find "release-assets/manager/$REPO" -type f \( -iname '*.apk' -o -iname '*.zip' \) -print
             done
           ls -la release-assets/manager
