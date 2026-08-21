@@ -226,38 +226,105 @@ jobs:
           echo "Resolved:"
           env | grep -E '^(nomount_commit|kernelsu_commit|kernelsu_branch|root_commit|susfs_commit_|kernel_patches_commit|anykernel3_commit|droidspaces_commit)' | sort
 
-      - name: Validate release manager build exists
-        if: ${{ inputs.release_type != 'Action' }}
+      - name: Resolve manager build for selected root flavor
+        id: manager
         shell: bash
         run: |
           set -euo pipefail
 
-          # A Release/Pre-Release must link to the EXACT KernelSU-Next manager build
-          # for the stock commit this fork's branch is synced with. If that exact run
-          # can't be found, fail NOW (before any kernel is built) — a release without
-          # a matching manager is not shippable.
-          KSU_REPO="https://github.com/pershoot/KernelSU-Next.git"
-          OFFICIAL_KSU_REPO="https://github.com/KernelSU-Next/KernelSU-Next.git"
+          # Every run must ship the EXACT manager build matching the selected root's
+          # stock/sync commit, downloaded as an artifact. If that exact run can't be
+          # found, fail NOW (before any kernel builds). This applies to test AND release.
+          FLAVOR="${{ inputs.root_flavor }}"
+          echo "Root flavor: ${FLAVOR}"
 
-          git clone --depth=1 --branch dev-susfs "$KSU_REPO" /tmp/ksu-manager-check
-          cd /tmp/ksu-manager-check
-          git remote add official "$OFFICIAL_KSU_REPO" || true
-          git fetch --depth=1 official dev
-          STOCK_COMMIT=$(git merge-base HEAD FETCH_HEAD)
-          echo "Stock (sync) commit for manager: $STOCK_COMMIT"
+          case "${FLAVOR}" in
+            KernelSU-Next)
+              # Manager: KernelSU-Next, synced at merge-base(pershoot dev-susfs, official dev)
+              MANAGER_OWNER="KernelSU-Next"
+              MANAGER_REPO="KernelSU-Next"
+              MANAGER_WF="build-manager-ci.yml"
+              KSU_REPO="https://github.com/pershoot/KernelSU-Next.git"
+              OFFICIAL_KSU_REPO="https://github.com/KernelSU-Next/KernelSU-Next.git"
+              git clone --depth=1 --branch dev-susfs "$KSU_REPO" /tmp/ksu-manager-check
+              cd /tmp/ksu-manager-check
+              git remote add official "$OFFICIAL_KSU_REPO" || true
+              git fetch --depth=1 official dev
+              STOCK_COMMIT=$(git merge-base HEAD FETCH_HEAD)
+              ;;
+            KernelSU)
+              # Manager: tiann/KernelSU, at main tip (the root source commit)
+              MANAGER_OWNER="tiann"
+              MANAGER_REPO="KernelSU"
+              MANAGER_WF="build-manager.yml"
+              STOCK_COMMIT=$(git ls-remote https://github.com/tiann/KernelSU.git refs/heads/main | awk '{print $1; exit}')
+              git clone --depth=1 --branch main https://github.com/tiann/KernelSU.git /tmp/ksu-manager-check
+              cd /tmp/ksu-manager-check
+              ;;
+            ReSukiSU)
+              # Manager: ReSukiSU, at main tip
+              MANAGER_OWNER="ReSukiSU"
+              MANAGER_REPO="ReSukiSU"
+              MANAGER_WF="build-manager.yml"
+              STOCK_COMMIT=$(git ls-remote https://github.com/ReSukiSU/ReSukiSU.git refs/heads/main | awk '{print $1; exit}')
+              git clone --depth=1 --branch main https://github.com/ReSukiSU/ReSukiSU.git /tmp/ksu-manager-check
+              cd /tmp/ksu-manager-check
+              ;;
+            *)
+              echo "FLAVOR=${FLAVOR}"
+              echo "manager_run_id=" >> "$GITHUB_OUTPUT"
+              echo "manager_stock_commit=" >> "$GITHUB_OUTPUT"
+              echo "Skipping manager resolution (no root flavor / unsupported)."
+              exit 0
+              ;;
+          esac
+
+          echo "Stock (sync) commit for manager: ${STOCK_COMMIT}"
+          echo "stock_commit=${STOCK_COMMIT}" >> "$GITHUB_OUTPUT"
 
           MANAGER_RUN_ID=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
-            "https://api.github.com/repos/KernelSU-Next/KernelSU-Next/actions/workflows/build-manager-ci.yml/runs?head_sha=${STOCK_COMMIT}" \
+            "https://api.github.com/repos/${MANAGER_OWNER}/${MANAGER_REPO}/actions/workflows/${MANAGER_WF}/runs?head_sha=${STOCK_COMMIT}" \
             | jq -r '.workflow_runs[0].id // empty')
 
           if [[ -z "${MANAGER_RUN_ID:-}" ]]; then
-            echo "ERROR: no KernelSU-Next manager build exists for stock commit ${STOCK_COMMIT}" >&2
-            echo "A Release/Pre-Release must link to the exact matching manager build." >&2
-            echo "Wait for the official build-manager-ci run for this commit, or use Type 'Action'." >&2
+            echo "ERROR: no ${MANAGER_REPO} manager build exists for stock commit ${STOCK_COMMIT}" >&2
+            echo "Every run must ship the exact matching manager build as an artifact." >&2
+            echo "Wait for the official manager workflow run for this commit, or pick another root." >&2
             exit 1
           fi
 
+          echo "manager_run_id=${MANAGER_RUN_ID}" >> "$GITHUB_OUTPUT"
+          echo "manager_owner=${MANAGER_OWNER}" >> "$GITHUB_OUTPUT"
+          echo "manager_repo=${MANAGER_REPO}" >> "$GITHUB_OUTPUT"
+          echo "manager_wf=${MANAGER_WF}" >> "$GITHUB_OUTPUT"
           echo "Exact manager build found: run ${MANAGER_RUN_ID} for ${STOCK_COMMIT}"
+
+      - name: Download manager APK artifact
+        if: ${{ steps.manager.outputs.manager_run_id != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets/manager
+          cd release-assets/manager
+          ARTIFACTS_JSON=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+            "https://api.github.com/repos/${{ steps.manager.outputs.manager_owner }}/${{ steps.manager.outputs.manager_repo }}/actions/runs/${{ steps.manager.outputs.manager_run_id }}/artifacts")
+          echo "$ARTIFACTS_JSON" | jq -r '.artifacts[].id' | while read -r AID; do
+            curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+              -o "manager-${AID}.zip" \
+              "https://api.github.com/repos/${{ steps.manager.outputs.manager_owner }}/${{ steps.manager.outputs.manager_repo }}/actions/artifacts/${AID}/zip"
+            unzip -o "manager-${AID}.zip" >/dev/null 2>&1 || true
+            rm -f "manager-${AID}.zip"
+          done
+          find . -type f \( -iname '*.apk' -o -iname '*.zip' \) -print
+          ls -la
+
+      - name: Upload manager APK as artifact
+        if: ${{ steps.manager.outputs.manager_run_id != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: manager-apk
+          path: release-assets/manager/
+          if-no-files-found: error
 
       - name: Compose requested feature set
         id: features
