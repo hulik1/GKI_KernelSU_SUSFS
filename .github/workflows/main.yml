@@ -841,7 +841,7 @@ jobs:
         MANAGER_RUN_ID=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors "https://api.github.com/repos/KernelSU-Next/KernelSU-Next/actions/workflows/build-manager-ci.yml/runs?head_sha=${STOCK_COMMIT}" | jq -r '.workflow_runs[0].id // empty')
         if [[ -n "${MANAGER_RUN_ID:-}" ]]; then
           KSU_MANAGER="https://github.com/KernelSU-Next/KernelSU-Next/actions/runs/${MANAGER_RUN_ID}"
-          KSU_MANAGER_NOTE="exact build for initialized commit ${STOCK_COMMIT:0:12}"
+          KSU_MANAGER_NOTE="built from stock dev commit ${STOCK_COMMIT:0:12} (exact match)"
         else
           # No run indexed for the stock commit (e.g. official dev was force-pushed/rebase).
           # Fall back to the build-manager run for the CURRENT official dev tip so the
@@ -850,10 +850,10 @@ jobs:
           MANAGER_RUN_ID=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors "https://api.github.com/repos/KernelSU-Next/KernelSU-Next/actions/workflows/build-manager-ci.yml/runs?branch=dev" | jq -r '.workflow_runs[0].id // empty')
           if [[ -n "${MANAGER_RUN_ID:-}" ]]; then
             KSU_MANAGER="https://github.com/KernelSU-Next/KernelSU-Next/actions/runs/${MANAGER_RUN_ID}"
-            KSU_MANAGER_NOTE="latest official dev branch build-manager run (fallback)"
+            KSU_MANAGER_NOTE="built from the latest official dev branch (fallback, commit may differ)"
           else
             KSU_MANAGER="https://github.com/KernelSU-Next/KernelSU-Next/actions/workflows/build-manager-ci.yml"
-            KSU_MANAGER_NOTE="no manager run found"
+            KSU_MANAGER_NOTE="no manager build found"
           fi
         fi
 
