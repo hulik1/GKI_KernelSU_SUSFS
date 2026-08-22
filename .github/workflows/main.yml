@@ -484,11 +484,28 @@ jobs:
           name: manager-apk
           path: manager-apk
           merge-multiple: true
+      - name: Locate manager zip
+        id: locate
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP="${{ matrix.zip }}"
+          # The download preserves per-manager subfolders, so locate the file.
+          FILE="$(find manager-apk -type f -name "$ZIP" | head -1)"
+          if [ -z "$FILE" ]; then
+            echo "ERROR: could not find $ZIP under manager-apk/" >&2
+            find manager-apk -type f | head
+            exit 1
+          fi
+          echo "Uploading $FILE as artifact $ZIP"
+          # Re-upload the file itself as its own artifact (not a bundled dir).
+          cp "$FILE" "$ZIP"
+          echo "artifact_path=$ZIP" >> "$GITHUB_OUTPUT"
       - name: Upload manager zip as its own artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.zip }}
-          path: manager-apk/${{ matrix.zip }}
+          path: ${{ steps.locate.outputs.artifact_path }}
           if-no-files-found: error
 
   build-nomount-module:
