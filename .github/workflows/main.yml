@@ -285,7 +285,7 @@ jobs:
                   echo "ERROR: no ${repo} manager build exists for stock commit ${stock}" >&2
                   exit 1
                 fi
-                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s"}' \
+                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s","want":"manager"}' \
                   "$flavor" "$owner" "$repo" "$run_id" "$stock"
                 ;;
               resukisu)
@@ -298,7 +298,7 @@ jobs:
                   echo "ERROR: no ${repo} manager build exists for stock commit ${stock}" >&2
                   exit 1
                 fi
-                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s"}' \
+                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s","want":"Manager-release,Spoofed-Manager-release,Manager-debug"}' \
                   "$flavor" "$owner" "$repo" "$run_id" "$stock"
                 ;;
               *)
