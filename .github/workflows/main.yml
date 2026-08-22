@@ -137,7 +137,7 @@ jobs:
       anykernel3_commit: ${{ steps.resolve.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ steps.resolve.outputs.droidspaces_commit }}
       feature_set: ${{ steps.features.outputs.feature_set }}
-      manager_zips: ${{ steps.mgrzips.outputs.manager_zips }}
+      manager_list: ${{ steps.manager.outputs.manager_list }}
     steps:
       - name: Resolve latest component commits
         id: resolve
@@ -325,100 +325,6 @@ jobs:
             echo "manager_list=" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Download manager APK artifacts
-        if: ${{ steps.manager.outputs.manager_list != '' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p release-assets/manager
-          echo '${{ steps.manager.outputs.manager_list }}' \
-            | jq -c '.[]' | while read -r M; do
-              OWNER=$(echo "$M" | jq -r .owner)
-              REPO=$(echo "$M" | jq -r .repo)
-              SRC=$(echo "$M" | jq -r .source)
-              dldir="release-assets/manager/_download"
-              outdir="release-assets/manager/$REPO"
-              mkdir -p "$dldir" "$outdir"
-              (
-                cd "$dldir"
-                if [ "$SRC" = "release" ]; then
-                  echo "Downloading all $REPO manager APKs from latest release"
-                  curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
-                    "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest" \
-                    > /tmp/manager-rel.json
-                  OUT_ABS="${GITHUB_WORKSPACE:-$PWD}/release-assets/manager/$REPO"
-                  for URL in $(jq -r '.assets[] | select(.name | endswith(".apk")) | .browser_download_url' /tmp/manager-rel.json); do
-                    NAME="${URL##*/}"
-                    curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o "${NAME}" "$URL"
-                    # Each APK becomes its own zip, named after that APK (prefixed with the manager).
-                    base="${NAME%.apk}"
-                    ( zip -qr "${OUT_ABS}/${REPO}_${base}.zip" "${NAME}" )
-                  done
-                else
-                  RUN_ID=$(echo "$M" | jq -r .run_id)
-                  echo "Downloading $REPO manager from run $RUN_ID"
-                  ARTIFACTS_JSON=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
-                    -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
-                    "https://api.github.com/repos/${OWNER}/${REPO}/actions/runs/${RUN_ID}/artifacts")
-                  WANT="$(echo "$M" | jq -r '.want | if . then join(",") else "" end')"
-                  if [ -z "$WANT" ]; then
-                    ARTIFACT_IDS=$(echo "$ARTIFACTS_JSON" | jq -r '.artifacts[].id')
-                  else
-                    ARTIFACT_IDS=$(echo "$ARTIFACTS_JSON" | jq -r --arg want "$WANT" '
-                      ($want | split(",")) as $wl |
-                      .artifacts[] | select(.name as $n | any($wl[]; $n == .)) | .id')
-                  fi
-                  echo "$ARTIFACT_IDS" | while read -r AID; do
-                    [ -n "$AID" ] || continue
-                    ART=$(echo "$ARTIFACTS_JSON" | jq -r --arg id "$AID" '.artifacts[] | select(.id == ($id|tonumber)) | .name | gsub(" "; "_")')
-                    curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
-                      -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
-                      -o "_${AID}.zip" \
-                      "https://api.github.com/repos/${OWNER}/${REPO}/actions/artifacts/${AID}/zip"
-                    mkdir -p "_${AID}"
-                    unzip -o -q "_${AID}.zip" -d "_${AID}" || true
-                    rm -f "_${AID}.zip"
-                    # Each APK becomes its own zip, named after that APK (prefixed with the manager).
-                    OUT_ABS="${GITHUB_WORKSPACE:-$PWD}/release-assets/manager/$REPO"
-                    for apk in _${AID}/*.apk; do
-                      [ -f "$apk" ] || continue
-                      base="${apk##*/}"
-                      ( cd "_${AID}" && zip -qr "${OUT_ABS}/${REPO}_${base%.apk}.zip" "${base}" )
-                    done
-                    rm -rf "_${AID}"
-                  done
-                fi
-              )
-              cd "${GITHUB_WORKSPACE:-$HOME}"
-              find "release-assets/manager/$REPO" -type f -iname '*.zip' -print
-            done
-          rm -rf release-assets/manager/_download
-          echo "--- final manager zips ---"
-          find release-assets/manager -type f -iname '*.zip' -print
-          ls -la release-assets/manager
-
-      - name: Upload manager APK as artifact
-        if: ${{ steps.manager.outputs.manager_list != '' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: manager-apk
-          path: release-assets/manager/
-          if-no-files-found: error
-
-      - name: List manager zips
-        id: mgrzips
-        if: ${{ steps.manager.outputs.manager_list != '' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          # Emit compact single-line JSON array of zip filenames so a matrix job
-          # re-uploads each as its own artifact. GITHUB_OUTPUT values must be
-          # single-line (no pretty-print, no leading spaces).
-          ZIPS="$(find release-assets/manager -type f -iname '*.zip' -printf '%f\n' \
-            | jq -R -s -c 'split("\n") | map(select(. != ""))')"
-          echo "manager_zips=${ZIPS}" >> "$GITHUB_OUTPUT"
-          echo "$ZIPS"
-
       - name: Compose requested feature set
         id: features
         shell: bash
@@ -472,40 +378,77 @@ jobs:
 
   upload-manager-artifacts:
     needs: resolve-sources
-    if: ${{ needs.resolve-sources.outputs.manager_zips != '[]' && needs.resolve-sources.outputs.manager_zips != '' }}
+    if: ${{ needs.resolve-sources.outputs.manager_list != '' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        zip: ${{ fromJson(needs.resolve-sources.outputs.manager_zips) }}
+        manager: ${{ fromJson(needs.resolve-sources.outputs.manager_list) }}
+    env:
+      GH_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
     steps:
-      - uses: actions/download-artifact@v7
-        with:
-          name: manager-apk
-          path: manager-apk
-          merge-multiple: true
-      - name: Locate manager zip
-        id: locate
+      - name: Download and zip manager APKs for ${{ matrix.manager.repo }}
         shell: bash
         run: |
           set -euo pipefail
-          ZIP="${{ matrix.zip }}"
-          # The download preserves per-manager subfolders, so locate the file.
-          FILE="$(find manager-apk -type f -name "$ZIP" | head -1)"
-          if [ -z "$FILE" ]; then
-            echo "ERROR: could not find $ZIP under manager-apk/" >&2
-            find manager-apk -type f | head
-            exit 1
-          fi
-          echo "Uploading $FILE as artifact $ZIP"
-          # Re-upload the file itself as its own artifact (not a bundled dir).
-          cp "$FILE" "$ZIP"
-          echo "artifact_path=$ZIP" >> "$GITHUB_OUTPUT"
-      - name: Upload manager zip as its own artifact
+          OWNER="${{ matrix.manager.owner }}"
+          REPO="${{ matrix.manager.repo }}"
+          SRC="${{ matrix.manager.source }}"
+          RUN_ID="${{ matrix.manager.run_id }}"
+          WANT="${{ matrix.manager.want }}"
+          mkdir -p "manager-dl" "manager-art/$REPO"
+          (
+            cd manager-dl
+            if [ "$SRC" = "release" ]; then
+              echo "Downloading all $REPO manager APKs from latest release"
+              curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest" > rel.json
+              for URL in $(jq -r '.assets[] | select(.name | endswith(".apk")) | .browser_download_url' rel.json); do
+                NAME="${URL##*/}"
+                curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o "$NAME" "$URL"
+                base="${NAME%.apk}"
+                ( zip -qr "${GITHUB_WORKSPACE:-$PWD}/../manager-art/$REPO/${REPO}_${base}.zip" "$NAME" )
+              done
+            else
+              echo "Downloading $REPO manager from run $RUN_ID"
+              ARTIFACTS_JSON=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
+                "https://api.github.com/repos/${OWNER}/${REPO}/actions/runs/${RUN_ID}/artifacts")
+              if [ -z "$WANT" ]; then
+                ARTIFACT_IDS=$(echo "$ARTIFACTS_JSON" | jq -r '.artifacts[].id')
+              else
+                ARTIFACT_IDS=$(echo "$ARTIFACTS_JSON" | jq -r --arg want "$WANT" '
+                  ($want | split(",")) as $wl |
+                  .artifacts[] | select(.name as $n | any($wl[]; $n == .)) | .id')
+              fi
+              echo "$ARTIFACT_IDS" | while read -r AID; do
+                [ -n "$AID" ] || continue
+                ART=$(echo "$ARTIFACTS_JSON" | jq -r --arg id "$AID" '.artifacts[] | select(.id == ($id|tonumber)) | .name | gsub(" "; "_")')
+                curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                  -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
+                  -o "_${AID}.zip" \
+                  "https://api.github.com/repos/${OWNER}/${REPO}/actions/artifacts/${AID}/zip"
+                mkdir -p "_${AID}"
+                unzip -o -q "_${AID}.zip" -d "_${AID}" || true
+                rm -f "_${AID}.zip"
+                for apk in _${AID}/*.apk; do
+                  [ -f "$apk" ] || continue
+                  base="${apk##*/}"
+                  ( cd "_${AID}" && zip -qr "${GITHUB_WORKSPACE:-$PWD}/../../manager-art/$REPO/${REPO}_${base%.apk}.zip" "${base}" )
+                done
+                rm -rf "_${AID}"
+              done
+            fi
+          )
+          cd "${GITHUB_WORKSPACE:-$HOME}"
+          rm -rf manager-dl
+          find "manager-art/$REPO" -type f -iname '*.zip' -print
+
+      - name: Upload manager APK zips for ${{ matrix.manager.repo }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.zip }}
-          path: ${{ steps.locate.outputs.artifact_path }}
+          name: manager-${{ matrix.manager.repo }}
+          path: manager-art/${{ matrix.manager.repo }}/
           if-no-files-found: error
 
   build-nomount-module:
@@ -979,6 +922,7 @@ jobs:
     - build-android15-6-6
     - build-android16-6-12
     - build-nomount-module
+    - upload-manager-artifacts
 
     env:
       GH_TOKEN: ${{ github.token }}
@@ -1184,7 +1128,7 @@ jobs:
       uses: actions/download-artifact@v7
       with:
         path: release-assets/manager
-        pattern: 'manager-apk'
+        pattern: 'manager-*'
         merge-multiple: true
         if-no-files-found: ignore
 
