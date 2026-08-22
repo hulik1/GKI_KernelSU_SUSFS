@@ -358,7 +358,7 @@ jobs:
                 # zip under its own name rather than unzipping them.
                 WANT="$(echo "$M" | jq -r '.want | if . then join(",") else "" end')"
                 if [ -z "$WANT" ]; then
-                  echo "$ARTIFACTS_JSON" | jq -r '.artifacts[] | .id + " " + (.name|gsub(" "; "_"))' \
+                  echo "$ARTIFACTS_JSON" | jq -r '.artifacts[] | (.id|tostring) + " " + (.name|gsub(" "; "_"))' \
                   | while read -r AID ART_NAME; do
                     curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
                       -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
@@ -368,7 +368,7 @@ jobs:
                 else
                   echo "$ARTIFACTS_JSON" | jq -r --arg want "$WANT" '
                     ($want | split(",")) as $wl |
-                    .artifacts[] | select(.name as $n | any($wl[]; $n == .)) | .id + " " + (.name|gsub(" "; "_"))' \
+                    .artifacts[] | select(.name as $n | any($wl[]; $n == .)) | (.id|tostring) + " " + (.name|gsub(" "; "_"))' \
                   | while read -r AID ART_NAME; do
                     curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
                       -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
