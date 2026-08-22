@@ -27,7 +27,7 @@ inputs:
     description: PAT with read access to the upstream repo (for private/artifact downloads)
     required: true
   output_dir:
-    description: Absolute path of the folder to write per-APK zips into
+    description: Absolute path of the folder to write each extracted .apk file into
     required: true
 
 runs:
@@ -53,9 +53,8 @@ runs:
               "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest" > rel.json
             for URL in $(jq -r '.assets[] | select(.name | endswith(".apk")) | .browser_download_url' rel.json); do
               NAME="${URL##*/}"
-              curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o "$NAME" "$URL"
-              base="${NAME%.apk}"
-              ( zip -qr "${OUT_ABS}/${REPO}_${base}.zip" "$NAME" )
+              curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o "/tmp/$NAME" "$URL"
+              cp -f "/tmp/$NAME" "$OUT_ABS/$NAME"
             done
           else
             echo "Downloading $REPO manager from run $RUN_ID"
@@ -80,8 +79,7 @@ runs:
               rm -f "_${AID}.zip"
               for apk in _${AID}/*.apk; do
                 [ -f "$apk" ] || continue
-                base="${apk##*/}"
-                ( cd "_${AID}" && zip -qr "${OUT_ABS}/${REPO}_${base%.apk}.zip" "${base}" )
+                cp -f "$apk" "$OUT_ABS/$(basename "$apk")"
               done
               rm -rf "_${AID}"
             done

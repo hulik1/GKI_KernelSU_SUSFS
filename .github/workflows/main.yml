@@ -417,14 +417,14 @@ jobs:
           path: manager-zips
           pattern: 'manager-zip-*'
           merge-multiple: true
-      - name: List all manager APK zips
+      - name: List all manager APK files
         id: list
         shell: bash
         run: |
           set -euo pipefail
-          ZIPS="$(find manager-zips -type f -iname '*.zip' -printf '%f\n' \
+          APKS="$(find manager-zips -type f -iname '*.apk' -printf '%f\n' \
             | jq -R -s -c 'split("\n") | map(select(. != ""))')"
-          echo "zip_list=${ZIPS}" >> "$GITHUB_OUTPUT"
+          echo "zip_list=${APKS}" >> "$GITHUB_OUTPUT"
 
   publish-manager-artifacts:
     needs: upload-manager-artifacts
