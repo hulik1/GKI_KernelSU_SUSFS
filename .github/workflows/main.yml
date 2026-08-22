@@ -137,6 +137,7 @@ jobs:
       anykernel3_commit: ${{ steps.resolve.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ steps.resolve.outputs.droidspaces_commit }}
       feature_set: ${{ steps.features.outputs.feature_set }}
+      manager_zips: ${{ steps.mgrzips.outputs.manager_zips }}
     steps:
       - name: Resolve latest component commits
         id: resolve
@@ -404,6 +405,18 @@ jobs:
           path: release-assets/manager/
           if-no-files-found: error
 
+      - name: List manager zips
+        id: mgrzips
+        if: ${{ steps.manager.outputs.manager_list != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Emit JSON array of zip filenames so a matrix job re-uploads each
+          # as its own artifact (upload-artifact with a dir bundles to one zip).
+          find release-assets/manager -type f -iname '*.zip' -printf '%f\n' \
+            | jq -R -s 'split("\n") | map(select(. != ""))' | tee /tmp/mgrzips.json
+          echo "manager_zips=$(cat /tmp/mgrzips.json)" >> "$GITHUB_OUTPUT"
+
       - name: Compose requested feature set
         id: features
         shell: bash
@@ -454,6 +467,27 @@ jobs:
           retention-days: 1
           if-no-files-found: error
           compression-level: 9
+
+  upload-manager-artifacts:
+    needs: resolve-sources
+    if: ${{ needs.resolve-sources.outputs.manager_zips != '[]' && needs.resolve-sources.outputs.manager_zips != '' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        zip: ${{ fromJson(needs.resolve-sources.outputs.manager_zips) }}
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: manager-apk
+          path: manager-apk
+          merge-multiple: true
+      - name: Upload manager zip as its own artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.zip }}
+          path: manager-apk/${{ matrix.zip }}
+          if-no-files-found: error
 
   build-nomount-module:
     needs: resolve-sources
