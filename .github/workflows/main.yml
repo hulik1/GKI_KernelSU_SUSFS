@@ -394,6 +394,8 @@ jobs:
         run: |
           set -euo pipefail
           APK_JSON="[]"
+          OUT_APKS="${GITHUB_WORKSPACE:-$PWD}/manager_apks"
+          mkdir -p "$OUT_APKS"
           echo "$MANAGER_LIST" | jq -c '.[]' | while read -r M; do
             OWNER=$(echo "$M" | jq -r .owner)
             REPO=$(echo "$M" | jq -r .repo)
@@ -410,6 +412,8 @@ jobs:
                 for URL in $(jq -r '.assets[] | select(.name | endswith(".apk")) | .browser_download_url' rel.json); do
                   NAME="${URL##*/}"
                   curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o "$NAME" "$URL"
+                  mkdir -p "$OUT_APKS"
+                  cp -f "$NAME" "$OUT_APKS/$NAME"
                   APK_JSON=$(echo "$APK_JSON" | jq -c --arg o "$OWNER" --arg r "$REPO" --arg n "$NAME" \
                     '. + [{owner:$o,repo:$r,source:"release",run_id:"",want:"",apk:$n}]')
                   echo "$APK_JSON" > /tmp/apk_json_tmp
@@ -437,6 +441,7 @@ jobs:
                   for apk in _${AID}/*.apk; do
                     [ -f "$apk" ] || continue
                     NAME="$(basename "$apk")"
+                    cp -f "$apk" "$OUT_APKS/$NAME"
                     APK_JSON=$(echo "$APK_JSON" | jq -c --arg o "$OWNER" --arg r "$REPO" --arg i "$RUN_ID" --arg w "$WANT" --arg n "$NAME" \
                       '. + [{owner:$o,repo:$r,source:"run",run_id:$i,want:$w,apk:$n}]')
                     echo "$APK_JSON" > /tmp/apk_json_tmp
@@ -450,6 +455,13 @@ jobs:
           done
           echo "apk_list=${APK_JSON}" >> "$GITHUB_OUTPUT"
 
+      - name: Upload all manager APKs as one cross-blob
+        uses: actions/upload-artifact@v4
+        with:
+          name: manager-apks
+          path: manager_apks/
+          if-no-files-found: error
+
   publish-manager-artifacts:
     needs: list-manager-apks
     if: ${{ needs.list-manager-apks.outputs.apk_list != '' }}
@@ -461,22 +473,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Fetch and extract ${{ matrix.item.apk }}
-        uses: ./.github/actions/fetch-root-managers
+      - name: Download manager cross-blob
+        uses: actions/download-artifact@v7
         with:
-          owner: ${{ matrix.item.owner }}
-          repo: ${{ matrix.item.repo }}
-          source: ${{ matrix.item.source }}
-          run_id: ${{ matrix.item.run_id }}
-          want: ${{ matrix.item.want }}
-          token: ${{ secrets.MY_GITHUB_TOKEN }}
-          output_dir: ${{ github.workspace }}/mgr-apk
+          name: manager-apks
+          path: manager_apks
+          merge-multiple: true
 
       - name: Upload ${{ matrix.item.apk }} as its own artifact
         uses: actions/upload-artifact@v4
         with:
-          name: manager-apk-${{ matrix.item.repo }}-${{ matrix.item.apk }}
-          path: mgr-apk/${{ matrix.item.apk }}
+          name: manager-apk-${{ matrix.item.apk }}
+          path: manager_apks/${{ matrix.item.apk }}
           if-no-files-found: error
 
   build-nomount-module:
