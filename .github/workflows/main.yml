@@ -393,9 +393,11 @@ jobs:
           TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          APK_JSON="[]"
           OUT_APKS="${GITHUB_WORKSPACE:-$PWD}/manager_apks"
+          MANIFEST="${GITHUB_WORKSPACE:-$PWD}/manifest.txt"
+          rm -rf "$OUT_APKS" "$MANIFEST"
           mkdir -p "$OUT_APKS"
+          : > "$MANIFEST"
           echo "$MANAGER_LIST" | jq -c '.[]' | while read -r M; do
             OWNER=$(echo "$M" | jq -r .owner)
             REPO=$(echo "$M" | jq -r .repo)
@@ -412,15 +414,12 @@ jobs:
                 for URL in $(jq -r '.assets[] | select(.name | endswith(".apk")) | .browser_download_url' rel.json); do
                   NAME="${URL##*/}"
                   curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o "$NAME" "$URL"
-                  mkdir -p "$OUT_APKS"
                   cp -f "$NAME" "$OUT_APKS/$NAME"
-                  APK_JSON=$(echo "$APK_JSON" | jq -c --arg o "$OWNER" --arg r "$REPO" --arg n "$NAME" \
-                    '. + [{owner:$o,repo:$r,source:"release",run_id:"",want:"",apk:$n}]')
-                  echo "$APK_JSON" > /tmp/apk_json_tmp
+                  echo "$OWNER|$REPO|$NAME" >> "$MANIFEST"
                 done
               else
                 AJSON=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
-                  -H "Authorization: Bearer $TOKEN" \
+                  -H "Authorization: Bearer ${TOKEN}" \
                   "https://api.github.com/repos/${OWNER}/${REPO}/actions/runs/${RUN_ID}/artifacts")
                 if [ -z "$WANT" ]; then
                   ART_IDS=$(echo "$AJSON" | jq -r '.artifacts[].id')
@@ -432,7 +431,7 @@ jobs:
                 echo "$ART_IDS" | while read -r AID; do
                   [ -n "$AID" ] || continue
                   curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
-                    -H "Authorization: Bearer $TOKEN" \
+                    -H "Authorization: Bearer ${TOKEN}" \
                     -o "_${AID}.zip" \
                     "https://api.github.com/repos/${OWNER}/${REPO}/actions/artifacts/${AID}/zip"
                   mkdir -p "_${AID}"
@@ -442,19 +441,23 @@ jobs:
                     [ -f "$apk" ] || continue
                     NAME="$(basename "$apk")"
                     cp -f "$apk" "$OUT_APKS/$NAME"
-                    APK_JSON=$(echo "$APK_JSON" | jq -c --arg o "$OWNER" --arg r "$REPO" --arg i "$RUN_ID" --arg w "$WANT" --arg n "$NAME" \
-                      '. + [{owner:$o,repo:$r,source:"run",run_id:$i,want:$w,apk:$n}]')
-                    echo "$APK_JSON" > /tmp/apk_json_tmp
+                    echo "$OWNER|$REPO|$NAME" >> "$MANIFEST"
                   done
                   rm -rf "_${AID}"
                 done
               fi
             )
-            # re-read the inner-subshell-updated apk list
-            [ -f /tmp/apk_json_tmp ] && APK_JSON="$(cat /tmp/apk_json_tmp)"
           done
+          # Build the flat apk list from the manifest (single source of truth)
+          APK_JSON="[]"
+          while IFS='|' read -r o r n; do
+            [ -n "$n" ] || continue
+            APK_JSON=$(echo "$APK_JSON" | jq -c --arg o "$o" --arg r "$r" --arg n "$n" \
+              '. + [{owner:$o,repo:$r,apk:$n}]')
+          done < "$MANIFEST"
           echo "apk_list=${APK_JSON}" >> "$GITHUB_OUTPUT"
-
+          echo "Found $(wc -l < "$MANIFEST") manager APKs"
+          ls -1 "$OUT_APKS"
       - name: Upload all manager APKs as one cross-blob
         uses: actions/upload-artifact@v4
         with:
