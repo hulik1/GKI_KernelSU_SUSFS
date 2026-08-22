@@ -385,6 +385,7 @@ jobs:
       matrix:
         manager: ${{ fromJson(needs.resolve-sources.outputs.manager_list) }}
     steps:
+      - uses: actions/checkout@v7
       - name: Fetch manager APKs for ${{ matrix.manager.repo }}
         uses: ./.github/actions/fetch-root-managers
         with:
