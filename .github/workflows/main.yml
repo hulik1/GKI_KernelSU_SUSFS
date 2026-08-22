@@ -397,6 +397,7 @@ jobs:
           RUN_ID="${{ matrix.manager.run_id }}"
           WANT="${{ matrix.manager.want }}"
           mkdir -p "manager-dl" "manager-art/$REPO"
+          OUT_ABS="${GITHUB_WORKSPACE:-$PWD}/manager-art/$REPO"
           (
             cd manager-dl
             if [ "$SRC" = "release" ]; then
@@ -407,7 +408,7 @@ jobs:
                 NAME="${URL##*/}"
                 curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o "$NAME" "$URL"
                 base="${NAME%.apk}"
-                ( zip -qr "${GITHUB_WORKSPACE:-$PWD}/../manager-art/$REPO/${REPO}_${base}.zip" "$NAME" )
+                ( zip -qr "${OUT_ABS}/${REPO}_${base}.zip" "$NAME" )
               done
             else
               echo "Downloading $REPO manager from run $RUN_ID"
@@ -434,7 +435,7 @@ jobs:
                 for apk in _${AID}/*.apk; do
                   [ -f "$apk" ] || continue
                   base="${apk##*/}"
-                  ( cd "_${AID}" && zip -qr "${GITHUB_WORKSPACE:-$PWD}/../../manager-art/$REPO/${REPO}_${base%.apk}.zip" "${base}" )
+                  ( cd "_${AID}" && zip -qr "${OUT_ABS}/${REPO}_${base%.apk}.zip" "${base}" )
                 done
                 rm -rf "_${AID}"
               done
