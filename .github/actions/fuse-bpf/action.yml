@@ -24,7 +24,7 @@ runs:
         sudo apt-get update -qq
         sudo apt-get install -y -qq \
           clang llvm binutils-aarch64-linux-gnu \
-          libelf-dev libgelf-dev \
+          libelf-dev \
           gcc-aarch64-linux-gnu \
           elfutils
 
