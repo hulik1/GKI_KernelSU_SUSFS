@@ -272,7 +272,7 @@ jobs:
                   echo "ERROR: no ${repo} manager build exists for dev commit ${stock}" >&2
                   exit 1
                 fi
-                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s","want":["manager","manager-spoofed"]}' \
+                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s","want":"manager,manager-spoofed"}' \
                   "$flavor" "$owner" "$repo" "$run_id" "$stock"
                 ;;
               classic)
