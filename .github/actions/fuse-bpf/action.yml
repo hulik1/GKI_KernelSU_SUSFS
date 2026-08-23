@@ -89,7 +89,7 @@ runs:
         GEN_OBJ="${GENERATED_HDR_DIR}/build"
 
         $BPF_CC -target bpf \
-          -include linux/types.h \
+          -include stdint.h \
           -D__TARGET_ARCH_arm64 \
           -I "$GEN_HDR" \
           -idirafter "${GEN_OBJ}/arch/arm64/include/generated/uapi" \
