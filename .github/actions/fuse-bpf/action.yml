@@ -46,6 +46,21 @@ runs:
         # UAPI int-ll64 typedefs (uint8_t..uint64_t) actually resolve.
         printf '%s\n' '#define __BITS_PER_LONG 64' > "$GEN_DIR/usr/include/asm/bitsperlong.h"
         printf '%s\n' '#include <asm-generic/int-ll64.h>' > "$GEN_DIR/usr/include/asm/int-ll64.h"
+        # Provide uintNN_t/intNN_t without pulling in glibc stdint.h (absent in
+        # bare -target bpf). Define from the __uNN/__sNN primitives the kernel
+        # UAPI headers already provide.
+        printf '%s\n' \
+          '#ifndef TYPES_OVERRIDE_H' \
+          '#define TYPES_OVERRIDE_H' \
+          'typedef unsigned char        uint8_t;' \
+          'typedef unsigned short       uint16_t;' \
+          'typedef unsigned int         uint32_t;' \
+          'typedef unsigned long long   uint64_t;' \
+          'typedef signed char          int8_t;' \
+          'typedef signed short         int16_t;' \
+          'typedef signed int           int32_t;' \
+          'typedef signed long long     int64_t;' \
+          '#endif' > "$GEN_DIR/usr/include/types_override.h"
         for d in asm-generic linux mtd rdma sound video; do
           if [ -d "$KSRC/include/uapi/$d" ]; then
             ln -sfn "$KSRC/include/uapi/$d" "$GEN_DIR/usr/include/$d"
@@ -89,7 +104,7 @@ runs:
         GEN_OBJ="${GENERATED_HDR_DIR}/build"
 
         $BPF_CC -target bpf \
-          -include stdint.h \
+          -include "types_override.h" \
           -D__TARGET_ARCH_arm64 \
           -I "$GEN_HDR" \
           -idirafter "${GEN_OBJ}/arch/arm64/include/generated/uapi" \
