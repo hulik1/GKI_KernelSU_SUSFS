@@ -273,10 +273,12 @@ jobs:
           echo "root_matrix=$ROOT_MATRIX" >> "$GITHUB_OUTPUT"
 
           # SUSFS per supported Android/kernel branch (gitlab simonpunk/susfs4ksu).
-          # Only a pure KernelSU-Next build takes SUSFS at latest so it stays
-          # API-matched to the always-latest KernelSU-Next tree. All other flavors
-          # (KernelSU, ReSukiSU, and All) pin SUSFS (verified SHA, latest otherwise).
-          susfs_latest="${{ inputs.root_flavor == 'KernelSU-Next' }}"
+          # KernelSU-Next builds — including 'All' (which always contains a
+          # KernelSU-Next variant) — take SUSFS at latest so it stays API-matched
+          # to the always-latest KernelSU-Next tree. Pure KernelSU / ReSukiSU
+          # builds pin SUSFS (verified SHA, latest otherwise). KernelSU-Next root
+          # itself is always latest regardless of flavor.
+          susfs_latest="${{ inputs.root_flavor == 'KernelSU-Next' || inputs.root_flavor == 'All' }}"
           declare -A SUSFS_BRANCHES=(
             [susfs_commit_android12_5_10]="gki-android12-5.10"
             [susfs_commit_android13_5_10]="gki-android13-5.10"
