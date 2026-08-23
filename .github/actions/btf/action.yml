@@ -184,5 +184,9 @@ runs:
       with:
         config_list: |
           # FUSE-BPF support (Issue #211) — FUSE filesystems backed by eBPF
-          # programs. Sits on eBPF (Issue #176) above.
+          # programs. Sits on eBPF (Issue #176) above. Explicitly set the
+          # kconfig dependencies (FUSE_FS, BPF via BPF_SYSCALL) so kconfig can't
+          # silently drop FUSE_BPF on any branch whose gki_defconfig differs.
+          CONFIG_FUSE_FS=y
+          CONFIG_BPF_SYSCALL=y
           CONFIG_FUSE_BPF=y
