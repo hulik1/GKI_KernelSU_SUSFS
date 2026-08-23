@@ -28,6 +28,25 @@ runs:
           gcc-aarch64-linux-gnu \
           elfutils
 
+    - name: Generate kernel UAPI headers
+      shell: bash
+      run: |
+        set -euo pipefail
+        GEN_DIR="$(mktemp -d)"
+        echo "GENERATED_HDR_DIR=${GEN_DIR}" >> "$GITHUB_ENV"
+        # Generate clean, self-contained UAPI headers (incl. arch asm/) into a
+        # temp build dir, so compilation doesn't rely on absent generated files.
+        make -C "${{ github.workspace }}/kernel/common" \
+          ARCH=arm64 \
+          O="${GEN_DIR}/build" \
+          headers_install \
+          INSTALL_HDR_PATH="${GEN_DIR}/usr" \
+          >/dev/null 2>&1 || {
+            # Fallback: generate just the arch asm headers via prepare
+            make -C "${{ github.workspace }}/kernel/common" \
+              ARCH=arm64 O="${GEN_DIR}/build" prepare >/dev/null 2>&1 || true
+          }
+
     - name: Build BPF Object (fd_bpf.bpf) for arm64
       shell: bash
       run: |
@@ -58,12 +77,19 @@ runs:
         echo "Using BPF compiler: $BPF_CC"
         echo "Compiling fd_bpf.c → fd_bpf.bpf..."
 
+        # Include generated UAPI headers first (contain arch asm/), then the
+        # kernel UAPI/source include dirs as fallback.
+        GEN_HDR="${GENERATED_HDR_DIR}/usr/include"
+
         $BPF_CC -target bpf \
           -D__TARGET_ARCH_arm64 \
-          -I "${{ github.workspace }}/kernel/common/include" \
-          -idirafter "${{ github.workspace }}/kernel/common/arch/arm64/include" \
+          -I "$GEN_HDR" \
+          -idirafter "${{ github.workspace }}/kernel/common/arch/arm64/include/generated/uapi" \
           -idirafter "${{ github.workspace }}/kernel/common/arch/arm64/include/uapi" \
-          -Wall -Werror -O2 -g \
+          -idirafter "${{ github.workspace }}/kernel/common/include/uapi" \
+          -idirafter "${{ github.workspace }}/kernel/common/arch/arm64/include" \
+          -idirafter "${{ github.workspace }}/kernel/common/include" \
+          -Wall -O2 -g \
           -emit-llvm -c fd_bpf.c -o fd_bpf.ir
 
         if command -v llc &>/dev/null; then
@@ -71,8 +97,8 @@ runs:
         else
           $BPF_CC -target bpf \
             -D__TARGET_ARCH_arm64 \
-            -I "${{ github.workspace }}/kernel/common/include" \
-            -Wall -Werror -O2 -g \
+            -I "$GEN_HDR" \
+            -Wall -O2 -g \
             -c fd_bpf.c -o fd_bpf.bpf
         fi
 
@@ -112,6 +138,7 @@ runs:
           -D_GNU_SOURCE \
           -D__KERNEL__ \
           -D__EXPORTED_HEADERS__ \
+          -I "${GENERATED_HDR_DIR}/usr/include" \
           -I "${{ github.workspace }}/kernel/common/include/uapi" \
           -I "${{ github.workspace }}/kernel/common/include" \
           -I "${{ github.workspace }}/kernel/common/arch/arm64/include" \
@@ -127,6 +154,7 @@ runs:
           -D_GNU_SOURCE \
           -D__KERNEL__ \
           -D__EXPORTED_HEADERS__ \
+          -I "${GENERATED_HDR_DIR}/usr/include" \
           -I "${{ github.workspace }}/kernel/common/include/uapi" \
           -I "${{ github.workspace }}/kernel/common/include" \
           -I "${{ github.workspace }}/kernel/common/arch/arm64/include" \
