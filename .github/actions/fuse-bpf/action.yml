@@ -41,7 +41,11 @@ runs:
         # no kernel configure required.
         mkdir -p "$GEN_DIR/usr/include/asm"
         printf '%s\n' '#include <asm-generic/types.h>' > "$GEN_DIR/usr/include/asm/types.h"
-        printf '%s\n' '#include <asm-generic/types.h>' > "$GEN_DIR/usr/include/asm/byteorder.h"
+        printf '%s\n' '#include <asm-generic/int-ll64.h>' > "$GEN_DIR/usr/include/asm/byteorder.h"
+        # Generated arch headers kbuild normally emits; provide them so the
+        # UAPI int-ll64 typedefs (uint8_t..uint64_t) actually resolve.
+        printf '%s\n' '#define __BITS_PER_LONG 64' > "$GEN_DIR/usr/include/asm/bitsperlong.h"
+        printf '%s\n' '#include <asm-generic/int-ll64.h>' > "$GEN_DIR/usr/include/asm/int-ll64.h"
         for d in asm-generic linux mtd rdma sound video; do
           if [ -d "$KSRC/include/uapi/$d" ]; then
             ln -sfn "$KSRC/include/uapi/$d" "$GEN_DIR/usr/include/$d"
