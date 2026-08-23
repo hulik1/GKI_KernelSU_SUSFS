@@ -273,6 +273,10 @@ jobs:
           echo "root_matrix=$ROOT_MATRIX" >> "$GITHUB_OUTPUT"
 
           # SUSFS per supported Android/kernel branch (gitlab simonpunk/susfs4ksu)
+          # For KernelSU-Next builds (root_flavor 'KernelSU-Next' or 'All'), always
+          # resolve SUSFS at latest so it stays API-matched to the always-latest
+          # KernelSU-Next tree. Pinned SUSFS only for pure KernelSU/ReSukiSU builds.
+          include_next="${{ inputs.root_flavor == 'KernelSU-Next' || inputs.root_flavor == 'All' }}"
           declare -A SUSFS_BRANCHES=(
             [susfs_commit_android12_5_10]="gki-android12-5.10"
             [susfs_commit_android13_5_10]="gki-android13-5.10"
@@ -283,7 +287,11 @@ jobs:
             [susfs_commit_android16_6_12]="gki-android16-6.12"
           )
           for key in "${!SUSFS_BRANCHES[@]}"; do
-            emit "$key" "$(pick "${PIN_SUSFS[$key]}" https://gitlab.com/simonpunk/susfs4ksu.git refs/heads/${SUSFS_BRANCHES[$key]})"
+            if [ "$include_next" = "true" ]; then
+              emit "$key" "$(resolve_sha https://gitlab.com/simonpunk/susfs4ksu.git refs/heads/${SUSFS_BRANCHES[$key]})"
+            else
+              emit "$key" "$(pick "${PIN_SUSFS[$key]}" https://gitlab.com/simonpunk/susfs4ksu.git refs/heads/${SUSFS_BRANCHES[$key]})"
+            fi
           done
 
           # Tracked build helpers (resolved automatically, before the run)
