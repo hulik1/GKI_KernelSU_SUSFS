@@ -402,8 +402,10 @@ jobs:
           set -euo pipefail
           mkdir -p sources
 
-          # NoMount kernel sources at the resolved dev tip
-          git clone --depth=1 --branch dev https://github.com/maxsteeel/nomount.git sources/nomount
+          # NoMount kernel sources at the resolved commit (pinned or dev tip)
+          git clone --no-checkout https://github.com/maxsteeel/nomount.git sources/nomount
+          git -C sources/nomount fetch --depth=1 origin "${{ steps.resolve.outputs.nomount_commit }}"
+          git -C sources/nomount checkout --detach "${{ steps.resolve.outputs.nomount_commit }}"
           [ "$(git -C sources/nomount rev-parse HEAD)" = "${{ steps.resolve.outputs.nomount_commit }}" ] || \
             { echo "NoMount clone HEAD mismatch" >&2; exit 1; }
 
