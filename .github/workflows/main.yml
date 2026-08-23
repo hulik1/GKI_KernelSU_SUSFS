@@ -527,16 +527,62 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Replicate maxsteeel build.yml: compile nm.c for arm64 + arm via zig cc.
+          # Replicate maxsteeel build.yml: compile nm.c for arm64 + arm via zig cc,
+          # then strip with sstrip from ELFkickers (same as upstream).
           cd nomount_src
+          curl -L https://www.muppetlabs.com/~breadbox/pub/software/ELFkickers-3.2.tar.gz -o sstrip.tar.gz
+          tar xf sstrip.tar.gz
+          make -C ELFkickers-3.2 sstrip
+          cp ELFkickers-3.2/sstrip/sstrip ./sstrip
+          chmod +x ./sstrip
+
           mkdir -p bin
           zig cc -target aarch64-linux -Oz -mcmodel=tiny -static -nostdlib -ffreestanding -fno-unwind-tables \
             -fno-ident -Wno-invalid-noreturn -Wl,--entry=_start userspace/src/nm.c -o bin/nm-arm64
           zig cc -target arm-linux -Oz -static -nostdlib -ffreestanding -fno-unwind-tables -fno-ident -Wno-invalid-noreturn \
             -ffunction-sections -fdata-sections -Wl,--gc-sections -Wl,--entry=_start userspace/src/nm.c -o bin/nm-arm
+          ./sstrip -z bin/nm-arm64
+          ./sstrip -z bin/nm-arm
           file bin/nm-*
           mkdir -p ../module/bin
           cp -f bin/nm-arm64 bin/nm-arm ../module/bin/
+
+      - name: Build ko-loader
+        if: ${{ inputs.use_nomount }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Replicate maxsteeel build.yml ko-loader step (zig cc).
+          cd nomount_src
+          git clone https://github.com/maxsteeel/ko-loader.git ko_loader_src
+          cd ko_loader_src
+          make TARGET=aarch64-linux && mv ko-loader ko-loader-arm64
+          make TARGET=arm-linux && mv ko-loader ko-loader-arm
+          ../sstrip -z ko-loader-arm64
+          ../sstrip -z ko-loader-arm
+          file ko-loader-*
+          mv ko-loader-* ../module/bin/
+
+      - name: Update version code + webroot (replicate upstream)
+        if: ${{ inputs.use_nomount }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd nomount_src
+          sed -i 's/^versionCode=.*/versionCode=${{ github.run_number }}/' module/module.prop
+          # Optimize webroot via standalone esbuild (same as upstream build.yml).
+          MODULE_BUILD="module"
+          sed '/@import ".\/theme.css";/d' module/webroot/styles.css > "$RUNNER_TEMP/temp.css"
+          cat "$RUNNER_TEMP/temp.css" module/webroot/theme.css > "$RUNNER_TEMP/combined.css"
+          curl -sL "https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-0.28.1.tgz" -o /tmp/esbuild.tgz
+          tar -xzf /tmp/esbuild.tgz -C /tmp && mv /tmp/package/bin/esbuild /tmp/esbuild && chmod +x /tmp/esbuild
+          /tmp/esbuild module/webroot/index.js --bundle --format=esm --minify --outfile="$RUNNER_TEMP/index.js"
+          /tmp/esbuild "$RUNNER_TEMP/combined.css" --minify --outfile="$RUNNER_TEMP/styles.css"
+          tr '\n' ' ' < module/webroot/index.html | sed 's/  */ /g' | sed 's/> </></g' > "$RUNNER_TEMP/index.html"
+          install -m 0644 "$RUNNER_TEMP/index.js" "$MODULE_BUILD/webroot/index.js"
+          install -m 0644 "$RUNNER_TEMP/styles.css" "$MODULE_BUILD/webroot/styles.css"
+          install -m 0644 "$RUNNER_TEMP/index.html" "$MODULE_BUILD/webroot/index.html"
+          rm "$MODULE_BUILD/webroot/theme.css"
 
       - name: Package NoMount metamodule
         id: package
@@ -546,7 +592,7 @@ jobs:
           set -euo pipefail
           COMMIT="${{ steps.clone.outputs.commit }}"
           module_zip="${RUNNER_TEMP}/NoMount-${COMMIT}.zip"
-          # Package the module/ directory (webroot, scripts, module.prop, bin/nm).
+          # Package the module/ directory (webroot, scripts, module.prop, bin/nm, bin/ko-loader).
           # LKM .ko files are intentionally skipped: the kernel builds nomount
           # in-tree (CONFIG_NOMOUNT=y via the nomount action).
           ( cd nomount_src/module && zip -qr "$module_zip" . )
