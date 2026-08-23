@@ -191,11 +191,18 @@ jobs:
           }
 
           # Audited pins (from root-variants.yml). Used only when commit_mode=verified.
-          # SUSFS is intentionally NOT pinned here: it is always resolved at latest
-          # so it stays API-matched to the always-latest KernelSU-Next tree.
           PIN_NOMOUNT="c52936b229c25a4b0e41b6627f7d3bc5eaaaf2b5"
           PIN_KERNELSU="da9abf498a77d438989fea0f5f4e348b9a540c07"
           PIN_RESUKISU="3ef06b0fcb0960dc9563256fe26a58e892663387"
+          declare -A PIN_SUSFS=(
+            [susfs_commit_android12_5_10]="3c14ad549f826b1f53878ec8c12253efebeed75a"
+            [susfs_commit_android13_5_10]="f81aaf10e9560282052bb61dd931315c2ca3e617"
+            [susfs_commit_android13_5_15]="ccb1918684b27644d17a6c842f57b60ae5966025"
+            [susfs_commit_android14_5_15]="0463ac089308014e8c22cc6a4558e0d6d2a53e08"
+            [susfs_commit_android14_6_1]="e287d59066380bf6de4396532d4a42edf4408701"
+            [susfs_commit_android15_6_6]="be7b7ef49a1e1b189c3abf00eacaa7ebdb4168c1"
+            [susfs_commit_android16_6_12]="f37930f374ef88de990d6abea0c67d0ea28c1edc"
+          )
 
           pick() { # pinned repo ref  -> pinned when verified, else latest
             local pinned="$1" repo="$2" ref="$3"
@@ -266,8 +273,10 @@ jobs:
           echo "root_matrix=$ROOT_MATRIX" >> "$GITHUB_OUTPUT"
 
           # SUSFS per supported Android/kernel branch (gitlab simonpunk/susfs4ksu).
-          # Always resolve SUSFS at latest so it stays API-matched to the
-          # always-latest KernelSU-Next tree.
+          # Only a pure KernelSU-Next build takes SUSFS at latest so it stays
+          # API-matched to the always-latest KernelSU-Next tree. All other flavors
+          # (KernelSU, ReSukiSU, and All) pin SUSFS (verified SHA, latest otherwise).
+          susfs_latest="${{ inputs.root_flavor == 'KernelSU-Next' }}"
           declare -A SUSFS_BRANCHES=(
             [susfs_commit_android12_5_10]="gki-android12-5.10"
             [susfs_commit_android13_5_10]="gki-android13-5.10"
@@ -278,7 +287,11 @@ jobs:
             [susfs_commit_android16_6_12]="gki-android16-6.12"
           )
           for key in "${!SUSFS_BRANCHES[@]}"; do
-            emit "$key" "$(resolve_sha https://gitlab.com/simonpunk/susfs4ksu.git refs/heads/${SUSFS_BRANCHES[$key]})"
+            if [ "$susfs_latest" = "true" ]; then
+              emit "$key" "$(resolve_sha https://gitlab.com/simonpunk/susfs4ksu.git refs/heads/${SUSFS_BRANCHES[$key]})"
+            else
+              emit "$key" "$(pick "${PIN_SUSFS[$key]}" https://gitlab.com/simonpunk/susfs4ksu.git refs/heads/${SUSFS_BRANCHES[$key]})"
+            fi
           done
 
           # Tracked build helpers (resolved automatically, before the run)
