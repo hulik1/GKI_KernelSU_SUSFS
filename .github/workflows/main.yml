@@ -273,12 +273,8 @@ jobs:
           echo "root_matrix=$ROOT_MATRIX" >> "$GITHUB_OUTPUT"
 
           # SUSFS per supported Android/kernel branch (gitlab simonpunk/susfs4ksu).
-          # KernelSU-Next builds — including 'All' (which always contains a
-          # KernelSU-Next variant) — take SUSFS at latest so it stays API-matched
-          # to the always-latest KernelSU-Next tree. Pure KernelSU / ReSukiSU
-          # builds pin SUSFS (verified SHA, latest otherwise). KernelSU-Next root
-          # itself is always latest regardless of flavor.
-          susfs_latest="${{ inputs.root_flavor == 'KernelSU-Next' || inputs.root_flavor == 'All' }}"
+          # Always emit the verified pinned SHA here; build.yml overrides to the
+          # latest branch tip per-variant when the root flavor is KernelSU-Next.
           declare -A SUSFS_BRANCHES=(
             [susfs_commit_android12_5_10]="gki-android12-5.10"
             [susfs_commit_android13_5_10]="gki-android13-5.10"
@@ -289,11 +285,7 @@ jobs:
             [susfs_commit_android16_6_12]="gki-android16-6.12"
           )
           for key in "${!SUSFS_BRANCHES[@]}"; do
-            if [ "$susfs_latest" = "true" ]; then
-              emit "$key" "$(resolve_sha https://gitlab.com/simonpunk/susfs4ksu.git refs/heads/${SUSFS_BRANCHES[$key]})"
-            else
-              emit "$key" "$(pick "${PIN_SUSFS[$key]}" https://gitlab.com/simonpunk/susfs4ksu.git refs/heads/${SUSFS_BRANCHES[$key]})"
-            fi
+            emit "$key" "$(pick "${PIN_SUSFS[$key]}" https://gitlab.com/simonpunk/susfs4ksu.git refs/heads/${SUSFS_BRANCHES[$key]})"
           done
 
           # Tracked build helpers (resolved automatically, before the run)
