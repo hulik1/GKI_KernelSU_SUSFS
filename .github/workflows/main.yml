@@ -28,6 +28,11 @@ on:
           - android15-6.6
           - android16-6.12
         default: All
+      os_patch_level:
+        description: "Patch date (YYYY-MM), kernel sublevel, lts, or All (no filter)"
+        required: true
+        type: string
+        default: All
       brand_name:
         description: "Kernel Branding"
         type: string
@@ -40,11 +45,6 @@ on:
           - latest
           - verified
         default: latest
-      os_patch_level:
-        description: "Patch date (YYYY-MM), kernel sublevel, lts (builds the LTS branch), or all"
-        required: true
-        type: string
-        default: all
       root_flavor:
         description: "Root Flavor"
         type: choice

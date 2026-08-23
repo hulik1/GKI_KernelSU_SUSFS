@@ -134,7 +134,7 @@ jobs:
             }')
 
           SELECTED_PATCH_LEVEL="${{ inputs.os_patch_level }}"
-          if [ "$SELECTED_PATCH_LEVEL" = "all" ]; then
+          if [ "$(printf '%s' "$SELECTED_PATCH_LEVEL" | tr '[:upper:]' '[:lower:]')" = "all" ]; then
             SELECTED_PATCH_LEVEL=""
           fi
           if [ -n "$SELECTED_PATCH_LEVEL" ]; then
