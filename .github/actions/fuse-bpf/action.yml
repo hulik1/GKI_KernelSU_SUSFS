@@ -33,21 +33,21 @@ runs:
       run: |
         set -euo pipefail
         GEN_DIR="$(mktemp -d)"
-        OBJ_DIR="${GEN_DIR}/build"
         echo "GENERATED_HDR_DIR=${GEN_DIR}" >> "$GITHUB_ENV"
+        KSRC="${{ github.workspace }}/kernel/common"
 
-        # Run prepare which generates the arch/asm headers (incl. asm/types.h)
-        # into the object tree, plus headers_install for the UAPI set.
-        make -C "${{ github.workspace }}/kernel/common" \
-          ARCH=arm64 O="${OBJ_DIR}" \
-          prepare >/dev/null 2>&1 || true
-        make -C "${{ github.workspace }}/kernel/common" \
-          ARCH=arm64 O="${OBJ_DIR}" \
-          headers_install \
-          INSTALL_HDR_PATH="${GEN_DIR}/usr" >/dev/null 2>&1 || true
-        echo "Generated header trees:"
-        find "${OBJ_DIR}/arch/arm64/include/generated" "${OBJ_DIR}/include/generated" \
-          -name types.h 2>/dev/null | head || true
+        # Build a small stub tree for the arch "asm/" headers that kbuild
+        # normally generates (asm/types.h -> asm-generic/types.h). Deterministic,
+        # no kernel configure required.
+        mkdir -p "$GEN_DIR/usr/include/asm"
+        printf '%s\n' '#include <asm-generic/types.h>' > "$GEN_DIR/usr/include/asm/types.h"
+        printf '%s\n' '#include <asm-generic/types.h>' > "$GEN_DIR/usr/include/asm/byteorder.h"
+        for d in asm-generic linux mtd rdma sound video; do
+          if [ -d "$KSRC/include/uapi/$d" ]; then
+            ln -sfn "$KSRC/include/uapi/$d" "$GEN_DIR/usr/include/$d"
+          fi
+        done
+        echo "Stub header tree ready."
 
     - name: Build BPF Object (fd_bpf.bpf) for arm64
       shell: bash
