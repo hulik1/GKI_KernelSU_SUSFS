@@ -40,6 +40,11 @@ on:
           - latest
           - verified
         default: latest
+      os_patch_level:
+        description: "Patch date (YYYY-MM), kernel sublevel, lts (builds the LTS branch), or all"
+        required: true
+        type: string
+        default: all
       root_flavor:
         description: "Root Flavor"
         type: choice
@@ -154,8 +159,8 @@ jobs:
           set -euo pipefail
 
           # Commit resolution mode. 'latest' (default) resolves branch tips at
-          # run time via git ls-remote. 'verified' mode is stubbed to the same
-          # behavior until audited pin tables are filled in.
+          # run time via git ls-remote. 'verified' uses the audited pins below for
+          # NoMount, classic/resukisu roots, and SUSFS; KernelSU-Next stays latest.
           COMMIT_MODE="${{ inputs.commit_mode }}"
           echo "commit_mode=${COMMIT_MODE}"
 
@@ -182,12 +187,35 @@ jobs:
             echo "$1=$2" >> "$GITHUB_OUTPUT"
           }
 
-          # NoMount (dev tip)
-          emit nomount_commit "$(resolve_sha https://github.com/maxsteeel/nomount.git refs/heads/dev)"
+          # Audited pins (from root-variants.yml). Used only when commit_mode=verified.
+          PIN_NOMOUNT="c52936b229c25a4b0e41b6627f7d3bc5eaaaf2b5"
+          PIN_CLASSIC="da9abf498a77d438989fea0f5f4e348b9a540c07"
+          PIN_RESUKISU="3ef06b0fcb0960dc9563256fe26a58e892663387"
+          declare -A PIN_SUSFS=(
+            [susfs_commit_android12_5_10]="3c14ad549f826b1f53878ec8c12253efebeed75a"
+            [susfs_commit_android13_5_10]="f81aaf10e9560282052bb61dd931315c2ca3e617"
+            [susfs_commit_android13_5_15]="ccb1918684b27644d17a6c842f57b60ae5966025"
+            [susfs_commit_android14_5_15]="0463ac089308014e8c22cc6a4558e0d6d2a53e08"
+            [susfs_commit_android14_6_1]="e287d59066380bf6de4396532d4a42edf4408701"
+            [susfs_commit_android15_6_6]="be7b7ef49a1e1b189c3abf00eacaa7ebdb4168c1"
+            [susfs_commit_android16_6_12]="f37930f374ef88de990d6abea0c67d0ea28c1edc"
+          )
+
+          pick() { # pinned repo ref  -> pinned when verified, else latest
+            local pinned="$1" repo="$2" ref="$3"
+            if [ "$COMMIT_MODE" = "verified" ] && [ -n "$pinned" ]; then
+              echo "$pinned"
+            else
+              resolve_sha "$repo" "$ref"
+            fi
+          }
+
+          # NoMount (pinned in verified mode, else dev tip)
+          emit nomount_commit "$(pick "$PIN_NOMOUNT" https://github.com/maxsteeel/nomount.git refs/heads/dev)"
 
           # KernelSU-Next manager — always built from the official repo's dev branch.
           # pershoot's fork is used only for the kernel SUSFS integration (root_commit below),
-          # never for the manager.
+          # never for the manager. Manager always builds at latest.
           emit kernelsu_commit "$(resolve_sha https://github.com/KernelSU-Next/KernelSU-Next.git refs/heads/dev)"
           echo "kernelsu_branch=dev" >> "$GITHUB_OUTPUT"
 
@@ -196,9 +224,10 @@ jobs:
           # flavors (next / classic / resukisu). Every build always has a root;
           # 'All' emits a matrix of all three root flavors plus each pinned commit.
           #
-          # Always resolve all three branch-tip commits so 'All' can fan out.
-          CLASSIC_COMMIT="$(resolve_sha https://github.com/tiann/KernelSU.git refs/heads/main)"
-          RESUKISU_COMMIT="$(resolve_sha https://github.com/ReSukiSU/ReSukiSU.git refs/heads/main)"
+          # classic and resukisu pin in verified mode; KernelSU-Next (next) always
+          # builds at latest.
+          CLASSIC_COMMIT="$(pick "$PIN_CLASSIC" https://github.com/tiann/KernelSU.git refs/heads/main)"
+          RESUKISU_COMMIT="$(pick "$PIN_RESUKISU" https://github.com/ReSukiSU/ReSukiSU.git refs/heads/main)"
           if [ "${{ inputs.use_susfs }}" = "true" ]; then
             NEXT_COMMIT="$(resolve_sha https://github.com/pershoot/KernelSU-Next.git refs/heads/dev-susfs)"
           else
@@ -249,7 +278,7 @@ jobs:
             [susfs_commit_android16_6_12]="gki-android16-6.12"
           )
           for key in "${!SUSFS_BRANCHES[@]}"; do
-            emit "$key" "$(resolve_sha https://gitlab.com/simonpunk/susfs4ksu.git refs/heads/${SUSFS_BRANCHES[$key]})"
+            emit "$key" "$(pick "${PIN_SUSFS[$key]}" https://gitlab.com/simonpunk/susfs4ksu.git refs/heads/${SUSFS_BRANCHES[$key]})"
           done
 
           # Tracked build helpers (resolved automatically, before the run)
@@ -566,6 +595,7 @@ jobs:
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
+      os_patch_level: ${{ inputs.os_patch_level }}
     secrets: inherit
 
   build-android13-5-10:
@@ -593,6 +623,7 @@ jobs:
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
+      os_patch_level: ${{ inputs.os_patch_level }}
     secrets: inherit
 
   build-android13-5-15:
@@ -620,6 +651,7 @@ jobs:
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
+      os_patch_level: ${{ inputs.os_patch_level }}
     secrets: inherit
 
   build-android14-5-15:
@@ -647,6 +679,7 @@ jobs:
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
+      os_patch_level: ${{ inputs.os_patch_level }}
     secrets: inherit
 
   build-android14-6-1:
@@ -674,6 +707,7 @@ jobs:
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
+      os_patch_level: ${{ inputs.os_patch_level }}
     secrets: inherit
 
   build-android15-6-6:
@@ -701,6 +735,7 @@ jobs:
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
+      os_patch_level: ${{ inputs.os_patch_level }}
     secrets: inherit
 
   build-android16-6-12:
@@ -728,6 +763,7 @@ jobs:
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
+      os_patch_level: ${{ inputs.os_patch_level }}
     secrets: inherit
 
   rej:
