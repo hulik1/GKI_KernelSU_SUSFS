@@ -5,7 +5,7 @@ three separate source trees and never combines root implementations:
 
 | Variant | Upstream | Pinned commit |
 | --- | --- | --- |
-| Classic KernelSU | `tiann/KernelSU` | `da9abf498a77d438989fea0f5f4e348b9a540c07` |
+| KernelSU | `tiann/KernelSU` | `da9abf498a77d438989fea0f5f4e348b9a540c07` |
 | KernelSU Next | `KernelSU-Next/KernelSU-Next` `dev` | `234f6e040fcbca18b16d2398e1aa225712ec99ad` |
 | ReSukiSU | `ReSukiSU/ReSukiSU` | `3ef06b0fcb0960dc9563256fe26a58e892663387` |
 | NoMount | `maxsteeel/nomount` `dev` | `c52936b229c25a4b0e41b6627f7d3bc5eaaaf2b5` |

@@ -21,7 +21,7 @@ inputs:
     description: 'Kernel sublevel'
     required: true
   root_flavor:
-    description: 'Selected root implementation (classic / next / resukisu). Classic KernelSU (tiann main) needs the 10_enable_susfs_for_ksu patch; other flavors already ship SUSFS.'
+    description: 'Selected root implementation (kernelsu / next / resukisu). KernelSU (tiann main) needs the 10_enable_susfs_for_ksu patch; other flavors already ship SUSFS.'
     required: false
     default: ""
   nomount_enabled:
@@ -38,12 +38,12 @@ runs:
         susfs_commit: ${{ inputs.susfs_commit }}
         version: ${{ inputs.version }}
 
-    - name: Enable SUSFS for Classic KernelSU
-      # tiann/KernelSU main does NOT carry SUSFS, so for the classic flavor we
+    - name: Enable SUSFS for KernelSU (tiann)
+      # tiann/KernelSU main does NOT carry SUSFS, so for the kernelsu flavor we
       # apply the enable patch from susfs4ksu onto the KernelSU checkout.
       # pershoot dev-susfs (next) and ReSukiSU already include SUSFS, so this is
       # a no-op for those flavors.
-      if: inputs.root_flavor == 'classic'
+      if: inputs.root_flavor == 'kernelsu'
       shell: bash
       working-directory: ${{ github.workspace }}/kernel/KernelSU
       run: |
@@ -53,7 +53,7 @@ runs:
           echo "Missing 10_enable_susfs_for_ksu.patch at $PATCH" >&2
           exit 1
         fi
-        echo "Applying SUSFS enable patch to classic KernelSU checkout (kernel/KernelSU/kernel)"
+        echo "Applying SUSFS enable patch to KernelSU (tiann) checkout (kernel/KernelSU/kernel)"
         patch -p1 < "$PATCH"
 
     - name: Enable SUSFS Kernel Configs

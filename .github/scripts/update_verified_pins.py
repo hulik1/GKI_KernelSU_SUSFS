@@ -20,7 +20,7 @@ MAIN = os.path.join(REPO, ".github/workflows/main.yml")
 # approval env is "1"/"true" when the component was enabled and all its builds passed.
 PINS = [
     ("PIN_NOMOUNT", "NOMOUNT_SHA", "APPROVE_NOMOUNT"),
-    ("PIN_CLASSIC", "CLASSIC_SHA", "APPROVE_CLASSIC"),
+    ("PIN_KERNELSU", "KERNELSU_SHA", "APPROVE_KERNELSU"),
     ("PIN_RESUKISU", "RESUKISU_SHA", "APPROVE_RESUKISU"),
     ("PIN_SUSFS[susfs_commit_android12_5_10]", "SUSFS_ANDROID12_5_10_SHA", "APPROVE_SUSFS_ANDROID12_5_10"),
     ("PIN_SUSFS[susfs_commit_android13_5_10]", "SUSFS_ANDROID13_5_10_SHA", "APPROVE_SUSFS_ANDROID13_5_10"),

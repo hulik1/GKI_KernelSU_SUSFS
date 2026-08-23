@@ -147,7 +147,7 @@ jobs:
       susfs_commit_android14_6_1: ${{ steps.resolve.outputs.susfs_commit_android14_6_1 }}
       susfs_commit_android15_6_6: ${{ steps.resolve.outputs.susfs_commit_android15_6_6 }}
       susfs_commit_android16_6_12: ${{ steps.resolve.outputs.susfs_commit_android16_6_12 }}
-      classic_commit: ${{ steps.resolve.outputs.classic_commit }}
+      ksu_commit: ${{ steps.resolve.outputs.ksu_commit }}
       resukisu_commit: ${{ steps.resolve.outputs.resukisu_commit }}
       kernel_patches_commit: ${{ steps.resolve.outputs.kernel_patches_commit }}
       anykernel3_commit: ${{ steps.resolve.outputs.anykernel3_commit }}
@@ -163,7 +163,7 @@ jobs:
 
           # Commit resolution mode. 'latest' (default) resolves branch tips at
           # run time via git ls-remote. 'verified' uses the audited pins below for
-          # NoMount, classic/resukisu roots, and SUSFS; KernelSU-Next stays latest.
+          # NoMount, kernelsu/resukisu roots, and SUSFS; KernelSU-Next stays latest.
           COMMIT_MODE="${{ inputs.commit_mode }}"
           echo "commit_mode=${COMMIT_MODE}"
 
@@ -192,7 +192,7 @@ jobs:
 
           # Audited pins (from root-variants.yml). Used only when commit_mode=verified.
           PIN_NOMOUNT="c52936b229c25a4b0e41b6627f7d3bc5eaaaf2b5"
-          PIN_CLASSIC="da9abf498a77d438989fea0f5f4e348b9a540c07"
+          PIN_KERNELSU="da9abf498a77d438989fea0f5f4e348b9a540c07"
           PIN_RESUKISU="3ef06b0fcb0960dc9563256fe26a58e892663387"
           declare -A PIN_SUSFS=(
             [susfs_commit_android12_5_10]="3c14ad549f826b1f53878ec8c12253efebeed75a"
@@ -224,14 +224,14 @@ jobs:
 
           # Selected root implementation(s). Maps the human-facing choice
           # (KernelSU-Next / KernelSU / ReSukiSU / All) to internal root-setup
-          # flavors (next / classic / resukisu). Every build always has a root;
+          # flavors (next / kernelsu / resukisu). Every build always has a root;
           # 'All' emits a matrix of all three root flavors plus each pinned commit.
           #
-          # classic and resukisu pin in verified mode; KernelSU-Next (next) always
+          # kernelsu and resukisu pin in verified mode; KernelSU-Next (next) always
           # builds at latest.
-          CLASSIC_COMMIT="$(pick "$PIN_CLASSIC" https://github.com/tiann/KernelSU.git refs/heads/main)"
+          KERNELSU_COMMIT="$(pick "$PIN_KERNELSU" https://github.com/tiann/KernelSU.git refs/heads/main)"
           RESUKISU_COMMIT="$(pick "$PIN_RESUKISU" https://github.com/ReSukiSU/ReSukiSU.git refs/heads/main)"
-          emit classic_commit "$CLASSIC_COMMIT"
+          emit ksu_commit "$KERNELSU_COMMIT"
           emit resukisu_commit "$RESUKISU_COMMIT"
           if [ "${{ inputs.use_susfs }}" = "true" ]; then
             NEXT_COMMIT="$(resolve_sha https://github.com/pershoot/KernelSU-Next.git refs/heads/dev-susfs)"
@@ -245,9 +245,9 @@ jobs:
 
           case "${{ inputs.root_flavor }}" in
             KernelSU)
-              emit root_flavor "classic"
-              emit root_commit "$CLASSIC_COMMIT"
-              ROOT_MATRIX="[$(mk_entry classic KernelSU "$CLASSIC_COMMIT")]"
+              emit root_flavor "kernelsu"
+              emit root_commit "$KERNELSU_COMMIT"
+              ROOT_MATRIX="[$(mk_entry kernelsu KernelSU "$KERNELSU_COMMIT")]"
               ;;
             KernelSU-Next)
               emit root_flavor "next"
@@ -261,7 +261,7 @@ jobs:
               ;;
             All)
               # Fan out to all three root variants, each with its pinned commit.
-              ROOT_MATRIX="[$(mk_entry next KernelSU-Next "$NEXT_COMMIT"),$(mk_entry classic KernelSU "$CLASSIC_COMMIT"),$(mk_entry resukisu ReSukiSU "$RESUKISU_COMMIT")]"
+              ROOT_MATRIX="[$(mk_entry next KernelSU-Next "$NEXT_COMMIT"),$(mk_entry kernelsu KernelSU "$KERNELSU_COMMIT"),$(mk_entry resukisu ReSukiSU "$RESUKISU_COMMIT")]"
               echo "root_flavor=" >> "$GITHUB_OUTPUT"
               echo "root_commit=" >> "$GITHUB_OUTPUT"
               ;;
@@ -302,7 +302,7 @@ jobs:
 
           # Each selected root must ship ALL manager APK builds. KernelSU-Next publishes
           # its manager APKs (manager + manager-spoofed) from the official dev-tip
-          # build-manager-ci run; classic KernelSU and ReSukiSU expose theirs as
+          # build-manager-ci run; kernelsu (KernelSU) and ReSukiSU expose theirs as
           # CI-run artifacts. All three are pinned to an exact commit.
           resolve_one() { # flavor
             local flavor="$1"
@@ -323,7 +323,8 @@ jobs:
                 printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s","want":"manager,manager-spoofed"}' \
                   "$flavor" "$owner" "$repo" "$run_id" "$stock"
                 ;;
-              classic)
+
+              kernelsu)
                 owner="tiann"; repo="KernelSU"; wf="build-manager.yml"
                 stock=$(git ls-remote https://github.com/tiann/KernelSU.git refs/heads/main | awk '{print $1; exit}')
                 run_id=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
@@ -360,9 +361,9 @@ jobs:
           echo "Root flavor: ${FLAVORS}"
           LIST=""
           case "${FLAVORS}" in
-            All) LIST="$(resolve_one next),$(resolve_one classic),$(resolve_one resukisu)" ;;
+            All) LIST="$(resolve_one next),$(resolve_one kernelsu),$(resolve_one resukisu)" ;;
             KernelSU-Next) LIST="$(resolve_one next)" ;;
-            KernelSU) LIST="$(resolve_one classic)" ;;
+            KernelSU) LIST="$(resolve_one kernelsu)" ;;
             ReSukiSU) LIST="$(resolve_one resukisu)" ;;
             *) echo "Skipping manager resolution (no root flavor / none)." ;;
           esac
@@ -803,7 +804,7 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
         NOMOUNT_SHA: ${{ needs.resolve-sources.outputs.nomount_commit }}
-        CLASSIC_SHA: ${{ needs.resolve-sources.outputs.classic_commit }}
+        KERNELSU_SHA: ${{ needs.resolve-sources.outputs.ksu_commit }}
         RESUKISU_SHA: ${{ needs.resolve-sources.outputs.resukisu_commit }}
         SUSFS_ANDROID12_5_10_SHA: ${{ needs.resolve-sources.outputs.susfs_commit_android12_5_10 }}
         SUSFS_ANDROID13_5_10_SHA: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_10 }}
@@ -813,7 +814,7 @@ jobs:
         SUSFS_ANDROID15_6_6_SHA: ${{ needs.resolve-sources.outputs.susfs_commit_android15_6_6 }}
         SUSFS_ANDROID16_6_12_SHA: ${{ needs.resolve-sources.outputs.susfs_commit_android16_6_12 }}
         APPROVE_NOMOUNT: ${{ inputs.use_nomount }}
-        APPROVE_CLASSIC: ${{ (inputs.root_flavor == 'KernelSU' || inputs.root_flavor == 'All') }}
+        APPROVE_KERNELSU: ${{ (inputs.root_flavor == 'KernelSU' || inputs.root_flavor == 'All') }}
         APPROVE_RESUKISU: ${{ (inputs.root_flavor == 'ReSukiSU' || inputs.root_flavor == 'All') }}
         APPROVE_SUSFS_ANDROID12_5_10: ${{ inputs.use_susfs && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == 'android12-5.10') }}
         APPROVE_SUSFS_ANDROID13_5_10: ${{ inputs.use_susfs && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == 'android13-5.10') }}
