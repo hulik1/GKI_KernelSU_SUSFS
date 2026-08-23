@@ -32,6 +32,14 @@ on:
         description: "Kernel Branding"
         type: string
         default: Wild
+      commit_mode:
+        description: "verified = audited pinned SHAs (pending), latest = branch tips at run time"
+        required: false
+        type: choice
+        options:
+          - latest
+          - verified
+        default: latest
       root_flavor:
         description: "Root Flavor"
         type: choice
@@ -144,6 +152,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          # Commit resolution mode. 'latest' (default) resolves branch tips at
+          # run time via git ls-remote. 'verified' mode is stubbed to the same
+          # behavior until audited pin tables are filled in.
+          COMMIT_MODE="${{ inputs.commit_mode }}"
+          echo "commit_mode=${COMMIT_MODE}"
 
           retry() {
             local n=0
