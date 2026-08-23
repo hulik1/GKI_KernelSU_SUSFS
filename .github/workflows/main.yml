@@ -559,45 +559,11 @@ jobs:
           if-no-files-found: error
           compression-level: 0
 
-  build-fuse-bpf:
-    needs: resolve-sources
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        if: ${{ inputs.use_bpf }}
-
-      - name: Sparse-checkout FUSE-BPF source from kernel/common (android16-6.12-lts)
-        if: ${{ inputs.use_bpf }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          # Only the daemon source + the headers it compiles against are needed,
-          # NOT the full ~16GB kernel tree (which includes ~12GB of prebuilts).
-          git clone --depth 1 --filter=blob:none --sparse \
-            --branch android16-6.12-lts \
-            https://android.googlesource.com/kernel/common \
-            "${{ github.workspace }}/kernel/common"
-          cd "${{ github.workspace }}/kernel/common"
-          git sparse-checkout set \
-            tools/testing/selftests/filesystems/fuse \
-            include \
-            arch/arm64/include \
-            tools/testing/selftests
-
-      - name: Build FUSE-BPF Userspace Daemon (Issue #211)
-        if: ${{ inputs.use_bpf }}
-        uses: ./.github/actions/fuse-bpf
-        with:
-          version: android16-6.12
-          kernel_version: 6.12
-          android_version: android16
-
   build-android12-5-10:
     needs:
     - prepare-ccache
     - resolve-sources
     - build-nomount-module
-    - build-fuse-bpf
     - publish-manager-artifacts
     if: ${{ !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == 'android12-5.10') }}
     strategy:
@@ -625,7 +591,6 @@ jobs:
     - prepare-ccache
     - resolve-sources
     - build-nomount-module
-    - build-fuse-bpf
     - publish-manager-artifacts
     if: ${{ !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == 'android13-5.10') }}
     strategy:
@@ -653,7 +618,6 @@ jobs:
     - prepare-ccache
     - resolve-sources
     - build-nomount-module
-    - build-fuse-bpf
     - publish-manager-artifacts
     if: ${{ !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == 'android13-5.15') }}
     strategy:
@@ -681,7 +645,6 @@ jobs:
     - prepare-ccache
     - resolve-sources
     - build-nomount-module
-    - build-fuse-bpf
     - publish-manager-artifacts
     if: ${{ !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == 'android14-5.15') }}
     strategy:
@@ -709,7 +672,6 @@ jobs:
     - prepare-ccache
     - resolve-sources
     - build-nomount-module
-    - build-fuse-bpf
     - publish-manager-artifacts
     if: ${{ !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == 'android14-6.1') }}
     strategy:
@@ -737,7 +699,6 @@ jobs:
     - prepare-ccache
     - resolve-sources
     - build-nomount-module
-    - build-fuse-bpf
     - publish-manager-artifacts
     if: ${{ !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == 'android15-6.6') }}
     strategy:
@@ -765,7 +726,6 @@ jobs:
     - prepare-ccache
     - resolve-sources
     - build-nomount-module
-    - build-fuse-bpf
     - publish-manager-artifacts
     if: ${{ !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == 'android16-6.12') }}
     strategy:
