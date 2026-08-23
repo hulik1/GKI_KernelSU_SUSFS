@@ -22,13 +22,8 @@ PINS = [
     ("PIN_NOMOUNT", "NOMOUNT_SHA", "APPROVE_NOMOUNT"),
     ("PIN_KERNELSU", "KERNELSU_SHA", "APPROVE_KERNELSU"),
     ("PIN_RESUKISU", "RESUKISU_SHA", "APPROVE_RESUKISU"),
-    ("PIN_SUSFS[susfs_commit_android12_5_10]", "SUSFS_ANDROID12_5_10_SHA", "APPROVE_SUSFS_ANDROID12_5_10"),
-    ("PIN_SUSFS[susfs_commit_android13_5_10]", "SUSFS_ANDROID13_5_10_SHA", "APPROVE_SUSFS_ANDROID13_5_10"),
-    ("PIN_SUSFS[susfs_commit_android13_5_15]", "SUSFS_ANDROID13_5_15_SHA", "APPROVE_SUSFS_ANDROID13_5_15"),
-    ("PIN_SUSFS[susfs_commit_android14_5_15]", "SUSFS_ANDROID14_5_15_SHA", "APPROVE_SUSFS_ANDROID14_5_15"),
-    ("PIN_SUSFS[susfs_commit_android14_6_1]", "SUSFS_ANDROID14_6_1_SHA", "APPROVE_SUSFS_ANDROID14_6_1"),
-    ("PIN_SUSFS[susfs_commit_android15_6_6]", "SUSFS_ANDROID15_6_6_SHA", "APPROVE_SUSFS_ANDROID15_6_6"),
-    ("PIN_SUSFS[susfs_commit_android16_6_12]", "SUSFS_ANDROID16_6_12_SHA", "APPROVE_SUSFS_ANDROID16_6_12"),
+    # SUSFS is intentionally excluded: it is always resolved at latest so it
+    # stays API-matched to the always-latest KernelSU-Next tree.
 ]
 
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -44,14 +39,8 @@ def read_pins():
         text = fh.read()
     pins = {}
     for var, _, _ in PINS:
-        if var.startswith("PIN_SUSFS["):
-            key = var[len("PIN_SUSFS["):-1]
-            # match:  [susfs_commit_android12_5_10]="<sha>"
-            m = re.search(r"\[%s\]=\"([0-9a-f]{40})\"" % re.escape(key), text)
-            pins[key] = m.group(1) if m else None
-        else:
-            m = re.search(r"%s=\"([0-9a-f]{40})\"" % re.escape(var), text)
-            pins[var] = m.group(1) if m else None
+        m = re.search(r"%s=\"([0-9a-f]{40})\"" % re.escape(var), text)
+        pins[var] = m.group(1) if m else None
     return pins
 
 
@@ -66,13 +55,12 @@ def build_changes():
         if not approved(approve_env):
             print(f"  skip {var}: not approved to promote (disabled or a build failed)", file=sys.stderr)
             continue
-        key = var[len("PIN_SUSFS["):-1] if var.startswith("PIN_SUSFS[") else var
-        old_sha = read_pins().get(key)
+        old_sha = read_pins().get(var)
         if old_sha == new_sha:
-            print(f"  unchanged {key} ({new_sha[:8]})")
+            print(f"  unchanged {var} ({new_sha[:8]})")
             continue
-        promoted[key] = new_sha
-        changes.append((key, old_sha, new_sha))
+        promoted[var] = new_sha
+        changes.append((var, old_sha, new_sha))
     return changes, promoted
 
 
@@ -98,10 +86,8 @@ def apply_pins(promoted):
     with open(MAIN, "r", encoding="utf-8") as fh:
         text = fh.read()
     for key, sha in promoted.items():
-        pattern = re.compile(r"\[%s\]=\"([0-9a-f]{40})\"" % re.escape(key) if not key.startswith("PIN_")
-                            else r"%s=\"([0-9a-f]{40})\"" % re.escape(key))
-        text, n = pattern.subn(lambda m: (f"[{key}]=\"{sha}\"" if not key.startswith("PIN_")
-                                          else f"{key}=\"{sha}\""), text, count=1)
+        pattern = re.compile(r"%s=\"([0-9a-f]{40})\"" % re.escape(key))
+        text, n = pattern.subn(lambda m: f"{key}=\"{sha}\"", text, count=1)
         if n == 0:
             print(f"  ERROR: could not locate pin for {key}", file=sys.stderr)
             return False
