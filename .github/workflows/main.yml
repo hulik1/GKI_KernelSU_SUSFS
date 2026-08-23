@@ -523,7 +523,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: NoMount-Metamodule
-          path: ${{ steps.buildmod.outputs.module_path }}
+          path: ${{ steps.buildmod.outputs.module_dir }}
           if-no-files-found: error
           compression-level: 0
 
@@ -1141,6 +1141,19 @@ jobs:
         shopt -s nullglob
 
         for dir in release-assets/*-AnyKernel3; do
+          zip_name="${dir}.zip"
+          rm -f "$zip_name"
+          cd "$dir"
+          zip -r -q -9 "../$(basename "$zip_name")" .
+          cd - >/dev/null
+        done
+
+    - name: Zip NoMount Metamodule for Release
+      run: |
+        set -e
+        shopt -s nullglob
+
+        for dir in release-assets/*NoMount-Metamodule; do
           zip_name="${dir}.zip"
           rm -f "$zip_name"
           cd "$dir"
