@@ -71,6 +71,9 @@ runs:
           'typedef signed short         int16_t;' \
           'typedef signed int           int32_t;' \
           'typedef signed long long     int64_t;' \
+          'typedef __SIZE_TYPE__        size_t;' \
+          'typedef __PTRDIFF_TYPE__     ptrdiff_t;' \
+          'typedef __SSIZE_TYPE__       ssize_t;' \
           '#endif' > "$GEN_DIR/usr/include/types_override.h"
         for d in asm-generic linux mtd rdma sound video; do
           if [ -d "$KSRC/include/uapi/$d" ]; then
