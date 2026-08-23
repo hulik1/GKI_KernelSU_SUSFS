@@ -46,6 +46,17 @@ runs:
         # UAPI int-ll64 typedefs (uint8_t..uint64_t) actually resolve.
         printf '%s\n' '#define __BITS_PER_LONG 64' > "$GEN_DIR/usr/include/asm/bitsperlong.h"
         printf '%s\n' '#include <asm-generic/int-ll64.h>' > "$GEN_DIR/usr/include/asm/int-ll64.h"
+        # kbuild generates every generic-y arch header as:
+        #   asm/<name>.h  ->  #include <asm-generic/<name>.h>
+        # Provide them all up front so UAPI headers (linux/errno.h etc.) resolve
+        # without needing a full kernel configure.
+        for name in errno byteorder socket siginfo unistd ioctls \
+                    termbits termios fcntl param resource stat statfs \
+                    signal types posix_types auxvec bitsperlong \
+                    section-core; do
+          printf '%s\n' "#include <asm-generic/${name}.h>" \
+            > "$GEN_DIR/usr/include/asm/${name}.h"
+        done
         # Provide uintNN_t/intNN_t without pulling in glibc stdint.h (absent in
         # bare -target bpf). Define from the __uNN/__sNN primitives the kernel
         # UAPI headers already provide.
