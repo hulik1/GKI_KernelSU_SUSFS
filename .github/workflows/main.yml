@@ -147,6 +147,13 @@ jobs:
       susfs_commit_android14_6_1: ${{ steps.resolve.outputs.susfs_commit_android14_6_1 }}
       susfs_commit_android15_6_6: ${{ steps.resolve.outputs.susfs_commit_android15_6_6 }}
       susfs_commit_android16_6_12: ${{ steps.resolve.outputs.susfs_commit_android16_6_12 }}
+      susfs_commit_android12_5_10_resukisu: ${{ steps.resolve.outputs.susfs_commit_android12_5_10_resukisu }}
+      susfs_commit_android13_5_10_resukisu: ${{ steps.resolve.outputs.susfs_commit_android13_5_10_resukisu }}
+      susfs_commit_android13_5_15_resukisu: ${{ steps.resolve.outputs.susfs_commit_android13_5_15_resukisu }}
+      susfs_commit_android14_5_15_resukisu: ${{ steps.resolve.outputs.susfs_commit_android14_5_15_resukisu }}
+      susfs_commit_android14_6_1_resukisu: ${{ steps.resolve.outputs.susfs_commit_android14_6_1_resukisu }}
+      susfs_commit_android15_6_6_resukisu: ${{ steps.resolve.outputs.susfs_commit_android15_6_6_resukisu }}
+      susfs_commit_android16_6_12_resukisu: ${{ steps.resolve.outputs.susfs_commit_android16_6_12_resukisu }}
       ksu_commit: ${{ steps.resolve.outputs.ksu_commit }}
       resukisu_commit: ${{ steps.resolve.outputs.resukisu_commit }}
       kernel_patches_commit: ${{ steps.resolve.outputs.kernel_patches_commit }}
@@ -192,9 +199,20 @@ jobs:
 
           # Audited pins (from root-variants.yml). Used only when commit_mode=verified.
           PIN_NOMOUNT="c52936b229c25a4b0e41b6627f7d3bc5eaaaf2b5"
-          PIN_KERNELSU="da9abf498a77d438989fea0f5f4e348b9a540c07"
+          PIN_KERNELSU="4a92049e44cb4ad3ec50c889e3259bfa5d685b01"
           PIN_RESUKISU="3ef06b0fcb0960dc9563256fe26a58e892663387"
           declare -A PIN_SUSFS=(
+            [susfs_commit_android12_5_10]="44d9fed948b6d21c25ace142081418690f568dd3"
+            [susfs_commit_android13_5_10]="83ffa9f7a9039e233af3d47aeeb838278b23ef8c"
+            [susfs_commit_android13_5_15]="9623bd64ccb195dc538af70133ad3374f30de795"
+            [susfs_commit_android14_5_15]="fcfdf108e3003fe97a95bf6ed238eb13a93b4aba"
+            [susfs_commit_android14_6_1]="891af66c15e70b25b2254b9fb0f4e89ff5b9e019"
+            [susfs_commit_android15_6_6]="7767a4614146d44f7a81a18b6e687dd8316fc959"
+            [susfs_commit_android16_6_12]="78a1f10a21df7271329fe5a733a3cb43c9c6c230"
+          )
+          # ReSukiSU keeps its own SUSFS pin set (currently the shared values,
+          # including 6.1 = 0ff93279). KernelSU's set above already diverges on 6.1.
+          declare -A PIN_SUSFS_RESUKISU=(
             [susfs_commit_android12_5_10]="44d9fed948b6d21c25ace142081418690f568dd3"
             [susfs_commit_android13_5_10]="83ffa9f7a9039e233af3d47aeeb838278b23ef8c"
             [susfs_commit_android13_5_15]="9623bd64ccb195dc538af70133ad3374f30de795"
@@ -245,17 +263,17 @@ jobs:
 
           case "${{ inputs.root_flavor }}" in
             KernelSU)
-              emit root_flavor "kernelsu"
+              echo "root_flavor=kernelsu" >> "$GITHUB_OUTPUT"
               emit root_commit "$KERNELSU_COMMIT"
               ROOT_MATRIX="[$(mk_entry kernelsu KernelSU "$KERNELSU_COMMIT")]"
               ;;
             KernelSU-Next)
-              emit root_flavor "next"
+              echo "root_flavor=next" >> "$GITHUB_OUTPUT"
               emit root_commit "$NEXT_COMMIT"
               ROOT_MATRIX="[$(mk_entry next KernelSU-Next "$NEXT_COMMIT")]"
               ;;
             ReSukiSU)
-              emit root_flavor "resukisu"
+              echo "root_flavor=resukisu" >> "$GITHUB_OUTPUT"
               emit root_commit "$RESUKISU_COMMIT"
               ROOT_MATRIX="[$(mk_entry resukisu ReSukiSU "$RESUKISU_COMMIT")]"
               ;;
@@ -286,6 +304,8 @@ jobs:
           )
           for key in "${!SUSFS_BRANCHES[@]}"; do
             emit "$key" "$(pick "${PIN_SUSFS[$key]}" https://gitlab.com/simonpunk/susfs4ksu.git refs/heads/${SUSFS_BRANCHES[$key]})"
+            # Per-flavor ReSukiSU SUSFS pin (same branch, own pin set).
+            emit "${key}_resukisu" "$(pick "${PIN_SUSFS_RESUKISU[$key]}" https://gitlab.com/simonpunk/susfs4ksu.git refs/heads/${SUSFS_BRANCHES[$key]})"
           done
 
           # Tracked build helpers (resolved automatically, before the run)
@@ -583,7 +603,7 @@ jobs:
     with:
       config_file: .github/config/android12-5.10.json
       feature_set: ${{ needs.resolve-sources.outputs.feature_set }}
-      susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android12_5_10 }}
+      susfs_commit: ${{ matrix.root.root_flavor == 'resukisu' && needs.resolve-sources.outputs.susfs_commit_android12_5_10_resukisu || needs.resolve-sources.outputs.susfs_commit_android12_5_10 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
       root_flavor: ${{ matrix.root.root_flavor }}
@@ -611,7 +631,7 @@ jobs:
     with:
       config_file: .github/config/android13-5.10.json
       feature_set: ${{ needs.resolve-sources.outputs.feature_set }}
-      susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_10 }}
+      susfs_commit: ${{ matrix.root.root_flavor == 'resukisu' && needs.resolve-sources.outputs.susfs_commit_android13_5_10_resukisu || needs.resolve-sources.outputs.susfs_commit_android13_5_10 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
       root_flavor: ${{ matrix.root.root_flavor }}
@@ -639,7 +659,7 @@ jobs:
     with:
       config_file: .github/config/android13-5.15.json
       feature_set: ${{ needs.resolve-sources.outputs.feature_set }}
-      susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_15 }}
+      susfs_commit: ${{ matrix.root.root_flavor == 'resukisu' && needs.resolve-sources.outputs.susfs_commit_android13_5_15_resukisu || needs.resolve-sources.outputs.susfs_commit_android13_5_15 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
       root_flavor: ${{ matrix.root.root_flavor }}
@@ -667,7 +687,7 @@ jobs:
     with:
       config_file: .github/config/android14-5.15.json
       feature_set: ${{ needs.resolve-sources.outputs.feature_set }}
-      susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android14_5_15 }}
+      susfs_commit: ${{ matrix.root.root_flavor == 'resukisu' && needs.resolve-sources.outputs.susfs_commit_android14_5_15_resukisu || needs.resolve-sources.outputs.susfs_commit_android14_5_15 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
       root_flavor: ${{ matrix.root.root_flavor }}
@@ -695,7 +715,7 @@ jobs:
     with:
       config_file: .github/config/android14-6.1.json
       feature_set: ${{ needs.resolve-sources.outputs.feature_set }}
-      susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android14_6_1 }}
+      susfs_commit: ${{ matrix.root.root_flavor == 'resukisu' && needs.resolve-sources.outputs.susfs_commit_android14_6_1_resukisu || needs.resolve-sources.outputs.susfs_commit_android14_6_1 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
       root_flavor: ${{ matrix.root.root_flavor }}
@@ -723,7 +743,7 @@ jobs:
     with:
       config_file: .github/config/android15-6.6.json
       feature_set: ${{ needs.resolve-sources.outputs.feature_set }}
-      susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android15_6_6 }}
+      susfs_commit: ${{ matrix.root.root_flavor == 'resukisu' && needs.resolve-sources.outputs.susfs_commit_android15_6_6_resukisu || needs.resolve-sources.outputs.susfs_commit_android15_6_6 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
       root_flavor: ${{ matrix.root.root_flavor }}
@@ -751,7 +771,7 @@ jobs:
     with:
       config_file: .github/config/android16-6.12.json
       feature_set: ${{ needs.resolve-sources.outputs.feature_set }}
-      susfs_commit: ${{ needs.resolve-sources.outputs.susfs_commit_android16_6_12 }}
+      susfs_commit: ${{ matrix.root.root_flavor == 'resukisu' && needs.resolve-sources.outputs.susfs_commit_android16_6_12_resukisu || needs.resolve-sources.outputs.susfs_commit_android16_6_12 }}
       nomount_commit: ${{ needs.resolve-sources.outputs.nomount_commit }}
       kernel_patches_commit: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
       root_flavor: ${{ matrix.root.root_flavor }}
