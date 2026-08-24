@@ -54,8 +54,8 @@ jobs:
           # GKI target; build.yml overrides SUSFS to latest ONLY for the next
           # (KernelSU-Next) variant, keeping kernelsu/resukisu stuck on the pin.
           nomount_commit="26417ca5fb4021c4fd0c886e6ee8662d3f7b117a"
-          ksu_commit="da9abf498a77d438989fea0f5f4e348b9a540c07"
-          resukisu_commit="3ef06b0fcb0960dc9563256fe26a58e892663387"
+          ksu_commit="abc3fdcf5b6ec9e0add131e600d55853a0fffbf2"
+          resukisu_commit="b2ac2fc8703ce9f5226e2a38a59f8b72f8a3005c"
           case "${{ inputs.kernel_build_version }}" in
             android12-5.10) susfs_commit="44d9fed948b6d21c25ace142081418690f568dd3" ;;
             android13-5.10) susfs_commit="83ffa9f7a9039e233af3d47aeeb838278b23ef8c" ;;
