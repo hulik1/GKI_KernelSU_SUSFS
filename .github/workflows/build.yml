@@ -603,33 +603,38 @@ jobs:
 
         resolve_artifact() {
           local artifact_name="$1"
-          local all_artifacts="[]"
           local page=1
-          local has_more=true
+          local match=""
+          local page_file
+          page_file="$(mktemp)"
 
-          while [ "$has_more" = "true" ]; do
-            page_content="$(curl --fail --silent --show-error --location \
+          # Page through the artifacts API, checking each page for the exact
+          # artifact name. Uses a temp file for jq input (not argv) so large
+          # artifact lists can't exceed the OS argument-length limit.
+          while :; do
+            curl --fail --silent --show-error --location \
               --header "Authorization: Bearer ${GH_TOKEN}" \
               --header "X-GitHub-Api-Version: 2022-11-28" \
-              "${artifacts_api}&page=${page}")"
-            all_artifacts="$(jq -cn --argjson acc "$all_artifacts" --argjson cur "$page_content" \
-              '$acc + $cur.artifacts')"
-            items="$(jq '(.artifacts | length) // 0' <<<"$page_content")"
-            if [ "$items" -lt 100 ]; then
-              has_more=false
+              "${artifacts_api}&page=${page}" -o "$page_file"
+
+            match="$(jq -r --arg name "$artifact_name" \
+              '[.artifacts[] | select(.name == $name and .expired == false)] | .[0]
+               | if . == null then "" else (.archive_download_url + "\t" + .digest) end' \
+              "$page_file")"
+
+            items="$(jq '(.artifacts | length) // 0' "$page_file")"
+            if [ "$items" -lt 100 ] || [ -n "$match" ]; then
+              break
             fi
             page=$((page + 1))
           done
 
-          local matches
-          matches="$(jq --arg name "$artifact_name" \
-            '[.artifacts[] | select(.name == $name and .expired == false)]' \
-            <<<"{\"artifacts\": $all_artifacts}")"
-          if [ "$(jq 'length' <<<"$matches")" -ne 1 ]; then
+          rm -f "$page_file"
+          if [ -z "$match" ]; then
             echo "Expected exactly one available artifact named ${artifact_name}." >&2
             exit 1
           fi
-          jq -r '.[0] | [.archive_download_url, .digest] | @tsv' <<<"$matches"
+          printf '%s\n' "$match"
         }
 
         read -r kernel_artifact_url kernel_artifact_sha256 < <(
