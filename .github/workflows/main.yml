@@ -417,18 +417,6 @@ jobs:
           [ "$(git -C sources/nomount rev-parse HEAD)" = "${{ steps.resolve.outputs.nomount_commit }}" ] || \
             { echo "NoMount clone HEAD mismatch" >&2; exit 1; }
 
-          echo "sources_dir=$PWD/sources" >> "$GITHUB_ENV"
-
-      - name: Upload sources artifact
-        if: ${{ inputs.use_nomount }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: sources
-          path: sources
-          retention-days: 1
-          if-no-files-found: error
-          compression-level: 9
-
   list-manager-apks:
     needs: resolve-sources
     if: ${{ needs.resolve-sources.outputs.manager_list != '' }}
