@@ -63,7 +63,7 @@ jobs:
             android14-5.15) susfs_commit="0463ac089308014e8c22cc6a4558e0d6d2a53e08" ;;
             android14-6.1) susfs_commit="e287d59066380bf6de4396532d4a42edf4408701" ;;
             android15-6.6) susfs_commit="7767a4614146d44f7a81a18b6e687dd8316fc959" ;;
-            android16-6.12) susfs_commit="f37930f374ef88de990d6abea0c67d0ea28c1edc" ;;
+            android16-6.12) susfs_commit="78a1f10a21df7271329fe5a733a3cb43c9c6c230" ;;
             *) echo "Unsupported GKI target." >&2; exit 2 ;;
           esac
           next_commit="$(git ls-remote https://github.com/KernelSU-Next/KernelSU-Next.git refs/heads/dev | cut -f1)"
