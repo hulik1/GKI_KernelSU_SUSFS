@@ -54,7 +54,7 @@ on:
           - KernelSU
           - ReSukiSU
           - All
-        default: KernelSU-Next
+        default: All
       use_susfs:
         description: "SUSFS"
         type: boolean
