@@ -45,7 +45,7 @@ on:
           - latest
           - verified
           - update
-        default: latest
+        default: verified
       root_flavor:
         description: "Root Flavor"
         type: choice
