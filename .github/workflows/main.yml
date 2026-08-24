@@ -1121,6 +1121,18 @@ jobs:
         echo "MANAGER_RUN_ID=$MANAGER_RUN_ID" >> $GITHUB_ENV
 
     - name: Set release body
+      env:
+        ROOT_FLAVOR: ${{ inputs.root_flavor }}
+        FEATURE_SET: ${{ needs.resolve-sources.outputs.feature_set }}
+        MANAGER_LIST: ${{ needs.resolve-sources.outputs.manager_list }}
+        USE_SUSFS: ${{ inputs.use_susfs }}
+        USE_BBG: ${{ inputs.use_bbg }}
+        USE_DS: ${{ inputs.use_ds }}
+        USE_NET: ${{ inputs.use_net }}
+        USE_NTSYNC: ${{ inputs.use_ntsync }}
+        USE_PTRACE: ${{ inputs.use_ptrace }}
+        USE_UNICODE: ${{ inputs.use_unicode }}
+        USE_BPF: ${{ inputs.use_bpf }}
       run: |
         set -e
 
@@ -1136,6 +1148,14 @@ jobs:
           echo
           cat release_body.md
         } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Upload release notes artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: release-notes
+        path: release_body.md
+        retention-days: 7
+        if-no-files-found: error
 
     - name: Download Manager APK zips
       uses: actions/download-artifact@v7
@@ -1197,3 +1217,40 @@ jobs:
         files: |
           release-assets/**/*.zip
           release-assets/**/*-boot*.img
+
+  notes-preview:
+    if: always() && github.event_name == 'workflow_dispatch'
+    needs: [resolve-sources, build-android12-5-10, build-android13-5-10, build-android13-5-15, build-android14-5-15, build-android14-6-1, build-android15-6-6, build-android16-6-12, release]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Render release notes preview (always)
+        env:
+          ROOT_FLAVOR: ${{ inputs.root_flavor }}
+          FEATURE_SET: ${{ needs.resolve-sources.outputs.feature_set }}
+          MANAGER_LIST: ${{ needs.resolve-sources.outputs.manager_list }}
+          USE_SUSFS: ${{ inputs.use_susfs }}
+          USE_BBG: ${{ inputs.use_bbg }}
+          USE_DS: ${{ inputs.use_ds }}
+          USE_NET: ${{ inputs.use_net }}
+          USE_NTSYNC: ${{ inputs.use_ntsync }}
+          USE_PTRACE: ${{ inputs.use_ptrace }}
+          USE_UNICODE: ${{ inputs.use_unicode }}
+          USE_BPF: ${{ inputs.use_bpf }}
+          # KSU version not computed here; render will show placeholder if release job skipped
+        run: |
+          set -e
+          python3 .github/scripts/render_release_body.py .github/config/RELEASE_NOTES.md > release_body.md
+          {
+            echo "## Release Notes Preview (CI Summary)"
+            echo
+            cat release_body.md
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload release notes preview artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-notes-preview
+          path: release_body.md
+          retention-days: 7
+          if-no-files-found: warn
+
