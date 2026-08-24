@@ -57,11 +57,11 @@ jobs:
           ksu_commit="da9abf498a77d438989fea0f5f4e348b9a540c07"
           resukisu_commit="3ef06b0fcb0960dc9563256fe26a58e892663387"
           case "${{ inputs.kernel_build_version }}" in
-            android12-5.10) susfs_commit="3c14ad549f826b1f53878ec8c12253efebeed75a" ;;
-            android13-5.10) susfs_commit="f81aaf10e9560282052bb61dd931315c2ca3e617" ;;
-            android13-5.15) susfs_commit="ccb1918684b27644d17a6c842f57b60ae5966025" ;;
-            android14-5.15) susfs_commit="0463ac089308014e8c22cc6a4558e0d6d2a53e08" ;;
-            android14-6.1) susfs_commit="e287d59066380bf6de4396532d4a42edf4408701" ;;
+            android12-5.10) susfs_commit="44d9fed948b6d21c25ace142081418690f568dd3" ;;
+            android13-5.10) susfs_commit="83ffa9f7a9039e233af3d47aeeb838278b23ef8c" ;;
+            android13-5.15) susfs_commit="9623bd64ccb195dc538af70133ad3374f30de795" ;;
+            android14-5.15) susfs_commit="fcfdf108e3003fe97a95bf6ed238eb13a93b4aba" ;;
+            android14-6.1) susfs_commit="0ff932799d898366d57b3b5984d85cdbcfcfad0a" ;;
             android15-6.6) susfs_commit="7767a4614146d44f7a81a18b6e687dd8316fc959" ;;
             android16-6.12) susfs_commit="78a1f10a21df7271329fe5a733a3cb43c9c6c230" ;;
             *) echo "Unsupported GKI target." >&2; exit 2 ;;

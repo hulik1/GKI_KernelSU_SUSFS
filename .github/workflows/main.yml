@@ -195,11 +195,11 @@ jobs:
           PIN_KERNELSU="da9abf498a77d438989fea0f5f4e348b9a540c07"
           PIN_RESUKISU="3ef06b0fcb0960dc9563256fe26a58e892663387"
           declare -A PIN_SUSFS=(
-            [susfs_commit_android12_5_10]="3c14ad549f826b1f53878ec8c12253efebeed75a"
-            [susfs_commit_android13_5_10]="f81aaf10e9560282052bb61dd931315c2ca3e617"
-            [susfs_commit_android13_5_15]="ccb1918684b27644d17a6c842f57b60ae5966025"
-            [susfs_commit_android14_5_15]="0463ac089308014e8c22cc6a4558e0d6d2a53e08"
-            [susfs_commit_android14_6_1]="e287d59066380bf6de4396532d4a42edf4408701"
+            [susfs_commit_android12_5_10]="44d9fed948b6d21c25ace142081418690f568dd3"
+            [susfs_commit_android13_5_10]="83ffa9f7a9039e233af3d47aeeb838278b23ef8c"
+            [susfs_commit_android13_5_15]="9623bd64ccb195dc538af70133ad3374f30de795"
+            [susfs_commit_android14_5_15]="fcfdf108e3003fe97a95bf6ed238eb13a93b4aba"
+            [susfs_commit_android14_6_1]="0ff932799d898366d57b3b5984d85cdbcfcfad0a"
             [susfs_commit_android15_6_6]="7767a4614146d44f7a81a18b6e687dd8316fc959"
             [susfs_commit_android16_6_12]="78a1f10a21df7271329fe5a733a3cb43c9c6c230"
           )
