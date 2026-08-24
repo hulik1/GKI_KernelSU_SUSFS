@@ -36,13 +36,14 @@ releases, or claim device compatibility.
 
 ## Build-verified only artifact metadata
 
-Successful builds upload a `<target>-Metadata` artifact containing
-machine-readable JSON. Its `status` is **`Build-verified only`** only after the
-corresponding AnyKernel3 and NoMount metamodule artifacts are uploaded and their
-GitHub Actions API URLs and GitHub-issued `sha256` digests are recorded. Each
-record also includes the build method, root implementation/manager/version and
-commit, SUSFS and NoMount revisions, Android branch/KMI, kernel source commit,
-and provenance run URL.
+Successful builds upload a single `<target>-BuildInfo` artifact combining a
+human-readable summary table with an embedded machine-readable JSON block. The
+JSON `status` is **`Build-verified only`** only after the corresponding
+AnyKernel3 and NoMount metamodule artifacts are uploaded and their GitHub
+Actions API URLs and GitHub-issued `sha256` digests are recorded. Each record
+also includes the build method, root implementation/manager/version and commit,
+SUSFS and NoMount revisions, Android branch/KMI, kernel source commit, and
+provenance run URL.
 
 NoMount integration invokes the upstream `kernel/setup.sh` by its full immutable
 commit URL and passes that same SHA as the script argument. Each kernel artifact

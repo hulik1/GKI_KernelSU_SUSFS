@@ -572,15 +572,6 @@ jobs:
           fi
         } > "$SUMMARY_FILE"
 
-    - name: Upload Build Summary Artifact
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v7
-      with:
-        name: ${{ env.SUMMARY_BASE }}-Summary
-        path: /tmp/build-summary-${{ env.SUMMARY_BASE }}.md
-        if-no-files-found: ignore
-        compression-level: 9
-
     - name: Upload Artifacts
       id: kernel-artifact
       uses: actions/upload-artifact@v7
@@ -598,7 +589,8 @@ jobs:
       run: |
         set -euo pipefail
 
-        metadata_file="${{ github.workspace }}/${{ steps.extract.outputs.file_name }}-metadata.json"
+        metadata_file="/tmp/${SUMMARY_BASE}-metadata.json"
+        summary_file="/tmp/build-summary-${SUMMARY_BASE}.md"
         artifacts_api="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100"
 
         resolve_artifact() {
@@ -714,11 +706,22 @@ jobs:
           .catalog.boot == "not-guaranteed"
         ' "$metadata_file" > /dev/null
 
-    - name: Upload Build-verified only artifact metadata
-      if: ${{ success() && inputs.root_flavor != '' && inputs.nomount_commit != '' }}
+        # Merge the verified metadata into the combined summary markdown so both
+        # live in a single artifact: human-readable table + machine JSON block.
+        {
+          echo
+          echo "## Verified Metadata"
+          echo
+          echo '```json'
+          cat "$metadata_file"
+          echo '```'
+          echo
+        } >> "$summary_file"
+
+    - name: Upload Build Summary + Metadata
       uses: actions/upload-artifact@v7
       with:
-        name: ${{ steps.extract.outputs.file_name }}-Metadata
-        path: ${{ github.workspace }}/${{ steps.extract.outputs.file_name }}-metadata.json
-        if-no-files-found: error
+        name: ${{ steps.extract.outputs.file_name }}-BuildInfo
+        path: /tmp/build-summary-${{ env.SUMMARY_BASE }}.md
+        if-no-files-found: warn
         compression-level: 9
