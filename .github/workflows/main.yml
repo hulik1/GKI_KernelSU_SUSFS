@@ -200,7 +200,7 @@ jobs:
             [susfs_commit_android13_5_15]="ccb1918684b27644d17a6c842f57b60ae5966025"
             [susfs_commit_android14_5_15]="0463ac089308014e8c22cc6a4558e0d6d2a53e08"
             [susfs_commit_android14_6_1]="e287d59066380bf6de4396532d4a42edf4408701"
-            [susfs_commit_android15_6_6]="be7b7ef49a1e1b189c3abf00eacaa7ebdb4168c1"
+            [susfs_commit_android15_6_6]="7767a4614146d44f7a81a18b6e687dd8316fc959"
             [susfs_commit_android16_6_12]="f37930f374ef88de990d6abea0c67d0ea28c1edc"
           )
 
