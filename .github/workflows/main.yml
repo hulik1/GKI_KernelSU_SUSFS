@@ -512,7 +512,7 @@ jobs:
           echo "Found $(wc -l < "$MANIFEST") manager APKs"
           ls -1 "$OUT_APKS"
       - name: Upload all manager APKs as one cross-blob
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: manager-apks
           path: manager_apks/
@@ -537,7 +537,7 @@ jobs:
           merge-multiple: true
 
       - name: Upload ${{ matrix.item.apk }} as its own artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: manager-apk-${{ matrix.item.apk }}
           path: manager_apks/${{ matrix.item.apk }}
