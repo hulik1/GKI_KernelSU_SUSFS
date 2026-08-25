@@ -241,6 +241,18 @@ jobs:
             else
               echo "[INFO] $f already patched"
             fi
+            # Next (and tiann without 10_enable fallback) declares the 3 helpers as
+            # static on 6.6, but kernel hooks.c/selinuxfs.c reference them as extern
+            # after SUSFS (ReSukiSU uses __maybe_static -> global). Strip static so
+            # the linker can resolve security_context_to_sid_with_policy etc.
+            if grep -q "^static int security_context_to_sid_with_policy" "$f"; then
+              echo "[INFO] Stripping static from $f helpers (Next 6.6)"
+              sed -i 's/^static int security_context_to_sid_with_policy/int security_context_to_sid_with_policy/g' "$f"
+              sed -i 's/^static int security_sid_to_context_with_policy/int security_sid_to_context_with_policy/g' "$f"
+              sed -i 's/^static void security_compute_av_user_with_policy/void security_compute_av_user_with_policy/g' "$f"
+              # also forward decls (same prefix, same sed covers them)
+              echo "[OK] Stripped static from $f"
+            fi
           done
         else
           echo "[SKIP] KVER $KVER < 6.6"
