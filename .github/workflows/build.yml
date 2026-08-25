@@ -125,6 +125,12 @@ jobs:
         kernel_version: ${{ inputs.kernel_version }}
         os_patch_level: ${{ inputs.os_patch_level }}
 
+    - name: Capture source ABI/KMI safeguards
+      if: ${{ inputs.preserve_abi }}
+      uses: ./.github/actions/abi-kmi-safeguards
+      with:
+        mode: capture
+
     - name: Set Build Timestamp from Kernel Commit
       shell: bash
       run: |
@@ -170,12 +176,6 @@ jobs:
         kernel_version: ${{ inputs.kernel_version }}
         sublevel: ${{ steps.extract.outputs.sublevel }}
         os_patch_level: ${{ inputs.os_patch_level }}
-
-    - name: Capture source ABI/KMI safeguards
-      if: ${{ inputs.preserve_abi }}
-      uses: ./.github/actions/abi-kmi-safeguards
-      with:
-        mode: capture
 
     - name: Setup Selected Root Implementation
       if: ${{ inputs.root_flavor != '' }}
