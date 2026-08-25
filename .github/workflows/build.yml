@@ -191,12 +191,6 @@ jobs:
         config_list: |
           CONFIG_KSU_SUSFS=n
 
-    - name: Verify root ABI/KMI safeguards
-      if: ${{ inputs.preserve_abi }}
-      uses: ./.github/actions/abi-kmi-safeguards
-      with:
-        mode: verify
-
     - name: Resolve SUSFS commit
       id: susfs-cm
       shell: bash
@@ -292,12 +286,6 @@ jobs:
         version: ${{ inputs.version }}
         kernel_version: ${{ inputs.kernel_version }}
 
-    - name: Capture approved feature ABI/KMI baseline
-      if: ${{ inputs.preserve_abi }}
-      uses: ./.github/actions/abi-kmi-safeguards
-      with:
-        mode: capture
-
     - name: Integrate NoMount
       if: ${{ inputs.nomount_commit != '' || contains(inputs.feature_set, 'NoMount') || inputs.feature_set == 'All' }}
       uses: ./.github/actions/nomount
@@ -339,7 +327,7 @@ jobs:
       if: ${{ !inputs.preserve_abi }}
       uses: ./.github/actions/remove-protected-exports
 
-    - name: Verify NoMount ABI/KMI safeguards
+    - name: Verify final ABI/KMI safeguards (pristine vs post-patch, before build)
       if: ${{ inputs.preserve_abi }}
       uses: ./.github/actions/abi-kmi-safeguards
       with:
