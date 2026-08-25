@@ -313,6 +313,9 @@ jobs:
         sublevel: ${{ steps.extract.outputs.sublevel }}
         brand_name: ${{ inputs.brand_name }}
 
+    - name: Remove Protected Exports
+      uses: ./.github/actions/remove-protected-exports
+
     - name: Clean Kernel Flags
       uses: ./.github/actions/clean-kernel-flags
 
