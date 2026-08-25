@@ -220,11 +220,24 @@ jobs:
         if [ "$(printf '%s\n' "6.6" "$KVER" | sort -V | head -n1)" = "6.6" ]; then
           echo "[INFO] KVER $KVER >= 6.6, patching selinux_hide.c (all flavors/branches)"
           for f in $(find "${{ github.workspace }}" -name selinux_hide.c 2>/dev/null); do
-            if grep -q "if (security_dump_masked_av_fn)" "$f"; then
-              echo "[INFO] Patching $f"
+            # After SUSFS 10_enable (kernelsu only) the declaration becomes
+            #   extern void security_dump_masked_av_fn(...)   (a function)
+            #   if (func) / if (func != NULL) both trigger -Werror:
+            #     -Wpointer-bool-conversion  vs  -Wtautological-pointer-compare
+            # For the function form,  &func != NULL  silences both (clang note).
+            # For the pointer form (resukisu/next, no 10_enable) we want ptr != NULL.
+            if grep -q "extern void security_dump_masked_av_fn" "$f"; then
+              echo "[INFO] $f is extern-function form (10_enable applied), patching with &"
+              sed -i 's/if (security_dump_masked_av_fn)/if (\&security_dump_masked_av_fn)/g' "$f"
+              sed -i 's/if (security_dump_masked_av_fn != NULL)/if (\&security_dump_masked_av_fn != NULL)/g' "$f"
+              sed -i 's/if (context_struct_compute_av_fn)/if (\&context_struct_compute_av_fn)/g' "$f"
+              sed -i 's/if (context_struct_compute_av_fn != NULL)/if (\&context_struct_compute_av_fn != NULL)/g' "$f"
+              echo "[OK] Patched $f (function form)"
+            elif grep -q "if (security_dump_masked_av_fn" "$f"; then
+              echo "[INFO] $f is pointer form, patching with != NULL"
               sed -i 's/if (security_dump_masked_av_fn)/if (security_dump_masked_av_fn != NULL)/g' "$f"
               sed -i 's/if (context_struct_compute_av_fn)/if (context_struct_compute_av_fn != NULL)/g' "$f"
-              echo "[OK] Patched $f"
+              echo "[OK] Patched $f (pointer form)"
             else
               echo "[INFO] $f already patched"
             fi
