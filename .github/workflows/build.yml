@@ -174,6 +174,27 @@ jobs:
         flavor: ${{ inputs.root_flavor }}
         commit: ${{ inputs.root_commit }}
 
+    - name: Fix selinux_hide pointer-bool-conversion on 6.6+ (ALL branches)
+      shell: bash
+      run: |
+        set -euo pipefail
+        KVER="${{ inputs.kernel_version }}"
+        if [ "$(printf '%s\n' "6.6" "$KVER" | sort -V | head -n1)" = "6.6" ]; then
+          echo "[INFO] KVER $KVER >= 6.6, patching selinux_hide.c (all flavors/branches)"
+          for f in $(find "${{ github.workspace }}" -name selinux_hide.c 2>/dev/null); do
+            if grep -q "if (security_dump_masked_av_fn)" "$f"; then
+              echo "[INFO] Patching $f"
+              sed -i 's/if (security_dump_masked_av_fn)/if (security_dump_masked_av_fn != NULL)/g' "$f"
+              sed -i 's/if (context_struct_compute_av_fn)/if (context_struct_compute_av_fn != NULL)/g' "$f"
+              echo "[OK] Patched $f"
+            else
+              echo "[INFO] $f already patched"
+            fi
+          done
+        else
+          echo "[SKIP] KVER $KVER < 6.6"
+        fi
+
     - name: Disable SUSFS for ReSukiSU without SUSFS feature
       if: ${{ inputs.root_flavor == 'resukisu' && !contains(inputs.feature_set, 'SUSFS') }}
       uses: ./.github/actions/set-kernel-config

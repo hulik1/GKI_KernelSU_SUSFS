@@ -86,34 +86,6 @@ runs:
         sed -i 's/\s*vm_flags_clear(new_vma, VM_PAD_MASK);/                new_vma->vm_flags \&= ~VM_PAD_MASK;/' mm/mmap.c
         echo "MMAP_VM_FLAGS_FIX=true" >> "$GITHUB_ENV"
 
-    - name: 'Fix selinux_hide pointer-bool-conversion on 6.6+'
-      shell: bash
-      run: |
-        set -euo pipefail
-        KVER="${{ inputs.kernel_version }}"
-        # version >= 6.6 ? apply to ALL flavors/branches (kernelsu/next/resukisu, any GKI)
-        if [ "$(printf '%s\n' "6.6" "$KVER" | sort -V | head -n1)" = "6.6" ]; then
-          echo "[INFO] KVER $KVER >= 6.6, checking selinux_hide.c (all branches)"
-          # Search workspace-wide so we catch kernel/common/drivers/kernelsu, common/drivers/kernelsu, kernel/KernelSU, etc.
-          for f in $(find "${{ github.workspace }}" -name selinux_hide.c 2>/dev/null); do
-            if grep -q "security_dump_masked_av_fn" "$f" && grep -q "if (security_dump_masked_av_fn)" "$f"; then
-              echo "[INFO] Patching $f (security_dump_masked_av_fn)"
-              sed -i 's/if (security_dump_masked_av_fn)/if (security_dump_masked_av_fn != NULL)/g' "$f"
-              sed -i 's/if (context_struct_compute_av_fn)/if (context_struct_compute_av_fn != NULL)/g' "$f"
-              echo "SELINUX_HIDE_FIX=patched:$f" >> "$GITHUB_ENV"
-            else
-              echo "[INFO] $f already patched or no pattern"
-            fi
-          done
-          if [ -z "${SELINUX_HIDE_FIX:-}" ]; then
-            echo "[INFO] No selinux_hide.c needing patch found"
-            echo "SELINUX_HIDE_FIX=not_needed" >> "$GITHUB_ENV"
-          fi
-        else
-          echo "[SKIP] KVER $KVER < 6.6, no selinux_hide fix (covers all branches)"
-          echo "SELINUX_HIDE_FIX=skipped" >> "$GITHUB_ENV"
-        fi
-
     - name: 'Final Kernel Fixes Summary'
       shell: bash
       run: |
