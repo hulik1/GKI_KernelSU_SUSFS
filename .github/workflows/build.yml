@@ -63,10 +63,6 @@ on:
         required: false
         type: string
         default: Wild
-      preserve_abi:
-        required: false
-        type: boolean
-        default: false
       build_bypass:
         required: false
         type: boolean
@@ -124,12 +120,6 @@ jobs:
         android_version: ${{ inputs.android_version }}
         kernel_version: ${{ inputs.kernel_version }}
         os_patch_level: ${{ inputs.os_patch_level }}
-
-    - name: Capture source ABI/KMI safeguards
-      if: ${{ inputs.preserve_abi }}
-      uses: ./.github/actions/abi-kmi-safeguards
-      with:
-        mode: capture
 
     - name: Set Build Timestamp from Kernel Commit
       shell: bash
@@ -322,16 +312,6 @@ jobs:
         version: ${{ inputs.version }}
         sublevel: ${{ steps.extract.outputs.sublevel }}
         brand_name: ${{ inputs.brand_name }}
-
-    - name: Remove Protected Exports
-      if: ${{ !inputs.preserve_abi }}
-      uses: ./.github/actions/remove-protected-exports
-
-    - name: Verify final ABI/KMI safeguards (pristine vs post-patch, before build)
-      if: ${{ inputs.preserve_abi }}
-      uses: ./.github/actions/abi-kmi-safeguards
-      with:
-        mode: verify
 
     - name: Clean Kernel Flags
       uses: ./.github/actions/clean-kernel-flags

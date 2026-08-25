@@ -95,10 +95,6 @@ on:
         description: "Performance"
         type: boolean
         default: false
-      preserve_abi:
-        description: "Preserve ABI/KMI (capture/verify; uncheck to strip protected exports)"
-        type: boolean
-        default: true
 
 jobs:
   prepare-ccache:
@@ -617,7 +613,6 @@ jobs:
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
-      preserve_abi: ${{ inputs.preserve_abi }}
       os_patch_level: ${{ inputs.os_patch_level }}
     secrets: inherit
 
@@ -646,7 +641,6 @@ jobs:
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
-      preserve_abi: ${{ inputs.preserve_abi }}
       os_patch_level: ${{ inputs.os_patch_level }}
     secrets: inherit
 
@@ -675,7 +669,6 @@ jobs:
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
-      preserve_abi: ${{ inputs.preserve_abi }}
       os_patch_level: ${{ inputs.os_patch_level }}
     secrets: inherit
 
@@ -704,7 +697,6 @@ jobs:
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
-      preserve_abi: ${{ inputs.preserve_abi }}
       os_patch_level: ${{ inputs.os_patch_level }}
     secrets: inherit
 
@@ -733,7 +725,6 @@ jobs:
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
-      preserve_abi: ${{ inputs.preserve_abi }}
       os_patch_level: ${{ inputs.os_patch_level }}
     secrets: inherit
 
@@ -762,7 +753,6 @@ jobs:
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
-      preserve_abi: ${{ inputs.preserve_abi }}
       os_patch_level: ${{ inputs.os_patch_level }}
     secrets: inherit
 
@@ -791,7 +781,6 @@ jobs:
       anykernel3_commit: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
-      preserve_abi: ${{ inputs.preserve_abi }}
       os_patch_level: ${{ inputs.os_patch_level }}
     secrets: inherit
 

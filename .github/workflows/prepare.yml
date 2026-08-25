@@ -56,11 +56,6 @@ on:
         required: false
         type: string
         default: Wild
-      preserve_abi:
-        description: "Keep ABI/KMI protection files intact and verify their hashes"
-        required: false
-        type: boolean
-        default: false
       build_bypass:
         description: "Produce the legacy bypass image"
         required: false
@@ -179,6 +174,5 @@ jobs:
       anykernel3_commit: ${{ inputs.anykernel3_commit }}
       droidspaces_commit: ${{ inputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
-      preserve_abi: ${{ inputs.preserve_abi }}
       build_bypass: ${{ inputs.build_bypass }}
     secrets: inherit
