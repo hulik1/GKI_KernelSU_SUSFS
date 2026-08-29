@@ -63,10 +63,6 @@ on:
         required: false
         type: string
         default: Wild
-      build_bypass:
-        required: false
-        type: boolean
-        default: true
       bypass:
         required: false
         type: boolean
