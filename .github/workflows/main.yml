@@ -95,6 +95,10 @@ on:
         description: "Performance"
         type: boolean
         default: false
+      bypass:
+        description: "Apply kernel version-check bypass hack"
+        type: boolean
+        default: false
 
 jobs:
   prepare-ccache:
@@ -614,6 +618,7 @@ jobs:
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
+      bypass: ${{ inputs.bypass }}
     secrets: inherit
 
   build-android13-5-10:
@@ -642,6 +647,7 @@ jobs:
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
+      bypass: ${{ inputs.bypass }}
     secrets: inherit
 
   build-android13-5-15:
@@ -670,6 +676,7 @@ jobs:
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
+      bypass: ${{ inputs.bypass }}
     secrets: inherit
 
   build-android14-5-15:
@@ -698,6 +705,7 @@ jobs:
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
+      bypass: ${{ inputs.bypass }}
     secrets: inherit
 
   build-android14-6-1:
@@ -726,6 +734,7 @@ jobs:
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
+      bypass: ${{ inputs.bypass }}
     secrets: inherit
 
   build-android15-6-6:
@@ -754,6 +763,7 @@ jobs:
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
+      bypass: ${{ inputs.bypass }}
     secrets: inherit
 
   build-android16-6-12:
@@ -782,6 +792,7 @@ jobs:
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
+      bypass: ${{ inputs.bypass }}
     secrets: inherit
 
   update-verified-pins:
