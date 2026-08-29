@@ -67,6 +67,10 @@ on:
         required: false
         type: boolean
         default: true
+      bypass:
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build-gki:
@@ -457,6 +461,13 @@ jobs:
     - name: Initialize Config Fragment
       run: touch "${{ github.workspace }}/wild_gki.fragment"
 
+    - name: Apply Kernel Bypass Hack
+      if: ${{ inputs.bypass == 'true' }}
+      uses: ./.github/actions/bypass-kernel
+      with:
+        version: ${{ inputs.version }}
+        bypass: true
+
     - name: Build Normal Kernel
       env:
         SOURCE_DATE_EPOCH: ${{ env.SOURCE_DATE_EPOCH }}
@@ -494,7 +505,7 @@ jobs:
         github_token: ${{ secrets.MY_GITHUB_TOKEN }}
 
     - name: Build Bypass Kernel
-      if: ${{ inputs.build_bypass }}
+      if: false
       env:
         SOURCE_DATE_EPOCH: ${{ env.SOURCE_DATE_EPOCH }}
         KBUILD_BUILD_TIMESTAMP: ${{ env.KBUILD_BUILD_TIMESTAMP }}

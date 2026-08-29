@@ -61,6 +61,11 @@ on:
         required: false
         type: boolean
         default: true
+      bypass:
+        description: "Apply the kernel version-check bypass hack (disabled by default)"
+        required: false
+        type: boolean
+        default: false
       os_patch_level:
         description: "Optional filter: patch date (YYYY-MM), kernel sublevel, lts (LTS branch), or all"
         required: false
@@ -175,4 +180,5 @@ jobs:
       droidspaces_commit: ${{ inputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
       build_bypass: ${{ inputs.build_bypass }}
+      bypass: ${{ inputs.bypass }}
     secrets: inherit
