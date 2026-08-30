@@ -8,7 +8,7 @@
 
 ## Prerequisites
 
-- Device with unlocked bootloader running a supported GKI kernel (see KMI below)
+- Device with unlocked bootloader running a GKI2 kernel 5.10+
 - Root access already granted to the flashing app
 
 ## Steps
