@@ -39,9 +39,9 @@ By flashing this kernel, **YOU** are choosing to make these modifications. If so
 
 ---
 
-## 📲 Install with Kernel Flasher
+## 📖 Installation
 
-See **[Installation Guide](docs/installation.md)** for full flashing instructions (KMI/SPL selection, Kernel Flasher steps).
+See **[Installation Guide](docs/installation.md)**.
 
 ---
 
