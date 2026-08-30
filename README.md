@@ -50,7 +50,7 @@ Full documentation: [docs/features.md](docs/features.md)
 
 ## Installation
 
-See **[Installation Guide](docs/installation.md)** - [Kernel Flasher](docs/kernelflasher.md) · [Patch boot.img with magiskboot](docs/magiskboot.md).
+See **[Installation Guide](docs/installation.md)**.
 
 ---
 
