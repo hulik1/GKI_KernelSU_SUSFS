@@ -2,6 +2,9 @@
 
 For some devices, the `boot.img` format isn't as common as `lz4`, `gz`, and uncompressed. A typical example is the Pixel, where the `boot.img` is compressed in the `lz4_legacy` format, while the ramdisk may be in `gz` or also compressed in `lz4_legacy`. Currently, if you directly flash the `boot.img` provided by KernelSU, the device may not be able to boot. In this case, you can manually patch the `boot.img`.
 
+> [!CAUTION]
+> Flashing a kernel can brick your device and will void your warranty. Make a full backup (boot partition at minimum) before proceeding.
+
 > [!TIP]
 > It's always recommended to use `magiskboot` to patch images. There are two ways:
 > - [magiskboot (official)](https://github.com/topjohnwu/Magisk/releases) - runs on Android devices (and Linux)

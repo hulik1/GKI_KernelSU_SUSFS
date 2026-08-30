@@ -1,7 +1,7 @@
 # Installation
 
 > [!CAUTION]
-> Flashing a kernel can brick your device and will void your warranty. Make a full backup before proceeding.
+> Flashing a kernel can brick your device and will void your warranty. Make a full backup (boot partition at minimum) before proceeding.
 
 Choose the method that fits your situation:
 
