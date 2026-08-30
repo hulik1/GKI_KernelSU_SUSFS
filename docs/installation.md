@@ -27,4 +27,4 @@ If you don't know which file to download, read the KMI/SPL description in the re
 
 ---
 
-See also: [Kernel Features Documentation](index.md) · [Releases](https://github.com/WildKernels/GKI_KernelSU_SUSFS/releases)
+See also: [Kernel Features Documentation](features.md) · [Releases](https://github.com/WildKernels/GKI_KernelSU_SUSFS/releases)

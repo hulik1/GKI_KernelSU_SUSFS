@@ -44,7 +44,7 @@ By flashing this kernel, **YOU** are choosing to make these modifications. If so
 - Performance - incl. NTSync
 - DroidSpaces - container runtime
 
-Full documentation: [docs/index.md](docs/index.md)
+Full documentation: [docs/features.md](docs/features.md)
 
 ---
 
