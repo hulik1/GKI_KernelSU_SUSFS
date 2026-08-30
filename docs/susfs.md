@@ -2,13 +2,10 @@
 
 SUSFS is a KernelSU add-on that provides root-hiding mechanisms using kernel patches and a userspace module.
 
-Implemented by [simonpunk](https://gitlab.com/simonpunk/susfs4ksu), the kernel patches are integrated into the builds from this repository when `use_susfs` is enabled.
-
 ## Source
 
 - **Upstream:** [simonpunk/susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu)
-- **Module (userspace add-on):** [susfs4ksu-module by sidex15](https://github.com/sidex15/susfs4ksu-module)
-- **Recommended module:** [sidex15/susfs4ksu-module](https://github.com/sidex15/susfs4ksu-module)
+- **Module (userspace add-on):** [sidex15/susfs4ksu-module](https://github.com/sidex15/susfs4ksu-module)
 
 ## Capabilities
 
@@ -24,22 +21,15 @@ SUSFS provides multiple root-hiding and spoofing capabilities:
 | `HIDE_KSU_SUSFS_SYMBOLS` | Automatically hide KSU and SUSFS symbols from `/proc/kallsyms`. Effective on all processes. |
 | `SPOOF_CMDLINE_OR_BOOTCONFIG` | Spoof `/proc/bootconfig` (GKI) or `/proc/cmdline` (non-GKI) output with a user-defined file. Effective on all processes. |
 | `OPEN_REDIRECT` | Redirect a target path to be opened with another user-defined path. Both paths must exist before they can be added. Requires SELinux permissions for both paths. Effective only on processes with a pre-defined UID scheme. |
-| `SUS_MAP` | Hide mmapped real files from `/proc/<pid>/[maps\|smaps\|smaps_rollup\|map_files\|mem\|pagemap]`. No anonymous-memory support; does not hide inline/PLT hooks caused by the injected library itself. May not evade strong injection detection. Effective only on zygote-spawned unmounted user app processes with `uid >= 10000`. |
+| `SUS_MAP` | Hide mmapped real files from `/proc/<pid>/[maps|smaps|smaps_rollup|map_files|mem|pagemap]`. No anonymous-memory support; does not hide inline/PLT hooks caused by the injected library itself. May not evade strong injection detection. Effective only on zygote-spawned unmounted user app processes with `uid >= 10000`. |
 | `AVC_SPOOF` | Spoof procfs AVC denial logs. Enabled at runtime via the sidex15 module — not a build-time Kconfig option. |
 
 ## Build Integration
 
-In this repository, SUSFS kernel patches are applied per Android/kernel version variant. The pinned SUSFS commits per variant are defined in the build workflow (see `.github/workflows/main.yml`).
+In this repository, SUSFS kernel patches are applied per Android/kernel version variant. The pinned SUSFS commits per variant are defined in the build workflow (`.github/workflows/main.yml`).
 
 SUSFS is always built at the latest branch tip when the root flavor is KernelSU-Next; for KernelSU and ReSukiSU, it uses the audited pinned commits.
 
-## Usage Notes
-
-- Some capabilities are effective only on zygote-spawned user app processes with `uid >= 10000`. This is a fundamental limitation of how the hooks are applied.
-- `OPEN_REDIRECT` does **not** bypass detections by itself; SELinux permissions for both paths are the user's responsibility.
-- `SUS_MAP` does not hide inline or PLT hooks caused by the injected library itself, and may not evade strong injection detection.
-
 ## Related
 
-- [kernelsu.md](kernelsu.md) — root implementation
 - [index.md](../index.md) — full feature index
