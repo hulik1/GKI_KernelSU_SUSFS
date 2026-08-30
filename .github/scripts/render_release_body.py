@@ -1,192 +1,186 @@
+#!/usr/bin/env python3
+"""
+Render release notes dynamically from workflow environment variables.
+
+No static template file is read. The script assembles the markdown directly
+from env vars set by the workflow.
+
+Invoke without a template file argument:
+    python3 .github/scripts/render_release_body.py > release_body.md
+"""
+
 import json
 import os
-import sys
 from pathlib import Path
 
+ROOT = Path(os.environ.get("GITHUB_WORKSPACE", "."))
 
-PLACEHOLDERS = {
-    "{{KSU_VERSION}}": lambda: os.environ.get("KSU_VERSION", "unknown"),
-    "{{KSU_GIT_TAG}}": lambda: os.environ.get("KSU_GIT_TAG", "no-tag"),
-    "{{KSUN_BRANCH}}": lambda: os.environ.get("KSUN_BRANCH", "dev"),
-    "{{KSUN_COMMIT}}": lambda: os.environ.get("KSUN_COMMIT", "unknown"),
-    "{{KSU_MANAGER}}": lambda: os.environ.get("KSU_MANAGER", "Placeholder"),
-    "{{KSU_MANAGER_NOTE}}": lambda: os.environ.get("KSU_MANAGER_NOTE", ""),
-    "{{SUSFS_BRANCHES}}": lambda: os.environ.get("SUSFS_COMMIT", "latest on auto-derived gki-{version} branch"),
-    "{{SUSFS_BRANCHS}}": lambda: os.environ.get("SUSFS_COMMIT", "latest on auto-derived gki-{version} branch"),
-}
+def env(name: str, default: str = "") -> str:
+    return os.environ.get(name, default).strip()
 
-
-def build_managers_markdown(text: str) -> str:
-    raw = os.environ.get("MANAGER_LIST", "").strip()
+def parse_managers(raw: str):
+    raw = raw.strip()
     if not raw:
-        return text
+        return []
     try:
-        managers = json.loads(raw)
-    except Exception:
-        return text
-    if not isinstance(managers, list) or not managers:
-        return text
-    # Build markdown list for all selected managers
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(data, list):
+        return []
+    return data
+
+def build_preamble() -> str:
+    return (
+        "# Wild Kernels for GKI2 Devices\n\n"
+        "> [!CAUTION]\n"
+        "> This software is provided for testing and educational purposes only. "
+        "Use at your own risk. The developers are not responsible for any damage, "
+        "data loss, or issues that may occur. Please ensure you have proper backups "
+        "before installation.\n\n"
+        "Join the Telegram group: <https://t.me/WildKernelsTG>\n\n"
+        "---\n\n"
+    )
+
+def build_managers_section(managers) -> str:
+    if not managers:
+        return ""
     flavor_labels = {"next": "KernelSU-Next", "kernelsu": "KernelSU", "resukisu": "ReSukiSU"}
     lines = []
     for m in managers:
         flavor = m.get("flavor", "")
         label = flavor_labels.get(flavor, flavor or "unknown")
         run_id = m.get("run_id")
-        owner = m.get("owner", "")
-        repo = m.get("repo", "")
         stock = m.get("stock", "")
-        if run_id and owner and repo:
-            url = f"https://github.com/{owner}/{repo}/actions/runs/{run_id}"
-            note = f" — stock `{stock[:12]}`" if stock else ""
-            lines.append(f"- **{label}:** [build-manager run]({url}){note}")
+        if run_id:
+            url = f"https://github.com/{m.get('owner', '')}/{m.get('repo', '')}/actions/runs/{run_id}"
+            stock_note = f" (stock `{stock[:12]}`)" if stock else ""
+            lines.append(f"- **{label}:** [{url}]({url}){stock_note}")
         else:
-            lines.append(f"- **{label}** manager (no run ID)")
-    replacement = "**Managers:**\n" + "\n".join(lines)
-    # Replace the single-manager line in template
-    # Template has: **Manager:** [build-manager run]({{KSU_MANAGER}}) — {{KSU_MANAGER_NOTE}}
-    # Replace that whole line if present
-    import re
-    text = re.sub(r"\*\*Manager:\*\*.*\n", replacement + "\n", text, count=1)
-    return text
+            lines.append(f"- **{label}:** release assets")
+    return "**Managers:**\n" + "\n".join(lines) + "\n"
 
+def build_ksu_section() -> str:
+    version = env("KSU_VERSION", "unknown")
+    tag = env("KSU_GIT_TAG", "no-tag")
+    branch = env("KSUN_BRANCH", "dev")
+    commit = env("KSUN_COMMIT", "unknown")
+    manager_url = env("KSU_MANAGER", "")
+    manager_note = env("KSU_MANAGER_NOTE", "")
+    parts = ["## KernelSU", ""]
+    parts.append(f"- **Version:** `{version}`")
+    if tag and tag != "no-tag":
+        parts.append(f"- **Tag:** `{tag}`")
+    parts.append(f"- **Branch:** `{branch}`")
+    parts.append(f"- **Commit:** `{commit}`")
+    if manager_url:
+        note = f" — {manager_note}" if manager_note else ""
+        base = manager_url.split("/actions/")[0]
+        parts.append(f"- **Manager:** [{base}]({manager_url}){note}")
+    parts.append("")
+    return "\n".join(parts)
 
-def filter_sections(text: str) -> str:
-    # Map heading substring -> required env flag
-    # If flag is "false", that section is dropped.
-    flag_map = {
-        "SUSFS": os.environ.get("USE_SUSFS", "true") == "true",
-        "Baseband Guard": os.environ.get("USE_BBG", "true") == "true",
-        "BBG": os.environ.get("USE_BBG", "true") == "true",
-        "DroidSpaces": os.environ.get("USE_DS", "true") == "true",
-        "Networking": os.environ.get("USE_NET", "true") == "true",
-        "NTSync": os.environ.get("USE_NTSYNC", "true") == "true",
-        "Ptrace": os.environ.get("USE_PTRACE", "true") == "true",
-        "Unicode": os.environ.get("USE_UNICODE", "true") == "true",
-        "BPF": os.environ.get("USE_BPF", "true") == "true",
-    }
-    # Split keeping delimiters: first chunk is preamble before first ## 
-    parts = text.split("\n## ")
-    if len(parts) <= 1:
-        return text
-    kept = [parts[0]]
-    for part in parts[1:]:
-        heading_line = part.split("\n", 1)[0]
-        keep = True
-        for key, enabled in flag_map.items():
-            if key.lower() in heading_line.lower() and not enabled:
-                keep = False
-                break
-        # Also drop specific subsections inside Misc/Other Features if relevant
-        # For now only top-level headings filtered; keep is per heading.
-        if keep:
-            kept.append("## " + part)
-    return "\n".join(kept) if len(kept) > 1 else parts[0] + "\n## ".join(kept[1:])
+def build_susfs_section() -> str:
+    variant_envs = [
+        ("android12-5.10", "susfs_commit_android12_5_10"),
+        ("android13-5.10", "susfs_commit_android13_5_10"),
+        ("android13-5.15", "susfs_commit_android13_5_15"),
+        ("android14-5.15", "susfs_commit_android14_5_15"),
+        ("android14-6.1", "susfs_commit_android14_6_1"),
+        ("android15-6.6", "susfs_commit_android15_6_6"),
+        ("android16-6.12", "susfs_commit_android16_6_12"),
+    ]
+    per_variant = []
+    for variant, env_key in variant_envs:
+        sha = env(env_key)
+        if sha and len(sha) == 40:
+            per_variant.append((variant, sha))
+    if per_variant:
+        parts = [
+            "## SUSFS",
+            "",
+            "Pinned SUSFS commits per Android/kernel variant:",
+            "",
+        ]
+        for variant, sha in per_variant:
+            parts.append(f"- **{variant}:** `{sha}`")
+        parts.append("")
+        return "\n".join(parts)
+    sha = env("SUSFS_COMMIT", "")
+    if sha:
+        return f"## SUSFS\n\n- **Commit:** `{sha}`\n"
+    return ""
 
-
-def inject_feature_summary(text: str) -> str:
-    feature_set = os.environ.get("FEATURE_SET", "").strip()
-    root_flavor = os.environ.get("ROOT_FLAVOR", "").strip()
-    if not feature_set and not root_flavor:
-        return text
-    summary_lines = []
-    if root_flavor:
-        summary_lines.append(f"**Root:** {root_flavor}")
+def build_root_section() -> str:
+    root_flavor = env("ROOT_FLAVOR", "unknown")
+    feature_set = env("FEATURE_SET", "")
+    parts = ["## This Build", ""]
+    parts.append(f"- **Root:** `{root_flavor}`")
     if feature_set:
-        summary_lines.append(f"**Features:** {feature_set}")
-    # Insert after the Features anchor list or after disclaimer
-    summary = "> " + " | ".join(summary_lines) + "\n" if summary_lines else ""
-    # Find the Features anchor list end (line with <!-- NOTE:)
-    marker = "<!-- NOTE:"
-    if marker in text and summary:
-        text = text.replace(marker, summary + "\n" + marker, 1)
-    return text
+        parts.append(f"- **Feature Set:** `{feature_set}`")
+    parts.append("")
+    return "\n".join(parts)
 
+def build_features_section() -> str:
+    enabled = []
+    if env("USE_SUSFS", "true") == "true":
+        enabled.append("SUSFS")
+    if env("USE_BBG", "true") == "true":
+        enabled.append("Baseband Guard")
+    if env("USE_DS", "true") == "true":
+        enabled.append("DroidSpaces-OSS")
+    if env("USE_NET", "true") == "true":
+        enabled.append("Networking")
+    if env("USE_NTSYNC", "true") == "true":
+        enabled.append("NTSync")
+    if env("USE_PTRACE", "true") == "true":
+        enabled.append("Ptrace Leak Fix")
+    if env("USE_UNICODE", "true") == "true":
+        enabled.append("Unicode Fix")
+    if env("USE_BPF", "true") == "true":
+        enabled.append("BTF / eBPF / FUSE-BPF")
+    if env("USE_PERF", "true") == "true":
+        enabled.append("Performance Tuning")
 
-def render_markdown(template_path: Path):
-    text = template_path.read_text()
+    if not enabled:
+        return ""
 
-    for placeholder, getter in PLACEHOLDERS.items():
-        text = text.replace(placeholder, getter())
+    parts = [
+        "## Features Included",
+        "",
+        "Each feature is documented separately in `docs/`:",
+        "",
+    ]
+    feature_doc_map = [
+        ("SUSFS", "susfs.md"),
+        ("Baseband Guard", "bbg.md"),
+        ("DroidSpaces-OSS", "droidspaces.md"),
+        ("Networking", "networking.md"),
+        ("NTSync", "ntsync.md"),
+        ("Ptrace Leak Fix", "ptrace.md"),
+        ("Unicode Fix", "unicode.md"),
+        ("BTF / eBPF / FUSE-BPF", "bpf.md"),
+        ("Performance Tuning", "performance.md"),
+    ]
+    for feature, doc in feature_doc_map:
+        if feature in enabled:
+            parts.append(f"- [{feature}](docs/{doc})")
+    parts.append("")
+    return "\n".join(parts)
 
-    text = build_managers_markdown(text)
-    text = inject_feature_summary(text)
-    text = filter_sections(text)
+def render() -> str:
+    parts = []
+    parts.append(build_preamble())
+    parts.append(build_root_section())
+    parts.append(build_ksu_section())
+    parts.append(build_susfs_section())
+    parts.append(build_managers_section(parse_managers(env("MANAGER_LIST", ""))))
+    parts.append(build_features_section())
+    return "\n".join(parts)
 
-    print(text, end="")
-
-
-config_path = Path(sys.argv[1])
-if config_path.suffix.lower() == ".md":
-    render_markdown(config_path)
-    sys.exit(0)
-
-# Backward-compatible JSON renderer for older release configs.
-
-def emit(text=""):
-    print(text)
-
-
-def emit_list(items):
-    if isinstance(items, list):
-        for item in items:
-            emit(f"- {item}")
-
-
-def emit_description(value):
-    if isinstance(value, list):
-        for line in value:
-            emit(line)
-    elif value:
-        emit(str(value))
-
-
-data = json.loads(config_path.read_text())
-
-emit("**IMPORTANT DISCLAIMER**")
-for line in data["release"]["disclaimer"]:
-    emit(line)
-
-kernelsu = data.get("kernelsu", {})
-emit()
-emit(f"## {kernelsu.get('name', 'KernelSU-Next')}")
-emit(f"- Version: {os.environ.get('KSU_VERSION', kernelsu.get('version', 'unknown'))}")
-emit(f"- Tag: {os.environ.get('KSU_GIT_TAG', kernelsu.get('tag', 'no-tag'))}")
-emit(f"- Branch: {os.environ.get('KSUN_BRANCH', kernelsu.get('branch', 'dev'))}")
-emit(f"- Commit: {os.environ.get('KSUN_COMMIT', kernelsu.get('commit', 'unknown'))}")
-if kernelsu.get("url"):
-    emit(f"- URL: {kernelsu['url']}")
-if kernelsu.get("manager"):
-    emit(f"- Manager: {kernelsu['manager']}")
-
-skip_keys = {"release", "kernelsu"}
-for key in data.keys():
-    if key in skip_keys:
-        continue
-
-    section = data[key]
-    emit()
-    emit(f"## {section.get('name', key)}")
-
-    if section.get("description"):
-        emit_description(section["description"])
-
-    if section.get("version"):
-        emit(f"- Version: {section['version']}")
-    if section.get("tag"):
-        emit(f"- Tag: {section['tag']}")
-    if section.get("branch"):
-        emit(f"- Branch: {section['branch']}")
-
-    if key == "susfs":
-        susfs_commit = os.environ.get("SUSFS_COMMIT", "")
-        if susfs_commit:
-            emit(f"- Commit: `{susfs_commit}`")
-        else:
-            emit("- Commit: latest on auto-derived gki-{version} branch")
-
-    if section.get("items"):
-        emit_list(section["items"])
-
-    if section.get("url"):
-        emit(f"- URL: {section['url']}")
+if __name__ == "__main__":
+    output = render()
+    print(output, end="")
+    step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if step_summary:
+        Path(step_summary).write_text(output)

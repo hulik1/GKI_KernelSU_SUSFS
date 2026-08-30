@@ -950,7 +950,6 @@ jobs:
 
     env:
       GH_TOKEN: ${{ github.token }}
-      RELEASE_NOTES: .github/config/RELEASE_NOTES.md
     outputs:
       new_tag: ${{ steps.tag.outputs.new_tag }}
     steps:
@@ -1147,10 +1146,9 @@ jobs:
       run: |
         set -e
 
-        RELEASE_NOTES_PATH="$RELEASE_NOTES"
         : > release_body.md
 
-        python3 .github/scripts/render_release_body.py "$RELEASE_NOTES_PATH" > release_body.md
+        python3 .github/scripts/render_release_body.py > release_body.md
 
     - name: Publish release notes preview
       run: |
@@ -1251,7 +1249,7 @@ jobs:
           # KSU version not computed here; render will show placeholder if release job skipped
         run: |
           set -e
-          python3 .github/scripts/render_release_body.py .github/config/RELEASE_NOTES.md > release_body.md
+          python3 .github/scripts/render_release_body.py > release_body.md
           {
             echo "## Release Notes Preview (CI Summary)"
             echo

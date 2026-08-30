@@ -33,6 +33,7 @@ By flashing this kernel, **YOU** are choosing to make these modifications. If so
 
 ## 🔗 Additional Resources
 
+- 📖 **[Kernel Features Documentation](docs/index.md)** — per-feature documentation
 - 🩹 [Kernel Patches](https://github.com/WildKernels/kernel_patches)
 - 📜 [Old Build Scripts](https://github.com/TheWildJames/kernel_build_scripts)
 - ⚡ [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher)
