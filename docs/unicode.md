@@ -4,7 +4,7 @@ Prevents path traversal via non-printable Unicode (experimental). Internal to ro
 
 ## Source
 
-- **Internal to root hiding**
+- **Source:** Internal to root hiding - [patch 6.1-](https://github.com/WildKernels/kernel_patches/blob/main/common/unicode_bypass_fix_6.1-.patch) (`kernel_patches/common/unicode_bypass_fix_6.1-.patch`) · [patch 6.1+](https://github.com/WildKernels/kernel_patches/blob/main/common/unicode_bypass_fix_6.1+.patch) (`kernel_patches/common/unicode_bypass_fix_6.1+.patch`)
 
 ## Purpose
 
