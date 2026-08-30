@@ -1,6 +1,6 @@
 # Mountify
 
-Globally mounted modules via OverlayFS - metamodule enabling `CONFIG_OVERLAY_FS=y` is required.
+Globally mounted modules via OverlayFS.
 
 ## Source
 

@@ -23,7 +23,7 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 | Module | Description | Source |
 |--------|-------------|--------|
 | NoMount | Metamodule providing mount-related functionality alongside root implementations. | [maxsteeel/nomount](https://github.com/maxsteeel/nomount) |
-| Mountify | Globally mounted modules via OverlayFS - `CONFIG_OVERLAY_FS=y` required, `CONFIG_TMPFS_XATTR=y` highly encouraged. | [backslashxx/mountify](https://github.com/backslashxx/mountify) |
+| Mountify | Globally mounted modules via OverlayFS. | [backslashxx/mountify](https://github.com/backslashxx/mountify) |
 
 ## Security
 

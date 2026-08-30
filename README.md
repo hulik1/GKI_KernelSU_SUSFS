@@ -37,7 +37,7 @@ By flashing this kernel, **YOU** are choosing to make these modifications. If so
 - [KernelSU-Next](docs/kernelsu-next.md) / [KernelSU (Classic)](docs/kernelsu-classic.md) / [ReSukiSU](docs/resukisu.md) - root implementations
 - [SUSFS](docs/susfs.md) - root hiding
 - [NoMount](docs/nomount.md) - mount metamodule
-- [Mountify](docs/mountify.md) - OverlayFS global mounts (`CONFIG_OVERLAY_FS=y`, `CONFIG_TMPFS_XATTR=y`)
+- [Mountify](docs/mountify.md) - OverlayFS global mounts
 - [Baseband Guard](docs/bbg.md) - partition protection
 - [Networking](docs/networking.md) - WireGuard, BBR, IPSet, CIFS
 - [TMPFS](docs/tmpfs.md) - xattr / POSIX ACLs
