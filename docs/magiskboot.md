@@ -8,6 +8,8 @@ For some devices, the `boot.img` format isn't as common as `lz4`, `gz`, and unco
 > - [WildKernels/Magisk (W.I.P.)](https://github.com/WildKernels/Magisk) - cross-built binaries for Windows/macOS/Linux PCs (W.I.P.)
 >
 
+**Platforms:** [Android](#using-magiskboot-on-android-devices) · [Linux](#using-magiskboot-on-linux) · [Windows / Other](#using-magiskboot-on-windows--other)
+
 ## Preparation
 
 1. Get your device's stock `boot.img`.
@@ -54,7 +56,34 @@ For some devices, the `boot.img` format isn't as common as `lz4`, `gz`, and unco
    fastboot flash boot new-boot.img
    ```
 
-## Using magiskboot on Windows / macOS / Linux PC
+## Using magiskboot on Linux
+
+Official `magiskboot` can run in Linux normally - use the [official build](https://github.com/topjohnwu/Magisk/releases). If you prefer, you can also use [WildKernels/Magisk (W.I.P.)](https://github.com/WildKernels/Magisk).
+
+1. Prepare stock `boot.img` and `Image` in your PC.
+2. Make it executable:
+   ```sh
+   chmod +x magiskboot
+   ```
+3. Unpack `boot.img`:
+   ```sh
+   ./magiskboot unpack boot.img
+   ```
+   You will get a `kernel` file - this is your stock kernel.
+4. Replace kernel:
+   ```sh
+   mv -f Image kernel
+   ```
+5. Repack:
+   ```sh
+   ./magiskboot repack boot.img
+   ```
+   You will get a `new-boot.img` file. Flash it by fastboot:
+   ```sh
+   fastboot flash boot new-boot.img
+   ```
+
+## Using magiskboot on Windows / Other
 
 1. Download the corresponding `magiskboot` binary for your OS from [WildKernels/Magisk (W.I.P.)](https://github.com/WildKernels/Magisk).
 2. Prepare stock `boot.img` and `Image` in your PC.
@@ -79,9 +108,6 @@ For some devices, the `boot.img` format isn't as common as `lz4`, `gz`, and unco
    ```sh
    fastboot flash boot new-boot.img
    ```
-
-> [!INFO]
-> Official `magiskboot` can run in Linux environments normally. If you're a Linux user, you can use the official build.
 
 ---
 
