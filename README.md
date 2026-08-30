@@ -108,6 +108,8 @@ Flashing this kernel will void your warranty, and there is always a risk of bric
 
 **These amazing people help make this project possible!**
 
+[![Contributors](https://contrib.rocks/image?repo=WildKernels/GKI_KernelSU_SUSFS)](https://github.com/WildKernels/GKI_KernelSU_SUSFS/graphs/contributors)
+
 | Contributor | Contribution |
 |-------------|-------------|
 | [simonpunk](https://gitlab.com/simonpunk/susfs4ksu.git) | Created SUSFS! |
