@@ -4,7 +4,7 @@ Fixes ptrace info leak on kernels older than 5.16. Internal to root hiding.
 
 ## Source
 
-- **Source:** Upstream kernel community - [patch](https://github.com/WildKernels/kernel_patches/blob/main/gki_ptrace.patch) (`kernel_patches/gki_ptrace.patch`)
+- **Source:** [patch](https://github.com/WildKernels/kernel_patches/blob/main/gki_ptrace.patch) (`kernel_patches/gki_ptrace.patch`)
 
 ## Purpose
 
