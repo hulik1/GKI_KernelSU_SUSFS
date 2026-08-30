@@ -15,9 +15,14 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 | Feature | Description | Source |
 |---------|-------------|--------|
 | SUSFS | Root-hiding add-on for KernelSU using kernel patches and a userspace module. | [simonpunk/susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu) |
-| NoMount | Metamodule providing mount-related functionality alongside root implementations. | [maxsteeel/nomount](https://github.com/maxsteeel/nomount) |
 | Ptrace Leak Fix | Fixes ptrace info leak on kernels older than 5.16. Internal to root hiding. | [patch](https://github.com/WildKernels/kernel_patches/blob/main/gki_ptrace.patch) |
 | Unicode Fix | Prevents path traversal via non-printable Unicode (experimental). Internal to root hiding. | Internal to root hiding · [patch 6.1-](https://github.com/WildKernels/kernel_patches/blob/main/common/unicode_bypass_fix_6.1-.patch) · [patch 6.1+](https://github.com/WildKernels/kernel_patches/blob/main/common/unicode_bypass_fix_6.1+.patch) |
+
+## Meta Module
+
+| Module | Description | Source |
+|--------|-------------|--------|
+| NoMount | Metamodule providing mount-related functionality alongside root implementations. | [maxsteeel/nomount](https://github.com/maxsteeel/nomount) |
 
 ## Security
 

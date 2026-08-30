@@ -36,7 +36,7 @@ By flashing this kernel, **YOU** are choosing to make these modifications. If so
 
 - [KernelSU-Next](docs/kernelsu-next.md) / [KernelSU (Classic)](docs/kernelsu-classic.md) / [ReSukiSU](docs/resukisu.md) - root implementations
 - [SUSFS](docs/susfs.md) - root hiding
-- [NoMount](docs/nomount.md) - mount metamodule (root hiding)
+- [NoMount](docs/nomount.md) - mount metamodule
 - [Baseband Guard](docs/bbg.md) - partition protection
 - [Networking](docs/networking.md) - WireGuard, BBR, IPSet, CIFS
 - [TMPFS](docs/tmpfs.md) - xattr / POSIX ACLs
