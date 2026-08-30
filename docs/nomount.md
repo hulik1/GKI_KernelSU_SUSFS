@@ -22,5 +22,5 @@ The kernel and metamodule revisions must match exactly. The NoMount integration 
 
 ## Related
 
-- [kernelsu.md](kernelsu.md) — root implementation
-- [index.md](../index.md) — full feature index
+- [kernelsu.md](kernelsu.md) - root implementation
+- [index.md](../index.md) - full feature index

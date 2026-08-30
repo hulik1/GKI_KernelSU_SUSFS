@@ -15,5 +15,5 @@ Performance-related features are enabled via the `use_perf` feature flag in the 
 
 ## Related
 
-- [ntsync.md](ntsync.md) — NTSync details
-- [index.md](index.md) — full feature index
+- [ntsync.md](ntsync.md) - NTSync details
+- [index.md](index.md) - full feature index

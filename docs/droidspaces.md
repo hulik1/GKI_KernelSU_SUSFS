@@ -16,4 +16,4 @@ DroidSpaces-OSS patches are applied during the build workflow when `use_ds` is e
 
 ## Related
 
-- [index.md](../index.md) — full feature index
+- [index.md](../index.md) - full feature index

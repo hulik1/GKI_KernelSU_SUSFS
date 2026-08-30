@@ -18,5 +18,5 @@ NTSync is enabled via the `use_ntsync` feature flag in the build workflow. It is
 
 ## Related
 
-- [performance.md](performance.md) — performance category
-- [index.md](index.md) — full feature index
+- [performance.md](performance.md) - performance category
+- [index.md](index.md) - full feature index

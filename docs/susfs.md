@@ -22,7 +22,7 @@ SUSFS provides multiple root-hiding and spoofing capabilities:
 | `SPOOF_CMDLINE_OR_BOOTCONFIG` | Spoof `/proc/bootconfig` (GKI) or `/proc/cmdline` (non-GKI) output with a user-defined file. Effective on all processes. |
 | `OPEN_REDIRECT` | Redirect a target path to be opened with another user-defined path. Both paths must exist before they can be added. Requires SELinux permissions for both paths. Effective only on processes with a pre-defined UID scheme. |
 | `SUS_MAP` | Hide mmapped real files from `/proc/<pid>/[maps|smaps|smaps_rollup|map_files|mem|pagemap]`. No anonymous-memory support; does not hide inline/PLT hooks caused by the injected library itself. May not evade strong injection detection. Effective only on zygote-spawned unmounted user app processes with `uid >= 10000`. |
-| `AVC_SPOOF` | Spoof procfs AVC denial logs. Enabled at runtime via the sidex15 module — not a build-time Kconfig option. |
+| `AVC_SPOOF` | Spoof procfs AVC denial logs. Enabled at runtime via the sidex15 module - not a build-time Kconfig option. |
 
 ## Build Integration
 
@@ -32,4 +32,4 @@ SUSFS is always built at the latest branch tip when the root flavor is KernelSU-
 
 ## Related
 
-- [index.md](../index.md) — full feature index
+- [index.md](../index.md) - full feature index

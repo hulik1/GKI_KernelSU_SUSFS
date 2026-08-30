@@ -15,27 +15,27 @@ This kernel includes a range of networking features and improvements, covering c
 
 ## VPN Support
 
-- **WireGuard** — Built-in VPN support via the WireGuard kernel module.
+- **WireGuard** - Built-in VPN support via the WireGuard kernel module.
 
 ## Firewall & NAT
 
-- **IP Set** — Advanced firewall capabilities via ip_set.
-- **IPv6 NAT** — NAT support for IPv6.
-- **TTL Target** — Network packet manipulation via TTL targeting.
+- **IP Set** - Advanced firewall capabilities via ip_set.
+- **IPv6 NAT** - NAT support for IPv6.
+- **TTL Target** - Network packet manipulation via TTL targeting.
 
 ## Traffic Shaping & Fair Queuing
 
-- **CAKE** — Common Applications Kept Enhanced; a full-featured queue discipline.
-- **fq** — Fair Queue packet scheduler.
-- **fq_codel** — Fair Queuing with Controlled Delay.
+- **CAKE** - Common Applications Kept Enhanced; a full-featured queue discipline.
+- **fq** - Fair Queue packet scheduler.
+- **fq_codel** - Fair Queuing with Controlled Delay.
 
 ## Connection Marking
 
-- **connmark** — Connection marking for packet classification.
+- **connmark** - Connection marking for packet classification.
 
 ## Filesystem Support
 
-- **CIFS** — Network filesystem support for SMB/CIFS sharing.
+- **CIFS** - Network filesystem support for SMB/CIFS sharing.
 
 ## Build Integration
 
@@ -43,4 +43,4 @@ Most networking features are upstream kernel configurations enabled in the kerne
 
 ## Related
 
-- [index.md](../index.md) — full feature index
+- [index.md](../index.md) - full feature index

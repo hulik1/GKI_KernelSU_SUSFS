@@ -238,7 +238,7 @@ jobs:
           # NoMount (pinned in verified mode, else dev tip)
           emit nomount_commit "$(pick "$PIN_NOMOUNT" https://github.com/maxsteeel/nomount.git refs/heads/dev)"
 
-          # KernelSU-Next manager — always built from the official repo's dev branch.
+          # KernelSU-Next manager - always built from the official repo's dev branch.
           # pershoot's fork is used only for the kernel SUSFS integration (root_commit below),
           # never for the manager. Manager always builds at latest.
           emit kernelsu_commit "$(resolve_sha https://github.com/KernelSU-Next/KernelSU-Next.git refs/heads/dev)"
@@ -1099,7 +1099,7 @@ jobs:
         STOCK_COMMIT=$(git merge-base HEAD FETCH_HEAD)
         echo "KSU Stock Commit (official sync point): $STOCK_COMMIT"
 
-        # Extract version info — anchored to the official sync point
+        # Extract version info - anchored to the official sync point
         # (STOCK_COMMIT), i.e. the commit the linked manager is built from.
         # Mirrors pershoot c0a2c5fd: count the merge-base with origin, not
         # the fork's extra commits, so the version shown in the release
@@ -1217,7 +1217,7 @@ jobs:
             parts.append(f"- **Branch:** `{branch}`")
             parts.append(f"- **Commit:** `{commit}`")
             if manager_url:
-                note = f" — {manager_note}" if manager_note else ""
+                note = f" - {manager_note}" if manager_note else ""
                 base = manager_url.split("/actions/")[0]
                 parts.append(f"- **Manager:** [{base}]({manager_url}){note}")
             parts.append("")
@@ -1491,7 +1491,7 @@ jobs:
               parts.append(f"- **Branch:** `{branch}`")
               parts.append(f"- **Commit:** `{commit}`")
               if manager_url:
-                  note = f" — {manager_note}" if manager_note else ""
+                  note = f" - {manager_note}" if manager_note else ""
                   base = manager_url.split("/actions/")[0]
                   parts.append(f"- **Manager:** [{base}]({manager_url}){note}")
               parts.append("")

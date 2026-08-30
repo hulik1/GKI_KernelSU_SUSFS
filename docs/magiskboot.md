@@ -4,8 +4,8 @@ For some devices, the `boot.img` format isn't as common as `lz4`, `gz`, and unco
 
 > [!TIP]
 > It's always recommended to use `magiskboot` to patch images. There are two ways:
-> - [magiskboot (official)](https://github.com/topjohnwu/Magisk/releases) — runs on Android devices (and Linux)
-> - [magiskboot_build](https://github.com/capntrips/magiskboot_build) — cross-built binaries for Windows/macOS/Linux PCs
+> - [magiskboot (official)](https://github.com/topjohnwu/Magisk/releases) - runs on Android devices (and Linux)
+> - [magiskboot_build](https://github.com/capntrips/magiskboot_build) - cross-built binaries for Windows/macOS/Linux PCs
 >
 > The official build of `magiskboot` can only run on Android devices. If you want to run it on a PC, use the second option.
 
@@ -41,7 +41,7 @@ For some devices, the `boot.img` format isn't as common as `lz4`, `gz`, and unco
    ```sh
    ./magiskboot unpack boot.img
    ```
-   You will get a `kernel` file — this is your stock kernel.
+   You will get a `kernel` file - this is your stock kernel.
 7. Replace kernel with the KernelSU Image:
    ```sh
    mv -f Image kernel
@@ -67,7 +67,7 @@ For some devices, the `boot.img` format isn't as common as `lz4`, `gz`, and unco
    ```sh
    ./magiskboot unpack boot.img
    ```
-   You will get a `kernel` file — this is your stock kernel.
+   You will get a `kernel` file - this is your stock kernel.
 5. Replace kernel:
    ```sh
    mv -f Image kernel

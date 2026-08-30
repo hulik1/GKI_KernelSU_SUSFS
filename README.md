@@ -34,17 +34,17 @@ By flashing this kernel, **YOU** are choosing to make these modifications. If so
 
 ## Features
 
-- [KernelSU-Next](docs/kernelsu-next.md) / [KernelSU (Classic)](docs/kernelsu-classic.md) / [ReSukiSU](docs/resukisu.md) — root implementations
-- [SUSFS](docs/susfs.md) — root hiding
-- [NoMount](docs/nomount.md) — mount metamodule (root hiding)
-- [Baseband Guard](docs/bbg.md) — partition protection
-- [Networking](docs/networking.md) — WireGuard, BBR, IPSet, CIFS
-- [TMPFS](docs/tmpfs.md) — xattr / POSIX ACLs
-- [BPF](docs/bpf.md) — BTF / eBPF / FUSE-BPF
-- [Ptrace Leak Fix](docs/ptrace.md) — internal to root hiding
-- [Unicode Fix](docs/unicode.md) — internal to root hiding (experimental)
-- [Performance](docs/performance.md) — incl. [NTSync](docs/ntsync.md)
-- [DroidSpaces](docs/droidspaces.md) — container runtime
+- [KernelSU-Next](docs/kernelsu-next.md) / [KernelSU (Classic)](docs/kernelsu-classic.md) / [ReSukiSU](docs/resukisu.md) - root implementations
+- [SUSFS](docs/susfs.md) - root hiding
+- [NoMount](docs/nomount.md) - mount metamodule (root hiding)
+- [Baseband Guard](docs/bbg.md) - partition protection
+- [Networking](docs/networking.md) - WireGuard, BBR, IPSet, CIFS
+- [TMPFS](docs/tmpfs.md) - xattr / POSIX ACLs
+- [BPF](docs/bpf.md) - BTF / eBPF / FUSE-BPF
+- [Ptrace Leak Fix](docs/ptrace.md) - internal to root hiding
+- [Unicode Fix](docs/unicode.md) - internal to root hiding (experimental)
+- [Performance](docs/performance.md) - incl. [NTSync](docs/ntsync.md)
+- [DroidSpaces](docs/droidspaces.md) - container runtime
 
 Full documentation: [docs/index.md](docs/index.md)
 
@@ -52,7 +52,7 @@ Full documentation: [docs/index.md](docs/index.md)
 
 ## Installation
 
-See **[Installation Guide](docs/installation.md)** — [Kernel Flasher](docs/kernelflasher.md) · [Patch boot.img with magiskboot](docs/magiskboot.md).
+See **[Installation Guide](docs/installation.md)** - [Kernel Flasher](docs/kernelflasher.md) · [Patch boot.img with magiskboot](docs/magiskboot.md).
 
 ---
 

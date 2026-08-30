@@ -16,4 +16,4 @@ When `use_bbg` is enabled in the build workflow, BBG is included in the kernel b
 
 ## Related
 
-- [index.md](../index.md) — full feature index
+- [index.md](../index.md) - full feature index

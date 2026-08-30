@@ -21,7 +21,7 @@ The ReSukiSU manager APK is built from `ReSukiSU/ReSukiSU`. The manager version 
 
 ## Related
 
-- [kernelsu-next.md](kernelsu-next.md) — KernelSU-Next
-- [kernelsu-classic.md](kernelsu-classic.md) — classic KernelSU
-- [susfs.md](susfs.md) — root hiding add-on
-- [index.md](../index.md) — full feature index
+- [kernelsu-next.md](kernelsu-next.md) - KernelSU-Next
+- [kernelsu-classic.md](kernelsu-classic.md) - classic KernelSU
+- [susfs.md](susfs.md) - root hiding add-on
+- [index.md](../index.md) - full feature index

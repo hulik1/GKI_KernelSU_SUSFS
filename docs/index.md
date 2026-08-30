@@ -1,4 +1,4 @@
-# Kernel Features — Documentation Index
+# Kernel Features - Documentation Index
 
 Per-feature documentation for the GKI2 kernels built from this repository.
 
@@ -64,6 +64,6 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 
 ---
 
-**Installation** — see [Installation Guide](installation.md) ([Kernel Flasher](kernelflasher.md) · [Patch boot.img with magiskboot](magiskboot.md)).
+**Installation** - see [Installation Guide](installation.md) ([Kernel Flasher](kernelflasher.md) · [Patch boot.img with magiskboot](magiskboot.md)).
 
-**Release Notes** — for build-specific version/commit info, see the [release workflow](https://github.com/WildKernels/GKI_KernelSU_SUSFS/actions/workflows/main.yml) or the releases page.
+**Release Notes** - for build-specific version/commit info, see the [release workflow](https://github.com/WildKernels/GKI_KernelSU_SUSFS/actions/workflows/main.yml) or the releases page.

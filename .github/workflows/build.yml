@@ -566,7 +566,7 @@ jobs:
         WARNINGS="N/A"
         
         {
-          echo "## ${{ inputs.android_version }} ${{ inputs.kernel_version }}.${{ inputs.sublevel }} (${{ inputs.variant }}) — ${STATUS}"
+          echo "## ${{ inputs.android_version }} ${{ inputs.kernel_version }}.${{ inputs.sublevel }} (${{ inputs.variant }}) - ${STATUS}"
           echo
           echo "| Metric | Value |"
           echo "|--------|-------|"

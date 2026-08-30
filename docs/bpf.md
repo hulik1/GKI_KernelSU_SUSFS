@@ -20,4 +20,4 @@ These options are enabled via kernel configuration and are included when the `us
 
 ## Related
 
-- [index.md](../index.md) — full feature index
+- [index.md](../index.md) - full feature index

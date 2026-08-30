@@ -16,4 +16,4 @@ Both features are enabled via kernel configuration options (`CONFIG_TMPFS_XATTR`
 
 ## Related
 
-- [index.md](../index.md) — full feature index
+- [index.md](../index.md) - full feature index
