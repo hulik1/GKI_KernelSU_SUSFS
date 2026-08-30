@@ -34,7 +34,7 @@ By flashing this kernel, **YOU** are choosing to make these modifications. If so
 
 ## Features
 
-- [KernelSU (Classic)](docs/kernelsu-classic.md) / [KernelSU-Next](docs/kernelsu-next.md) / [ReSukiSU](docs/resukisu.md) - root implementations
+- [KernelSU](docs/kernelsu-classic.md) / [KernelSU-Next](docs/kernelsu-next.md) / [ReSukiSU](docs/resukisu.md) - root implementations
 - [SUSFS](docs/susfs.md) - root hiding
 - [NoMount](docs/nomount.md) - mount metamodule
 - [Mountify](docs/mountify.md) - OverlayFS global mounts

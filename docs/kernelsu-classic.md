@@ -1,6 +1,6 @@
-# KernelSU (Classic)
+# KernelSU
 
-Classic KernelSU is a root solution for Android GKI devices that operates in kernel mode and grants root permission to userspace applications from kernel space. It is the original implementation by `tiann`.
+KernelSU is a root solution for Android GKI devices that operates in kernel mode and grants root permission to userspace applications from kernel space. It is the original implementation by `tiann`.
 
 ## Source
 
