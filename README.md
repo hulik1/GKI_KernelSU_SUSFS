@@ -41,15 +41,7 @@ By flashing this kernel, **YOU** are choosing to make these modifications. If so
 
 ## 📲 Install with Kernel Flasher
 
-> [!NOTE]
-> This method is more convenient when upgrading KernelSU and can be done without a computer. Make a backup first. See full guide: **[Installation Guide](docs/installation.md)**.
-
-**Steps:**
-
-1. **Download the AnyKernel3 ZIP.** If you don't know which file to download, carefully read the description of KMI and Security patch level in this document.
-2. **Open the Kernel Flasher app**, grant necessary root permissions, and use the provided AnyKernel3 ZIP to flash.
-
-This requires the [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) app to have root permissions. Other kernel flashing apps that can be used include [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) and [PixelFlasher](https://github.com/badabing2005/PixelFlasher).
+See **[Installation Guide](docs/installation.md)** for full flashing instructions (KMI/SPL selection, Kernel Flasher steps).
 
 ---
 
