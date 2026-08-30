@@ -4,7 +4,7 @@ SUSFS is a KernelSU add-on that provides root-hiding mechanisms using kernel pat
 
 ## Source
 
-- **Upstream:** [simonpunk/susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu)
+- **Source:** [simonpunk/susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu)
 - **Module (userspace add-on):** [sidex15/susfs4ksu-module](https://github.com/sidex15/susfs4ksu-module)
 
 ## Capabilities

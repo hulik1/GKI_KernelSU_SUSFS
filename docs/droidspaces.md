@@ -4,7 +4,7 @@ DroidSpaces-OSS is a lightweight, LXC-inspired container runtime for Android and
 
 ## Source
 
-- **Upstream:** [ravindu644/Droidspaces-OSS](https://github.com/ravindu644/Droidspaces-OSS)
+- **Source:** [ravindu644/Droidspaces-OSS](https://github.com/ravindu644/Droidspaces-OSS)
 
 ## Purpose
 

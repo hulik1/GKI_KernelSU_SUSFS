@@ -4,7 +4,7 @@ ReSukiSU is a root solution for Android GKI devices that operates in kernel mode
 
 ## Source
 
-- **Upstream:** [ReSukiSU/ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) (`main` branch)
+- **Source:** [ReSukiSU/ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) (`main` branch)
 - **Pinned commit:** `03b60f260cce36f23efbd26c9c334edfdc9ce7eb`
 
 Pinned in `main.yml` as `PIN_RESUKISU` and resolved via `pick` so builds are always verified against an exact commit.

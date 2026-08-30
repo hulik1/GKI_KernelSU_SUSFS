@@ -4,7 +4,7 @@ Baseband Guard is a lightweight Linux Security Module (LSM) for the Android kern
 
 ## Source
 
-- **Upstream:** [vc-teahouse/Baseband-guard](https://github.com/vc-teahouse/Baseband-guard)
+- **Source:** [vc-teahouse/Baseband-guard](https://github.com/vc-teahouse/Baseband-guard)
 
 ## Purpose
 

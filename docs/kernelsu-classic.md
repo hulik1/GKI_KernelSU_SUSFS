@@ -4,7 +4,7 @@ Classic KernelSU is a root solution for Android GKI devices that operates in ker
 
 ## Source
 
-- **Upstream:** [tiann/KernelSU](https://github.com/tiann/KernelSU) (`main` branch)
+- **Source:** [tiann/KernelSU](https://github.com/tiann/KernelSU) (`main` branch)
 - **Pinned commit:** `932014ab5b2c9b74a3d11e2ec4d17dd10fc9442e`
 
 Pinned in `main.yml` as `PIN_KERNELSU` and resolved via `pick` so builds are always verified against an exact commit.

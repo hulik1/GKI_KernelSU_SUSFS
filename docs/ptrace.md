@@ -4,7 +4,7 @@ Fixes ptrace info leak on kernels older than 5.16. Internal to root hiding.
 
 ## Source
 
-- **Upstream:** Upstream kernel community
+- **Source:** Upstream kernel community
 
 ## Purpose
 

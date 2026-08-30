@@ -4,7 +4,7 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 
 ## Root Implementations
 
-| Root Flavor | Description | Upstream |
+| Root Flavor | Description | Source |
 |-------------|-------------|----------|
 | KernelSU-Next | Root solution for GKI devices, original KernelSU-Next implementation, always at latest dev-tip. SUSFS-enabled builds sourced from pershoot fork. | [KernelSU-Next/KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) · [pershoot/KernelSU-Next](https://github.com/pershoot/KernelSU-Next) |
 | KernelSU (Classic) | Original KernelSU by tiann, pinned to verified commit. SUSFS patches applied during build. | [tiann/KernelSU](https://github.com/tiann/KernelSU) |

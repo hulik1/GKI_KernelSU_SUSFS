@@ -3,7 +3,7 @@
 `Build pinned root variants` is a manual, artifact-only workflow. It produces
 three separate source trees and never combines root implementations:
 
-| Variant | Upstream | Pinned commit |
+| Variant | Source | Pinned commit |
 | --- | --- | --- |
 | KernelSU | `tiann/KernelSU` | `da9abf498a77d438989fea0f5f4e348b9a540c07` |
 | KernelSU Next | `KernelSU-Next/KernelSU-Next` `dev` | `234f6e040fcbca18b16d2398e1aa225712ec99ad` |
