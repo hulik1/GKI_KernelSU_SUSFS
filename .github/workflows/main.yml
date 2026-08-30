@@ -1274,7 +1274,7 @@ jobs:
                 enabled.append("Performance Tuning")
             if not enabled:
                 return ""
-            parts = ["## Features Included", "", "Each feature is documented separately in `docs/`:", ""]
+            parts = ["## Features Included", "", "See [Kernel Features Documentation](https://github.com/WildKernels/GKI_KernelSU_SUSFS/blob/dev/docs/index.md) for full details.", ""]
             feature_doc_map = [
                 ("SUSFS", "susfs.md"),
                 ("Baseband Guard", "bbg.md"),
@@ -1288,9 +1288,21 @@ jobs:
             ]
             for feature, doc in feature_doc_map:
                 if feature in enabled:
-                    parts.append(f"- [{feature}](docs/{doc})")
+                    parts.append(f"- [{feature}](https://github.com/WildKernels/GKI_KernelSU_SUSFS/blob/dev/docs/{doc})")
             parts.append("")
             return "\n".join(parts)
+
+        def build_install_section():
+            return (
+                "## Install with Kernel Flasher\n\n"
+                "> [!NOTE]\n"
+                "> This method is more convenient when upgrading KernelSU and can be done without a computer. Make a backup first.\n\n"
+                "**Steps:**\n\n"
+                "1. **Download the AnyKernel3 ZIP.** If you don\'t know which file to download, carefully read the description of KMI and Security patch level in this document.\n"
+                "2. **Open the Kernel Flasher app**, grant necessary root permissions, and use the provided AnyKernel3 ZIP to flash.\n\n"
+                "This requires the [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) app to have root permissions. "
+                "Other apps that can be used include [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) and [PixelFlasher](https://github.com/badabing2005/PixelFlasher).\n"
+            )
 
         def render():
             parts = []
@@ -1300,6 +1312,7 @@ jobs:
             parts.append(build_susfs_section())
             parts.append(build_managers_section(parse_managers(env("MANAGER_LIST", ""))))
             parts.append(build_features_section())
+            parts.append(build_install_section())
             return "\n".join(parts)
 
         output = render()
@@ -1534,7 +1547,7 @@ jobs:
                   enabled.append("Performance Tuning")
               if not enabled:
                   return ""
-              parts = ["## Features Included", "", "Each feature is documented separately in `docs/`:", ""]
+              parts = ["## Features Included", "", "See [Kernel Features Documentation](https://github.com/WildKernels/GKI_KernelSU_SUSFS/blob/dev/docs/index.md) for full details.", ""]
               feature_doc_map = [
                   ("SUSFS", "susfs.md"),
                   ("Baseband Guard", "bbg.md"),
@@ -1548,9 +1561,21 @@ jobs:
               ]
               for feature, doc in feature_doc_map:
                   if feature in enabled:
-                      parts.append(f"- [{feature}](docs/{doc})")
+                      parts.append(f"- [{feature}](https://github.com/WildKernels/GKI_KernelSU_SUSFS/blob/dev/docs/{doc})")
               parts.append("")
               return "\n".join(parts)
+
+          def build_install_section():
+              return (
+                  "## Install with Kernel Flasher\n\n"
+                  "> [!NOTE]\n"
+                  "> This method is more convenient when upgrading KernelSU and can be done without a computer. Make a backup first.\n\n"
+                  "**Steps:**\n\n"
+                  "1. **Download the AnyKernel3 ZIP.** If you don\'t know which file to download, carefully read the description of KMI and Security patch level in this document.\n"
+                  "2. **Open the Kernel Flasher app**, grant necessary root permissions, and use the provided AnyKernel3 ZIP to flash.\n\n"
+                  "This requires the [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) app to have root permissions. "
+                  "Other apps that can be used include [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) and [PixelFlasher](https://github.com/badabing2005/PixelFlasher).\n"
+              )
 
           def render():
               parts = []
@@ -1560,6 +1585,7 @@ jobs:
               parts.append(build_susfs_section())
               parts.append(build_managers_section(parse_managers(env("MANAGER_LIST", ""))))
               parts.append(build_features_section())
+              parts.append(build_install_section())
               return "\n".join(parts)
 
           output = render()

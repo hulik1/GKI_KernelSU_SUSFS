@@ -35,16 +35,21 @@ By flashing this kernel, **YOU** are choosing to make these modifications. If so
 
 - 📖 **[Kernel Features Documentation](docs/index.md)** — per-feature documentation
 - 🩹 [Kernel Patches](https://github.com/WildKernels/kernel_patches)
-- 📜 [Old Build Scripts](https://github.com/TheWildJames/kernel_build_scripts)
 - ⚡ [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher)
 
 ---
 
-## 📋 Installation Instructions
+## 📲 Install with Kernel Flasher
 
-For GKI installation, please follow the official guide:
+> [!NOTE]
+> This method is more convenient when upgrading KernelSU and can be done without a computer. Make a backup first.
 
-📖 **[KernelSU Installation Guide](https://kernelsu.org/guide/installation.html)**
+**Steps:**
+
+1. **Download the AnyKernel3 ZIP.** If you don't know which file to download, carefully read the description of KMI and Security patch level in this document.
+2. **Open the Kernel Flasher app**, grant necessary root permissions, and use the provided AnyKernel3 ZIP to flash.
+
+This requires the [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) app to have root permissions. Other kernel flashing apps that can be used include [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) and [PixelFlasher](https://github.com/badabing2005/PixelFlasher).
 
 ---
 
