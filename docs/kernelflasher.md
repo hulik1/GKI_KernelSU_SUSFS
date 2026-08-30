@@ -12,15 +12,6 @@
 - Root access already granted to the flashing app (for upgrades) or a working method to flash initially (fastboot / custom recovery)
 - Battery >50%
 
-## Choosing the correct AnyKernel3 ZIP
-
-Each release artifact is named by **KMI (Kernel Module Interface)** and **Security Patch Level (SPL)**.
-
-- **KMI** - e.g. `android12-5.10`, `android13-5.10`, `android13-5.15`, `android14-5.15`, `android14-6.1`, `android15-6.6`, `android16-6.12`. Must match your device's current kernel version. Check with `uname -r` or in Settings → About phone → Kernel version.
-- **SPL** - monthly security patch string in the filename. Pick the build closest to your current SPL; newer SPL is generally backwards compatible but read the release notes for breaking changes.
-
-If you don't know which file to download, carefully read the description of KMI and Security patch level in the release notes before downloading.
-
 ## Steps
 
 1. **Download the AnyKernel3 ZIP** for your KMI/SPL from the latest [Releases](https://github.com/WildKernels/GKI_KernelSU_SUSFS/releases) page.
