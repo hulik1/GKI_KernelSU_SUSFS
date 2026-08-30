@@ -15,6 +15,8 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 | Feature | Description | Source |
 |---------|-------------|--------|
 | SUSFS | Root-hiding add-on for KernelSU using kernel patches and a userspace module. | [simonpunk/susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu) |
+| Ptrace Leak Fix | Fixes ptrace info leak on kernels older than 5.16. Internal to root hiding. | Upstream kernel community |
+| Unicode Fix | Prevents path traversal via non-printable Unicode (experimental). Internal to root hiding. | Internal to root hiding |
 
 ## Meta Module
 
@@ -57,8 +59,6 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 | Feature | Description | Source |
 |---------|-------------|--------|
 | BTF / eBPF / FUSE-BPF | BPF Type Format, extended BPF, FUSE-BPF interaction | Upstream kernel |
-| Ptrace Leak Fix | Fixes ptrace info leak on kernels older than 5.16 | Upstream kernel community |
-| Unicode Fix | Prevents path traversal via non-printable Unicode (experimental) | Internal |
 
 ## Performance
 

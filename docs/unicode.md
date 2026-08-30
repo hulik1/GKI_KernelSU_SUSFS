@@ -1,12 +1,16 @@
 # Unicode Fix
 
-The Unicode Fix prevents path traversal and other detections using non-printable Unicode codepoints.
+Prevents path traversal via non-printable Unicode (experimental). Internal to root hiding.
 
-This fix is marked as experimental.
+## Source
+
+- **Internal to root hiding**
 
 ## Purpose
 
 Certain path traversal attacks and detection-evasion techniques can use non-printable Unicode codepoints. The Unicode Fix patches the kernel to mitigate these vectors.
+
+It is documented as internal to root hiding (SUSFS/KernelSU) — not a standalone top-level feature.
 
 ## Status
 
@@ -18,4 +22,5 @@ The Unicode Fix is applied as a patch during the build workflow when `use_unicod
 
 ## Related
 
-- [index.md](../index.md) — full feature index
+- [susfs.md](susfs.md) — root hiding
+- [index.md](index.md) — full feature index

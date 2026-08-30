@@ -42,8 +42,8 @@ By flashing this kernel, **YOU** are choosing to make these modifications. If so
 - [NTSync](docs/ntsync.md) — NT sync primitives
 - [TMPFS](docs/tmpfs.md) — xattr / POSIX ACLs
 - [BPF](docs/bpf.md) — BTF / eBPF / FUSE-BPF
-- [Ptrace Leak Fix](docs/ptrace.md)
-- [Unicode Fix](docs/unicode.md) — experimental
+- [Ptrace Leak Fix](docs/ptrace.md) — internal to root hiding
+- [Unicode Fix](docs/unicode.md) — internal to root hiding (experimental)
 - [Performance](docs/performance.md)
 - [DroidSpaces](docs/droidspaces.md) — container runtime
 
