@@ -35,32 +35,32 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 
 | Feature | Description | Source |
 |---------|-------------|--------|
-| TCP Congestion Control | BBRv1, BBRv3, CUBIC, BIC, Westwood, HTCP | Upstream kernel |
+| TCP Congestion Control | BBRv1, BBRv3, CUBIC, BIC, Westwood, HTCP | [Upstream kernel](https://www.kernel.org/doc/html/latest/admin-guide/kernel-config.html) |
 | WireGuard | Built-in VPN support | [wireguard/wireguard-linux-compat](https://git.zx2c4.com/wireguard-linux-compat/) |
-| IP Set / IPv6 NAT | Advanced firewall capabilities | Upstream kernel |
-| Conntrack / connmark | Connection marking for packet classification | Upstream kernel |
-| CIFS | SMB/CIFS network filesystem | Upstream kernel |
-| TTL Target | Network packet manipulation | Upstream kernel |
+| IP Set / IPv6 NAT | Advanced firewall capabilities | [Upstream kernel](https://www.kernel.org/doc/html/latest/admin-guide/kernel-config.html) |
+| Conntrack / connmark | Connection marking for packet classification | [Upstream kernel](https://www.kernel.org/doc/html/latest/admin-guide/kernel-config.html) |
+| CIFS | SMB/CIFS network filesystem | [Upstream kernel](https://www.kernel.org/doc/html/latest/admin-guide/kernel-config.html) |
+| TTL Target | Network packet manipulation | [Upstream kernel](https://www.kernel.org/doc/html/latest/admin-guide/kernel-config.html) |
 
 ## Filesystem & Storage
 
 | Feature | Description | Source |
 |---------|-------------|--------|
-| TMPFS Extended Attributes | Extended attributes on tmpfs | Upstream kernel |
-| TMPFS POSIX ACLs | POSIX ACL support on tmpfs | Upstream kernel |
+| TMPFS Extended Attributes | Extended attributes on tmpfs | [Upstream kernel](https://www.kernel.org/doc/html/latest/admin-guide/kernel-config.html) |
+| TMPFS POSIX ACLs | POSIX ACL support on tmpfs | [Upstream kernel](https://www.kernel.org/doc/html/latest/admin-guide/kernel-config.html) |
 
 ## Debugging, Tracing & BPF
 
 | Feature | Description | Source |
 |---------|-------------|--------|
-| BTF / eBPF / FUSE-BPF | BPF Type Format, extended BPF, FUSE-BPF interaction | Upstream kernel |
+| BTF / eBPF / FUSE-BPF | BPF Type Format, extended BPF, FUSE-BPF interaction | [Upstream kernel](https://www.kernel.org/doc/html/latest/admin-guide/kernel-config.html) |
 
 ## Performance
 
 | Feature | Description | Source |
 |---------|-------------|--------|
 | NTSync | High-performance synchronization primitives compatible with Windows NT kernel API. | Internal |
-| Performance Tuning | Kernel configuration and tuning options | Upstream kernel |
+| Performance Tuning | Kernel configuration and tuning options | [Upstream kernel](https://www.kernel.org/doc/html/latest/admin-guide/kernel-config.html) |
 
 ## Container Runtime
 
