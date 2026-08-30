@@ -4,8 +4,8 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 
 ## Root Implementations
 
-- [KernelSU-Next](kernelsu-next.md)
 - [KernelSU (Classic)](kernelsu-classic.md)
+- [KernelSU-Next](kernelsu-next.md)
 - [ReSukiSU](resukisu.md)
 
 ## Root Hiding
