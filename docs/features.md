@@ -36,7 +36,7 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 | Feature | Description | Source |
 |---------|-------------|--------|
 | TCP Congestion Control | BBRv1, BBRv3, CUBIC, BIC, Westwood, HTCP | `CONFIG_TCP_CONG_BBR` / `CONFIG_TCP_CONG_CUBIC` etc |
-| WireGuard | Built-in VPN support | [wireguard/wireguard-linux-compat](https://git.zx2c4.com/wireguard-linux-compat/) |
+| WireGuard | Built-in VPN support | `CONFIG_WIREGUARD` |
 | IP Set / IPv6 NAT | Advanced firewall capabilities | `CONFIG_IP_SET` / `CONFIG_IP6_NF_NAT` |
 | Conntrack / connmark | Connection marking for packet classification | `CONFIG_NF_CONNTRACK` / `CONFIG_NET_ACT_CONNMARK` |
 | CIFS | SMB/CIFS network filesystem | `CONFIG_CIFS` |
