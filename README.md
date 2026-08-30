@@ -32,11 +32,12 @@ By flashing this kernel, **YOU** are choosing to make these modifications. If so
 
 ---
 
-## 🔗 Additional Resources
+## ✨ Features
 
-- 📖 **[Kernel Features Documentation](docs/index.md)** — per-feature documentation
-- 🩹 [Kernel Patches](https://github.com/WildKernels/kernel_patches)
-- ⚡ [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher)
+- 🔐 **KernelSU**: A root solution for Android GKI devices that works in kernel mode and grants root permission to userspace applications directly in kernel space
+- 🛡️ **SUSFS**: An addon root hiding kernel patches and userspace module for KernelSU
+
+📖 Full feature documentation: **[Kernel Features Documentation](docs/index.md)**
 
 ---
 
@@ -46,22 +47,21 @@ See **[Installation Guide](docs/installation.md)**.
 
 ---
 
-## ✨ Features
-
-- 🔐 **KernelSU**: A root solution for Android GKI devices that works in kernel mode and grants root permission to userspace applications directly in kernel space
-- 🛡️ **SUSFS**: An addon root hiding kernel patches and userspace module for KernelSU
-
----
-
 ## 🏆 Credits
 
 - 🔐 **KernelSU**: Developed by [tiann](https://github.com/tiann/KernelSU)
 - 🚀 **KernelSU-Next**: Developed by [rifsxd](https://github.com/KernelSU-Next/KernelSU-Next)
+- 🔀 **KernelSU-Next SUSFS Fork**: Developed by [pershoot](https://github.com/pershoot/KernelSU-Next) (`dev-susfs` branch used for SUSFS builds)
+- 🔄 **ReSukiSU**: Developed by [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU)
 - ✨ **Magic-KSU**: Developed by [5ec1cff](https://github.com/5ec1cff/KernelSU)
-- 🛡️ **SUSFS**: Developed by [simonpunk](https://gitlab.com/simonpunk/susfs4ksu.git)
-- 🛡️ **Baseband-guard (BBG)**: Developed by [vc-teahouse](https://github.com/vc-teahouse/Baseband-guard)
+- 🛡️ **SUSFS**: Developed by [simonpunk](https://gitlab.com/simonpunk/susfs4ksu)
 - 📦 **SUSFS Module**: Developed by [sidex15](https://github.com/sidex15)
-- 👑 **Sultan Kernels**: Developed by [kerneltoast](https://github.com/kerneltoast)
+- 🩹 **NoMount**: Developed by [maxsteeel](https://github.com/maxsteeel/nomount)
+- 📦 **DroidSpaces-OSS**: Developed by [ravindu644](https://github.com/ravindu644/Droidspaces-OSS)
+- 🛡️ **Baseband-guard (BBG)**: Developed by [vc-teahouse](https://github.com/vc-teahouse/Baseband-guard)
+- 🩹 **Kernel Patches**: Maintained by [WildKernels/kernel_patches](https://github.com/WildKernels/kernel_patches)
+- 📦 **AnyKernel3**: Maintained by [WildKernels/AnyKernel3](https://github.com/WildKernels/AnyKernel3) (fork of [osm0sis/AnyKernel3](https://github.com/osm0sis/AnyKernel3))
+- 👑 **Sultan Kernels (Pixel)**: Developed by [kerneltoast](https://github.com/kerneltoast)
 - 🔧 **Device Boot Fix**: [Boot fix commit](https://github.com/Anything-at-25-00/android_kernel_common_android12-5.10/commit/2476d262b597fe8af82cfb7aaf96676f51c6b4ed) for fixing some devices not booting
 
 🙏 Special thanks to the open-source community for their contributions!
