@@ -21,9 +21,9 @@ By flashing this kernel, **YOU** are choosing to make these modifications. If so
 
 ---
 
-## 🔧 Available Kernels
+## 📱 Available Devices
 
-| Kernel | Repository | Status |
+| Device | Repository | Status |
 |--------|------------|--------|
 | 🏗️ **GKI** | [GKI_KernelSU_SUSFS](https://github.com/WildKernels/GKI_KernelSU_SUSFS) | ✅ Active |
 | 👑 **Sultan** | [Sultan_KernelSU_SUSFS](https://github.com/WildKernels/Sultan_KernelSU_SUSFS) | ✅ Active |
