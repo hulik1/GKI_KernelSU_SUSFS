@@ -52,8 +52,8 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 
 | Feature | Description | Source |
 |---------|-------------|--------|
-| NTSync | High-performance synchronization primitives compatible with Windows NT kernel API. | Internal |
-| Performance Tuning | Kernel configuration and tuning options | Upstream kernel |
+| NTSync | High-performance synchronization primitives compatible with Windows NT kernel API. | `CONFIG_NTSYNC` · [kernel_patches/common/ntsync](https://github.com/WildKernels/kernel_patches/tree/main/common/ntsync) |
+| Performance Tuning | Kernel configuration and tuning options | [WildKernels/kernel_patches](https://github.com/WildKernels/kernel_patches/tree/main/common) |
 
 ## Container Runtime
 
