@@ -34,7 +34,20 @@ By flashing this kernel, **YOU** are choosing to make these modifications. If so
 
 ## Features
 
-See **[Kernel Features Documentation](docs/index.md)** for details on KernelSU, SUSFS, NoMount, Baseband Guard, networking, BPF, and more.
+- [KernelSU-Next](docs/kernelsu-next.md) / [KernelSU (Classic)](docs/kernelsu-classic.md) / [ReSukiSU](docs/resukisu.md) — root implementations
+- [NoMount](docs/nomount.md) — mount metamodule
+- [SUSFS](docs/susfs.md) — root hiding
+- [Baseband Guard](docs/bbg.md) — partition protection
+- [Networking](docs/networking.md) — WireGuard, BBR, IPSet, CIFS
+- [NTSync](docs/ntsync.md) — NT sync primitives
+- [TMPFS](docs/tmpfs.md) — xattr / POSIX ACLs
+- [BPF](docs/bpf.md) — BTF / eBPF / FUSE-BPF
+- [Ptrace Leak Fix](docs/ptrace.md)
+- [Unicode Fix](docs/unicode.md) — experimental
+- [Performance](docs/performance.md)
+- [DroidSpaces](docs/droidspaces.md) — container runtime
+
+Full documentation: [docs/index.md](docs/index.md)
 
 ---
 
