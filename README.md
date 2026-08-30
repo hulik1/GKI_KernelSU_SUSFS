@@ -34,10 +34,7 @@ By flashing this kernel, **YOU** are choosing to make these modifications. If so
 
 ## Features
 
-- **KernelSU**: A root solution for Android GKI devices that works in kernel mode and grants root permission to userspace applications directly in kernel space
-- **SUSFS**: An addon root hiding kernel patches and userspace module for KernelSU
-
-Full feature documentation: **[Kernel Features Documentation](docs/index.md)**
+See **[Kernel Features Documentation](docs/index.md)** for details on KernelSU, SUSFS, NoMount, Baseband Guard, networking, BPF, and more.
 
 ---
 
