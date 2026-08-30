@@ -8,7 +8,7 @@ Choose the method that fits your situation:
 | Method | When to use | Requires root | Guide |
 |--------|-------------|---------------|-------|
 | **Kernel Flasher** | Upgrading with root already available, no PC needed | Yes | [kernelflasher.md](kernelflasher.md) |
-| **magiskboot** | When you want to skip pre-rooted method and flash a prepatched `boot.img` directly | No | [magiskboot.md](magiskboot.md) |
+| **magiskboot** | When you want to flash a pre-patched `boot.img` directly (no pre-rooted setup required) | No | [magiskboot.md](magiskboot.md) |
 
 ## Choosing the correct AnyKernel3 ZIP
 
