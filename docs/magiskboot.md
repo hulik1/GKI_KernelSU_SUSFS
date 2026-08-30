@@ -21,6 +21,15 @@ For some devices, the `boot.img` format isn't as common as `lz4`, `gz`, and unco
 
 ## Using magiskboot on Android devices
 
+Folder structure on device (`/data/local/tmp/`):
+
+```
+/data/local/tmp/
+├── magiskboot
+├── boot.img
+└── Image
+```
+
 1. Download latest Magisk from [GitHub Releases](https://github.com/topjohnwu/Magisk/releases).
 2. Rename `Magisk-*(version).apk` to `Magisk-*.zip` and unzip it.
 3. Push `libmagiskboot.so` to your device by ADB:
@@ -58,6 +67,15 @@ For some devices, the `boot.img` format isn't as common as `lz4`, `gz`, and unco
 
 ## Using magiskboot on Linux
 
+Folder structure on PC:
+
+```
+.
+├── magiskboot
+├── boot.img
+└── Image
+```
+
 Official `magiskboot` can run in Linux normally - use the [official build](https://github.com/topjohnwu/Magisk/releases). If you prefer, you can also use [WildKernels/Magisk (W.I.P.)](https://github.com/WildKernels/Magisk).
 
 1. Prepare stock `boot.img` and `Image` in your PC.
@@ -84,6 +102,15 @@ Official `magiskboot` can run in Linux normally - use the [official build](https
    ```
 
 ## Using magiskboot on Windows / Other
+
+Folder structure on PC:
+
+```
+.
+├── magiskboot.exe
+├── boot.img
+└── Image
+```
 
 1. Download the corresponding `magiskboot` binary for your OS from [WildKernels/Magisk (W.I.P.)](https://github.com/WildKernels/Magisk).
 2. Prepare stock `boot.img` and `Image` in your PC.
