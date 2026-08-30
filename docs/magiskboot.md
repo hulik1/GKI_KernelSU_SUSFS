@@ -15,7 +15,7 @@ For some devices, the `boot.img` format isn't as common as `lz4`, `gz`, and unco
 3. Unpack the AnyKernel3 package and get the `Image` file, which is the kernel file of KernelSU.
 
 > [!NOTE]
-> Match by the full kernel version (e.g., `6.1.157-android14`), not just the Android OS version - your device's Android version and the `android14` in the kernel version are not necessarily the same.
+> Match by the full kernel version (e.g., `6.1.157-android14`) - your device's Android version and the `android14` in the kernel version are not necessarily the same.
 
 ## Using magiskboot on Android devices
 
