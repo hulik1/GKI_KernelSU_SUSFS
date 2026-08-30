@@ -4,7 +4,6 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 
 ## Root Implementations
 
-- [KernelSU](kernelsu-classic.md)
 - [KernelSU-Next](kernelsu-next.md)
 - [ReSukiSU](resukisu.md)
 
