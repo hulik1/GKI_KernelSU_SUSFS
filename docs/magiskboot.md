@@ -11,7 +11,10 @@ For some devices, the `boot.img` format isn't as common as `lz4`, `gz`, and unco
 ## Preparation
 
 1. Get your device's stock `boot.img`.
-2. Download the AnyKernel3 ZIP file provided by KernelSU that matches the KMI version of your device.
+2. Download the AnyKernel3 ZIP file that matches your kernel version (e.g., `6.1.157-android14`).
+
+   > [!NOTE]
+   > The Android version (e.g., Android 14) and the Android version in the kernel version (e.g., `android14` in `6.1.157-android14`) are not the same - they may differ.
 3. Unpack the AnyKernel3 package and get the `Image` file, which is the kernel file of KernelSU.
 
 ## Using magiskboot on Android devices
