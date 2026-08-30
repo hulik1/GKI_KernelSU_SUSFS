@@ -69,7 +69,5 @@ runs:
         patch -p1 -F3 --forward < "${{ github.workspace }}/kernel_patches/common/silence_irq_cpu_logspam.patch"
         echo "Patching silence_system_logspam.patch"
         patch -p1 -F3 --forward < "${{ github.workspace }}/kernel_patches/common/silence_system_logspam.patch"
-        echo "Patching use_unlikely_wrap_cpufreq.patch"
-        patch -p1 -F3 --forward < "${{ github.workspace }}/kernel_patches/common/use_unlikely_wrap_cpufreq.patch"
 
         echo "[+] Other patches applied"
