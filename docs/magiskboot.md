@@ -5,7 +5,7 @@ For some devices, the `boot.img` format isn't as common as `lz4`, `gz`, and unco
 > [!TIP]
 > It's always recommended to use `magiskboot` to patch images. There are two ways:
 > - [magiskboot (official)](https://github.com/topjohnwu/Magisk/releases) - runs on Android devices (and Linux)
-> - [magiskboot_build](https://github.com/capntrips/magiskboot_build) - cross-built binaries for Windows/macOS/Linux PCs
+> - [WildKernels/Magisk (W.I.P.)](https://github.com/WildKernels/Magisk) - cross-built binaries for Windows/macOS/Linux PCs (W.I.P.)
 >
 > The official build of `magiskboot` can only run on Android devices. If you want to run it on a PC, use the second option.
 
@@ -57,7 +57,7 @@ For some devices, the `boot.img` format isn't as common as `lz4`, `gz`, and unco
 
 ## Using magiskboot on Windows / macOS / Linux PC
 
-1. Download the corresponding `magiskboot` binary for your OS from [magiskboot_build](https://github.com/capntrips/magiskboot_build).
+1. Download the corresponding `magiskboot` binary for your OS from [WildKernels/Magisk (W.I.P.)](https://github.com/WildKernels/Magisk).
 2. Prepare stock `boot.img` and `Image` in your PC.
 3. Make it executable:
    ```sh
