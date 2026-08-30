@@ -7,7 +7,6 @@ For some devices, the `boot.img` format isn't as common as `lz4`, `gz`, and unco
 > - [magiskboot (official)](https://github.com/topjohnwu/Magisk/releases) - runs on Android devices (and Linux)
 > - [WildKernels/Magisk (W.I.P.)](https://github.com/WildKernels/Magisk) - cross-built binaries for Windows/macOS/Linux PCs (W.I.P.)
 >
-> The official build of `magiskboot` can only run on Android devices. If you want to run it on a PC, use the second option.
 
 > [!WARNING]
 > `Android-Image-Kitchen` isn't recommended for now because it doesn't handle the boot metadata (such as security patch level) correctly. Therefore, it may not work on some devices.
