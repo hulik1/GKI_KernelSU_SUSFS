@@ -4,45 +4,69 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 
 ## Root Implementations
 
-- [KernelSU](kernelsu.md)
-- [KernelSU-Next](kernelsu-next.md)
-- [ReSukiSU](resukisu.md)
+| Root Flavor | Description | Source |
+|-------------|-------------|----------|
+| KernelSU | Root solution for GKI devices, original implementation by tiann, pinned to verified commit. SUSFS patches applied during build. | [tiann/KernelSU](https://github.com/tiann/KernelSU) |
+| KernelSU-Next | Root solution for GKI devices, original KernelSU-Next implementation, always at latest dev-tip. SUSFS-enabled builds sourced from pershoot fork. | [KernelSU-Next/KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) · [pershoot/KernelSU-Next](https://github.com/pershoot/KernelSU-Next) |
+| ReSukiSU | ReSukiSU root fork, pinned to verified commit. Own SUSFS pins per flavor. | [ReSukiSU/ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) |
 
 ## Root Hiding
 
-- [susfs4ksu](susfs4ksu.md)
-- [Ptrace Leak Fix](ptrace.md)
-- [Unicode Fix](unicode.md)
+| Feature | Description | Source |
+|---------|-------------|--------|
+| susfs4ksu | Root-hiding add-on for KernelSU using kernel patches and a userspace module. | [simonpunk/susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu) |
+| Ptrace Leak Fix | Fixes ptrace info leak on kernels older than 5.16. Internal to root hiding. | [patch](https://github.com/WildKernels/kernel_patches/blob/main/gki_ptrace.patch) |
+| Unicode Fix | Prevents path traversal via non-printable Unicode (experimental). Internal to root hiding. | Internal to root hiding · [patch 6.1-](https://github.com/WildKernels/kernel_patches/blob/main/common/unicode_bypass_fix_6.1-.patch) · [patch 6.1+](https://github.com/WildKernels/kernel_patches/blob/main/common/unicode_bypass_fix_6.1+.patch) |
 
 ## Meta Module
 
-- [NoMount](nomount.md)
-- [Mountify](mountify.md)
+| Module | Description | Source |
+|--------|-------------|--------|
+| NoMount | Metamodule providing mount-related functionality alongside root implementations. | [maxsteeel/nomount](https://github.com/maxsteeel/nomount) |
+| Mountify | Globally mounted modules via OverlayFS. | [backslashxx/mountify](https://github.com/backslashxx/mountify) |
 
 ## Security
 
-- [Baseband Guard](bbg.md)
+| Feature | Description | Source |
+|---------|-------------|--------|
+| Baseband Guard | Lightweight LSM blocking unauthorized writes to critical partitions and device nodes. | [vc-teahouse/Baseband-guard](https://github.com/vc-teahouse/Baseband-guard) |
 
 ## Networking
 
-- [Networking](networking.md)
+| Feature | Description | Source |
+|---------|-------------|--------|
+| TCP Congestion Control | BBRv1, BBRv3, CUBIC, BIC, Westwood, HTCP | Upstream kernel |
+| WireGuard | Built-in VPN support | [wireguard/wireguard-linux-compat](https://git.zx2c4.com/wireguard-linux-compat/) |
+| IP Set / IPv6 NAT | Advanced firewall capabilities | Upstream kernel |
+| Conntrack / connmark | Connection marking for packet classification | Upstream kernel |
+| CIFS | SMB/CIFS network filesystem | Upstream kernel |
+| TTL Target | Network packet manipulation | Upstream kernel |
 
 ## Filesystem & Storage
 
-- [TMPFS](tmpfs.md)
+| Feature | Description | Source |
+|---------|-------------|--------|
+| TMPFS Extended Attributes | Extended attributes on tmpfs | Upstream kernel |
+| TMPFS POSIX ACLs | POSIX ACL support on tmpfs | Upstream kernel |
 
 ## Debugging, Tracing & BPF
 
-- [BPF](bpf.md)
+| Feature | Description | Source |
+|---------|-------------|--------|
+| BTF / eBPF / FUSE-BPF | BPF Type Format, extended BPF, FUSE-BPF interaction | Upstream kernel |
 
 ## Performance
 
-- [NTSync](ntsync.md)
-- [Performance Tuning](performance.md)
+| Feature | Description | Source |
+|---------|-------------|--------|
+| NTSync | High-performance synchronization primitives compatible with Windows NT kernel API. | Internal |
+| Performance Tuning | Kernel configuration and tuning options | Upstream kernel |
 
 ## Container Runtime
 
-- [DroidSpaces-OSS](droidspaces.md)
+| Feature | Description | Source |
+|---------|-------------|--------|
+| DroidSpaces-OSS | LXC-inspired container runtime for Android/Linux | [ravindu644/Droidspaces-OSS](https://github.com/ravindu644/Droidspaces-OSS) |
 
 ---
 
