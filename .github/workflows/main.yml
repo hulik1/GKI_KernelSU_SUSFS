@@ -1301,7 +1301,8 @@ jobs:
                 "1. **Download the AnyKernel3 ZIP.** If you don\'t know which file to download, carefully read the description of KMI and Security patch level in this document.\n"
                 "2. **Open the Kernel Flasher app**, grant necessary root permissions, and use the provided AnyKernel3 ZIP to flash.\n\n"
                 "This requires the [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) app to have root permissions. "
-                "Other apps that can be used include [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) and [PixelFlasher](https://github.com/badabing2005/PixelFlasher).\n"
+                "Other apps that can be used include [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) and [PixelFlasher](https://github.com/badabing2005/PixelFlasher). "
+                "Full guide: [docs/installation.md](https://github.com/WildKernels/GKI_KernelSU_SUSFS/blob/dev/docs/installation.md)\n"
             )
 
         def render():
@@ -1574,7 +1575,8 @@ jobs:
                   "1. **Download the AnyKernel3 ZIP.** If you don\'t know which file to download, carefully read the description of KMI and Security patch level in this document.\n"
                   "2. **Open the Kernel Flasher app**, grant necessary root permissions, and use the provided AnyKernel3 ZIP to flash.\n\n"
                   "This requires the [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) app to have root permissions. "
-                  "Other apps that can be used include [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) and [PixelFlasher](https://github.com/badabing2005/PixelFlasher).\n"
+                  "Other apps that can be used include [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) and [PixelFlasher](https://github.com/badabing2005/PixelFlasher). "
+                  "Full guide: [docs/installation.md](https://github.com/WildKernels/GKI_KernelSU_SUSFS/blob/dev/docs/installation.md)\n"
               )
 
           def render():

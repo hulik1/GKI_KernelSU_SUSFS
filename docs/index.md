@@ -64,4 +64,6 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 
 ---
 
+**Installation** — see [Installation Guide](installation.md) for flashing instructions (Kernel Flasher, KMI/SPL selection).
+
 **Release Notes** — for build-specific version/commit info, see the [release workflow](https://github.com/WildKernels/GKI_KernelSU_SUSFS/actions/workflows/main.yml) or the releases page.

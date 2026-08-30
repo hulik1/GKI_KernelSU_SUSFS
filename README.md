@@ -42,7 +42,7 @@ By flashing this kernel, **YOU** are choosing to make these modifications. If so
 ## 📲 Install with Kernel Flasher
 
 > [!NOTE]
-> This method is more convenient when upgrading KernelSU and can be done without a computer. Make a backup first.
+> This method is more convenient when upgrading KernelSU and can be done without a computer. Make a backup first. See full guide: **[Installation Guide](docs/installation.md)**.
 
 **Steps:**
 
