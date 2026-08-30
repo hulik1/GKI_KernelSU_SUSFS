@@ -13,6 +13,15 @@ For some devices, the `boot.img` format isn't as common as `lz4`, `gz`, and unco
 
 **Platforms:** [Android](#using-magiskboot-on-android-devices) · [Linux](#using-magiskboot-on-linux) · [Windows / Other](#using-magiskboot-on-windows--other)
 
+## Choosing the correct AnyKernel3 ZIP
+
+Each release artifact is named by **KMI** (Kernel Module Interface) and **Security Patch Level (SPL)**.
+
+- **KMI** - e.g. `android12-5.10`, `android13-5.10`, `android13-5.15`, `android14-5.15`, `android14-6.1`, `android15-6.6`, `android16-6.12`. Must match your device's current kernel version. Check with `uname -r` or in **Settings → About phone → Kernel version**.
+- **SPL** - monthly security patch string in the filename. Pick the build closest to your current SPL; newer SPL is generally backwards compatible but read the release notes for breaking changes.
+
+If you don't know which file to download, carefully read the description of KMI and Security patch level in the release notes before downloading.
+
 ## Preparation
 
 1. Get your device's stock `boot.img`.
