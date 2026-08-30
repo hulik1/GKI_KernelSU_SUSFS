@@ -20,6 +20,7 @@ The KernelSU-Next manager APK is built from the official `KernelSU-Next/KernelSU
 
 ## Related
 
+- [kernelsu.md](kernelsu.md) - KernelSU
 - [resukisu.md](resukisu.md) - ReSukiSU
 - [susfs.md](susfs.md) - root hiding add-on
 - [index.md](../index.md) - full feature index
