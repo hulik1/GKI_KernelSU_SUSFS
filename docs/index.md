@@ -10,17 +10,22 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 | KernelSU (Classic) | Original KernelSU by tiann, pinned to verified commit. SUSFS patches applied during build. | [tiann/KernelSU](https://github.com/tiann/KernelSU) |
 | ReSukiSU | ReSukiSU root fork, pinned to verified commit. Own SUSFS pins per flavor. | [ReSukiSU/ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) |
 
+## Root Hiding
+
+| Feature | Description | Source |
+|---------|-------------|--------|
+| SUSFS | Root-hiding add-on for KernelSU using kernel patches and a userspace module. | [simonpunk/susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu) |
+
 ## Meta Module
 
 | Module | Description | Source |
 |--------|-------------|--------|
 | NoMount | Metamodule providing mount-related functionality alongside root implementations. | [maxsteeel/nomount](https://github.com/maxsteeel/nomount) |
 
-## Root Hiding & Security
+## Security
 
 | Feature | Description | Source |
 |---------|-------------|--------|
-| SUSFS | Root-hiding add-on for KernelSU using kernel patches and a userspace module. | [simonpunk/susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu) |
 | Baseband Guard | Lightweight LSM blocking unauthorized writes to critical partitions and device nodes. | [vc-teahouse/Baseband-guard](https://github.com/vc-teahouse/Baseband-guard) |
 
 ## Kernel Modules & Compatibility
