@@ -23,5 +23,5 @@ The KernelSU manager APK is built from `tiann/KernelSU`. The manager version sho
 
 - [kernelsu-next.md](kernelsu-next.md) - KernelSU-Next
 - [resukisu.md](resukisu.md) - ReSukiSU
-- [susfs.md](susfs.md) - root hiding add-on
+- [susfs4ksu.md](susfs4ksu.md) - root hiding add-on
 - [index.md](../index.md) - full feature index

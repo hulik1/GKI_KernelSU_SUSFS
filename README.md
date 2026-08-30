@@ -3,7 +3,7 @@
 # Wild Kernels for Android
 
 [![KernelSU](https://img.shields.io/badge/KernelSU-Supported-green)](https://kernelsu.org/)
-[![SUSFS](https://img.shields.io/badge/SUSFS-Integrated-orange)](https://gitlab.com/simonpunk/susfs4ksu)
+[![susfs4ksu](https://img.shields.io/badge/susfs4ksu-Integrated-orange)](https://gitlab.com/simonpunk/susfs4ksu)
 
 </div>
 
@@ -35,7 +35,7 @@ By flashing this kernel, **YOU** are choosing to make these modifications. If so
 ## Features
 
 - [KernelSU](docs/kernelsu.md) / [KernelSU-Next](docs/kernelsu-next.md) / [ReSukiSU](docs/resukisu.md) - root implementations
-- [SUSFS](docs/susfs.md) - root hiding
+- [susfs4ksu](docs/susfs4ksu.md) - root hiding
 - [NoMount](docs/nomount.md) - mount metamodule
 - [Mountify](docs/mountify.md) - OverlayFS global mounts
 - [Baseband Guard](docs/bbg.md) - partition protection

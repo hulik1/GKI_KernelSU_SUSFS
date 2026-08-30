@@ -18,5 +18,5 @@ The ptrace leak fix is applied as a patch during the build workflow when `use_pt
 
 ## Related
 
-- [susfs.md](susfs.md) - root hiding
+- [susfs4ksu.md](susfs4ksu.md) - root hiding
 - [index.md](index.md) - full feature index

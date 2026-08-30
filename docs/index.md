@@ -10,7 +10,7 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 
 ## Root Hiding
 
-- [SUSFS](susfs.md)
+- [susfs4ksu](susfs4ksu.md)
 - [Ptrace Leak Fix](ptrace.md)
 - [Unicode Fix](unicode.md)
 

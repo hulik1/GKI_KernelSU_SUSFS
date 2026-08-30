@@ -1,6 +1,6 @@
-# SUSFS
+# susfs4ksu
 
-SUSFS is a KernelSU add-on that provides root-hiding mechanisms using kernel patches and a userspace module.
+susfs4ksu is a KernelSU add-on that provides root-hiding mechanisms using kernel patches and a userspace module.
 
 ## Source
 
