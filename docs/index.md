@@ -25,12 +25,6 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 |---------|-------------|--------|
 | Baseband Guard | Lightweight LSM blocking unauthorized writes to critical partitions and device nodes. | [vc-teahouse/Baseband-guard](https://github.com/vc-teahouse/Baseband-guard) |
 
-## Kernel Modules & Compatibility
-
-| Feature | Description | Source |
-|---------|-------------|--------|
-| NTSync | High-performance synchronization primitives compatible with Windows NT kernel API. | Internal |
-
 ## Networking
 
 | Feature | Description | Source |
@@ -59,6 +53,7 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 
 | Feature | Description | Source |
 |---------|-------------|--------|
+| NTSync | High-performance synchronization primitives compatible with Windows NT kernel API. | Internal |
 | Performance Tuning | Kernel configuration and tuning options | Upstream kernel |
 
 ## Container Runtime

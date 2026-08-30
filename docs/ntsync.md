@@ -1,12 +1,16 @@
 # NTSync
 
-NTSync provides high-performance, low-latency synchronization primitives compatible with the Windows NT kernel API.
+High-performance synchronization primitives compatible with Windows NT kernel API. Internal to performance category.
 
-It is included in builds from this repository when the corresponding feature flag is enabled.
+## Source
+
+- **Internal**
 
 ## Purpose
 
 NTSync brings Windows-compatible synchronization primitives (such as those used by NT kernel objects) to the Android kernel, which can be useful for compatibility with software expecting Windows-style synchronization behavior.
+
+It is documented as internal to the performance category.
 
 ## Build Integration
 
@@ -14,4 +18,5 @@ NTSync is enabled via the `use_ntsync` feature flag in the build workflow. It is
 
 ## Related
 
-- [index.md](../index.md) — full feature index
+- [performance.md](performance.md) — performance category
+- [index.md](index.md) — full feature index

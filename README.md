@@ -39,12 +39,11 @@ By flashing this kernel, **YOU** are choosing to make these modifications. If so
 - [NoMount](docs/nomount.md) — mount metamodule (root hiding)
 - [Baseband Guard](docs/bbg.md) — partition protection
 - [Networking](docs/networking.md) — WireGuard, BBR, IPSet, CIFS
-- [NTSync](docs/ntsync.md) — NT sync primitives
 - [TMPFS](docs/tmpfs.md) — xattr / POSIX ACLs
 - [BPF](docs/bpf.md) — BTF / eBPF / FUSE-BPF
 - [Ptrace Leak Fix](docs/ptrace.md) — internal to root hiding
 - [Unicode Fix](docs/unicode.md) — internal to root hiding (experimental)
-- [Performance](docs/performance.md)
+- [Performance](docs/performance.md) — incl. [NTSync](docs/ntsync.md)
 - [DroidSpaces](docs/droidspaces.md) — container runtime
 
 Full documentation: [docs/index.md](docs/index.md)
