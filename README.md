@@ -53,7 +53,7 @@ Full documentation: [docs/index.md](docs/index.md)
 
 ## Installation
 
-See **[Installation Guide](docs/installation.md)**.
+See **[Installation Guide](docs/installation.md)** — [Kernel Flasher](docs/kernelflasher.md) · [Patch boot.img with magiskboot](docs/magiskboot.md).
 
 ---
 
