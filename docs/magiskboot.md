@@ -13,7 +13,7 @@ For some devices, the `boot.img` format isn't as common as `lz4`, `gz`, and unco
 
 ## Preparation
 
-1. Get your device's stock `boot.img`. You can get it from your device manufacturer. You may need [payload-dumper-go](https://github.com/ssut/payload-dumper-go).
+1. Get your device's stock `boot.img`.
 2. Download the AnyKernel3 ZIP file provided by KernelSU that matches the KMI version of your device.
 3. Unpack the AnyKernel3 package and get the `Image` file, which is the kernel file of KernelSU.
 
