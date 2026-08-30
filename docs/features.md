@@ -35,32 +35,32 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 
 | Feature | Description | Source |
 |---------|-------------|--------|
-| TCP Congestion Control | BBRv1, BBRv3, CUBIC, BIC, Westwood, HTCP | [Upstream kernel](https://www.kernel.org/doc/html/latest/admin-guide/kernel-config.html) |
+| TCP Congestion Control | BBRv1, BBRv3, CUBIC, BIC, Westwood, HTCP | `CONFIG_TCP_CONG_BBR` / `CONFIG_TCP_CONG_CUBIC` etc |
 | WireGuard | Built-in VPN support | [wireguard/wireguard-linux-compat](https://git.zx2c4.com/wireguard-linux-compat/) |
-| IP Set / IPv6 NAT | Advanced firewall capabilities | [Upstream kernel](https://www.kernel.org/doc/html/latest/admin-guide/kernel-config.html) |
-| Conntrack / connmark | Connection marking for packet classification | [Upstream kernel](https://www.kernel.org/doc/html/latest/admin-guide/kernel-config.html) |
-| CIFS | SMB/CIFS network filesystem | [Upstream kernel](https://www.kernel.org/doc/html/latest/admin-guide/kernel-config.html) |
-| TTL Target | Network packet manipulation | [Upstream kernel](https://www.kernel.org/doc/html/latest/admin-guide/kernel-config.html) |
+| IP Set / IPv6 NAT | Advanced firewall capabilities | `CONFIG_IP_SET` / `CONFIG_IP6_NF_NAT` |
+| Conntrack / connmark | Connection marking for packet classification | `CONFIG_NF_CONNTRACK` / `CONFIG_NET_ACT_CONNMARK` |
+| CIFS | SMB/CIFS network filesystem | `CONFIG_CIFS` |
+| TTL Target | Network packet manipulation | `CONFIG_IP_NF_TARGET_TTL` / `CONFIG_IP6_NF_TARGET_HL` |
 
 ## Filesystem & Storage
 
 | Feature | Description | Source |
 |---------|-------------|--------|
-| TMPFS Extended Attributes | Extended attributes on tmpfs | [Upstream kernel](https://www.kernel.org/doc/html/latest/admin-guide/kernel-config.html) |
-| TMPFS POSIX ACLs | POSIX ACL support on tmpfs | [Upstream kernel](https://www.kernel.org/doc/html/latest/admin-guide/kernel-config.html) |
+| TMPFS Extended Attributes | Extended attributes on tmpfs | `CONFIG_TMPFS_XATTR` |
+| TMPFS POSIX ACLs | POSIX ACL support on tmpfs | `CONFIG_TMPFS_POSIX_ACL` |
 
 ## Debugging, Tracing & BPF
 
 | Feature | Description | Source |
 |---------|-------------|--------|
-| BTF / eBPF / FUSE-BPF | BPF Type Format, extended BPF, FUSE-BPF interaction | [Upstream kernel](https://www.kernel.org/doc/html/latest/admin-guide/kernel-config.html) |
+| BTF / eBPF / FUSE-BPF | BPF Type Format, extended BPF, FUSE-BPF interaction | `CONFIG_DEBUG_INFO_BTF` / `CONFIG_BPF_SYSCALL` / `CONFIG_FUSE_BPF` |
 
 ## Performance
 
 | Feature | Description | Source |
 |---------|-------------|--------|
 | NTSync | High-performance synchronization primitives compatible with Windows NT kernel API. | Internal |
-| Performance Tuning | Kernel configuration and tuning options | [Upstream kernel](https://www.kernel.org/doc/html/latest/admin-guide/kernel-config.html) |
+| Performance Tuning | Kernel configuration and tuning options | Upstream kernel |
 
 ## Container Runtime
 
