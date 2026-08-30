@@ -5,10 +5,10 @@
 
 Choose the method that fits your situation:
 
-| Method | When to use | Guide |
-|--------|-------------|-------|
-| **Kernel Flasher** | Upgrading with root already available, no PC needed | [kernelflasher.md](kernelflasher.md) |
-| **Patch boot.img manually** | Pixel / `lz4_legacy` or non-standard `boot.img` that won't boot directly | [magiskboot.md](magiskboot.md) |
+| Method | When to use | Requires root | Guide |
+|--------|-------------|---------------|-------|
+| **Kernel Flasher** | Upgrading with root already available, no PC needed | Yes | [kernelflasher.md](kernelflasher.md) |
+| **Patch boot.img manually** | Pixel / `lz4_legacy` or non-standard `boot.img` that won't boot directly | No | [magiskboot.md](magiskboot.md) |
 
 ## Choosing the correct AnyKernel3 ZIP
 
