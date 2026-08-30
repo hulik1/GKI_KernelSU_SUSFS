@@ -9,8 +9,7 @@
 ## Prerequisites
 
 - Device with unlocked bootloader running a supported GKI kernel (see KMI below)
-- Root access already granted to the flashing app (for upgrades) or a working method to flash initially (fastboot / custom recovery)
-- Battery >50%
+- Root access already granted to the flashing app
 
 ## Steps
 
