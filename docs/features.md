@@ -42,13 +42,6 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 | CIFS | SMB/CIFS network filesystem | `CONFIG_CIFS` |
 | TTL Target | Network packet manipulation | `CONFIG_IP_NF_TARGET_TTL` / `CONFIG_IP6_NF_TARGET_HL` |
 
-## Filesystem & Storage
-
-| Feature | Description | Source |
-|---------|-------------|--------|
-| TMPFS Extended Attributes | Extended attributes on tmpfs | `CONFIG_TMPFS_XATTR` |
-| TMPFS POSIX ACLs | POSIX ACL support on tmpfs | `CONFIG_TMPFS_POSIX_ACL` |
-
 ## Debugging, Tracing & BPF
 
 | Feature | Description | Source |
