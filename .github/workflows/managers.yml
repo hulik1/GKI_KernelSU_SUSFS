@@ -15,6 +15,7 @@ on:
           - KernelSU-Next
           - KernelSU
           - ReSukiSU
+          - KernelSU-Next-SUSFS
         default: All
       kernelsu_next_commit:
         description: "Pin KernelSU-Next manager to this commit (40-char SHA, empty = latest dev tip)"
@@ -28,6 +29,11 @@ on:
         default: ""
       resukisu_commit:
         description: "Pin ReSukiSU manager to this commit (40-char SHA, empty = latest main tip)"
+        required: false
+        type: string
+        default: ""
+      kernelsu_next_susfs_commit:
+        description: "Pin KernelSU-Next SUSFS (pershoot dev-susfs) manager to this commit (40-char SHA, empty = latest dev-susfs tip)"
         required: false
         type: string
         default: ""
@@ -58,6 +64,11 @@ on:
         required: false
         type: string
         default: ""
+      kernelsu_next_susfs_commit:
+        description: "Pin KernelSU-Next SUSFS manager commit"
+        required: false
+        type: string
+        default: ""
       build_from_source:
         description: "Build from source instead of fetching artifacts"
         required: false
@@ -81,6 +92,7 @@ jobs:
           INPUT_NEXT_COMMIT: ${{ inputs.kernelsu_next_commit }}
           INPUT_KSU_COMMIT: ${{ inputs.kernelsu_commit }}
           INPUT_RESUKISU_COMMIT: ${{ inputs.resukisu_commit }}
+          INPUT_NEXT_SUSFS_COMMIT: ${{ inputs.kernelsu_next_susfs_commit }}
         run: |
           set -euo pipefail
 
@@ -172,6 +184,52 @@ jobs:
                   "$flavor" "$owner" "$repo" "$run_id" "$stock"
                 ;;
 
+              next-susfs)
+                owner="pershoot"; repo="KernelSU-Next"; wf="build-manager-ci.yml"
+                if [[ -n "${INPUT_NEXT_SUSFS_COMMIT:-}" ]]; then
+                  stock="$INPUT_NEXT_SUSFS_COMMIT"
+                  if ! [[ "$stock" =~ ^[0-9a-f]{40}$ ]]; then
+                    echo "ERROR: kernelsu_next_susfs_commit must be a 40-char SHA (got: $stock)" >&2
+                    exit 1
+                  fi
+                else
+                  stock=$(resolve_sha https://github.com/pershoot/KernelSU-Next.git refs/heads/dev-susfs)
+                  # fallback to upstream KernelSU-Next dev-susfs if pershoot fork tip not found
+                  if ! [[ "$stock" =~ ^[0-9a-f]{40}$ ]]; then
+                    stock=$(resolve_sha https://github.com/KernelSU-Next/KernelSU-Next.git refs/heads/dev-susfs)
+                  fi
+                fi
+                run_id=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                  -H "Authorization: Bearer ***" \
+                  "https://api.github.com/repos/${owner}/${repo}/actions/workflows/${wf}/runs?head_sha=${stock}" \
+                  | jq -r '.workflow_runs[0].id // empty')
+                if [[ -z "${run_id}" ]]; then
+                  if [[ -z "${INPUT_NEXT_SUSFS_COMMIT:-}" ]]; then
+                    echo "No manager build for dev-susfs tip ${stock}, falling back to latest successful run" >&2
+                    fb=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -H "Authorization: Bearer ***" "https://api.github.com/repos/${owner}/${repo}/actions/workflows/${wf}/runs?branch=dev-susfs&status=success&per_page=1")
+                    run_id=$(echo "$fb" | jq -r '.workflow_runs[0].id // empty')
+                    stock=$(echo "$fb" | jq -r '.workflow_runs[0].head_sha // empty')
+                    if [[ -z "$run_id" ]]; then
+                      # dev-susfs has no CI on this fork — try dev fallback
+                      echo "No dev-susfs CI run, trying dev branch fallback" >&2
+                      fb=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -H "Authorization: Bearer ***" "https://api.github.com/repos/${owner}/${repo}/actions/workflows/${wf}/runs?branch=dev&status=success&per_page=1")
+                      run_id=$(echo "$fb" | jq -r '.workflow_runs[0].id // empty')
+                      stock=$(echo "$fb" | jq -r '.workflow_runs[0].head_sha // empty')
+                    fi
+                    if [[ -n "$run_id" ]]; then echo "Fallback to ${stock} run ${run_id}" >&2; fi
+                  fi
+                  if [[ -z "${run_id}" ]]; then
+                    echo "WARNING: no ${owner}/${repo} manager build for dev-susfs commit ${stock} — will need build_from_source" >&2
+                    # emit empty want so fetch path skips gracefully; source build will handle it
+                    printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":null,"stock":"%s","want":"manager,manager-spoofed","note":"no-ci-run"}' \
+                      "$flavor" "$owner" "$repo" "$stock"
+                    return 0
+                  fi
+                fi
+                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s","want":"manager,manager-spoofed"}' \
+                  "$flavor" "$owner" "$repo" "$run_id" "$stock"
+                ;;
+
               resukisu)
                 owner="ReSukiSU"; repo="ReSukiSU"; wf="build-manager.yml"
                 if [[ -n "${INPUT_RESUKISU_COMMIT:-}" ]]; then
@@ -214,8 +272,9 @@ jobs:
           echo "Root flavor: ${FLAVORS}"
           LIST=""
           case "${FLAVORS}" in
-            All) LIST=$(jq -c -n '[inputs]' <<< "$(resolve_one next)"$'\n'"$(resolve_one kernelsu)"$'\n'"$(resolve_one resukisu)") ;;
+            All) LIST=$(jq -c -n '[inputs]' <<< "$(resolve_one next)"$'\n'"$(resolve_one next-susfs)"$'\n'"$(resolve_one kernelsu)"$'\n'"$(resolve_one resukisu)") ;;
             KernelSU-Next) LIST=$(jq -c -n '[inputs]' <<< "$(resolve_one next)") ;;
+            KernelSU-Next-SUSFS) LIST=$(jq -c -n '[inputs]' <<< "$(resolve_one next-susfs)") ;;
             KernelSU) LIST=$(jq -c -n '[inputs]' <<< "$(resolve_one kernelsu)") ;;
             ReSukiSU) LIST=$(jq -c -n '[inputs]' <<< "$(resolve_one resukisu)") ;;
             *) echo "Skipping manager resolution (no root flavor / none)." ;;
@@ -255,7 +314,7 @@ jobs:
           rm -rf "$OUT_APKS" "$MANIFEST"
           mkdir -p "$OUT_APKS"
           : > "$MANIFEST"
-          echo "$MANAGER_LIST" | jq -c '.[]' | while read -r M; do
+          echo "$MANAGER_LIST" | jq -c '.[] | select(.run_id != null and .run_id != "null")' | while read -r M; do
             OWNER=$(echo "$M" | jq -r .owner)
             REPO=$(echo "$M" | jq -r .repo)
             SRC=$(echo "$M" | jq -r .source)
@@ -364,6 +423,10 @@ jobs:
             repo: https://github.com/ReSukiSU/ReSukiSU.git
             ref: main
             commit_input: resukisu_commit
+          - flavor: next-susfs
+            repo: https://github.com/pershoot/KernelSU-Next.git
+            ref: dev-susfs
+            commit_input: kernelsu_next_susfs_commit
     env:
       FLAVOR: ${{ matrix.flavor }}
     steps:
@@ -378,6 +441,7 @@ jobs:
           case "$WANT" in
             All) echo "run=true" >> "$GITHUB_OUTPUT" ;;
             KernelSU-Next) [[ "$FLAVOR" == "next" ]] && echo "run=true" >> "$GITHUB_OUTPUT" || echo "run=false" >> "$GITHUB_OUTPUT" ;;
+            KernelSU-Next-SUSFS) [[ "$FLAVOR" == "next-susfs" ]] && echo "run=true" >> "$GITHUB_OUTPUT" || echo "run=false" >> "$GITHUB_OUTPUT" ;;
             KernelSU) [[ "$FLAVOR" == "kernelsu" ]] && echo "run=true" >> "$GITHUB_OUTPUT" || echo "run=false" >> "$GITHUB_OUTPUT" ;;
             ReSukiSU) [[ "$FLAVOR" == "resukisu" ]] && echo "run=true" >> "$GITHUB_OUTPUT" || echo "run=false" >> "$GITHUB_OUTPUT" ;;
             *) echo "run=false" >> "$GITHUB_OUTPUT" ;;
@@ -390,6 +454,7 @@ jobs:
         shell: bash
         env:
           KSU_NEXT_COMMIT: ${{ inputs.kernelsu_next_commit }}
+          KSU_NEXT_SUSFS_COMMIT: ${{ inputs.kernelsu_next_susfs_commit }}
           KSU_COMMIT: ${{ inputs.kernelsu_commit }}
           RESUKISU_COMMIT: ${{ inputs.resukisu_commit }}
         run: |
@@ -397,6 +462,7 @@ jobs:
           flavor="${{ matrix.flavor }}"
           case "$flavor" in
             next) pin="$KSU_NEXT_COMMIT" ;;
+            next-susfs) pin="$KSU_NEXT_SUSFS_COMMIT" ;;
             kernelsu) pin="$KSU_COMMIT" ;;
             resukisu) pin="$RESUKISU_COMMIT" ;;
           esac
@@ -568,6 +634,7 @@ jobs:
             upper=$(echo "$flavor" | tr '[:lower:]' '[:upper:]')
             case "$flavor" in
               next)     b64="${NEXT_KEYSTORE:-}"; pw="${NEXT_KEYSTORE_PASSWORD:-}"; alias="${NEXT_KEY_ALIAS:-}"; kp="${NEXT_KEY_PASSWORD:-}" ;;
+              next-susfs) b64="${NEXT_KEYSTORE:-}"; pw="${NEXT_KEYSTORE_PASSWORD:-}"; alias="${NEXT_KEY_ALIAS:-}"; kp="${NEXT_KEY_PASSWORD:-}" ;;
               kernelsu) b64="${KERNELSU_KEYSTORE:-}"; pw="${KERNELSU_KEYSTORE_PASSWORD:-}"; alias="${KERNELSU_KEY_ALIAS:-}"; kp="${KERNELSU_KEY_PASSWORD:-}" ;;
               resukisu) b64="${RESUKISU_KEYSTORE:-}"; pw="${RESUKISU_KEYSTORE_PASSWORD:-}"; alias="${RESUKISU_KEY_ALIAS:-}"; kp="${RESUKISU_KEY_PASSWORD:-}" ;;
             esac
@@ -645,8 +712,8 @@ jobs:
           }
           copy_ksud_if_built || true
 
-          if [ "$flavor" = "next" ]; then
-            # KernelSU-Next: two variants (normal + spoofed via ./spoof)
+          if [ "$flavor" = "next" ] || [ "$flavor" = "next-susfs" ]; then
+            # KernelSU-Next (+ SUSFS): two variants (normal + spoofed via ./spoof)
             # Save signing config so spoof stomp can restore it
             cp -f gradle.properties /tmp/gradle-$flavor.properties.bak 2>/dev/null || true
             cp -f /tmp/manager-$flavor.jks /tmp/manager-$flavor.jks.bak 2>/dev/null || true
