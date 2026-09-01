@@ -28,10 +28,10 @@
 | Pixel 9 Pro XL | komodo | android14-6.1 | stock | Supported · 2026-08-30 |
 | Pixel 9 Pro Fold | comet | android14-6.1 | stock | Supported · 2026-08-30 |
 | Pixel 9a | tegu | android14-6.1 | stock | Supported · 2026-08-30 |
-| Pixel 10 | frankel | — | — | Expected — codename confirmed at source.android.com, pending factory image |
-| Pixel 10 Pro | blazer | — | — | Expected — codename confirmed at source.android.com, pending factory image |
-| Pixel 10 Pro XL | mustang | — | — | Expected — codename confirmed at source.android.com, pending factory image |
-| Pixel 10 Pro Fold | rango | — | — | Expected — codename confirmed at source.android.com, pending factory image |
+| Pixel 10 | frankel | — | — | Expected |
+| Pixel 10 Pro | blazer | — | — | Expected |
+| Pixel 10 Pro XL | mustang | — | — | Expected |
+| Pixel 10 Pro Fold | rango | — | — | Expected |
 | Pixel 10a | stallion | — | — | Expected |
 | Pixel 11 | cubs | — | — | Expected |
 | Pixel 11 Pro | grizzly | — | — | Expected |
