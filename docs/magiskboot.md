@@ -1,7 +1,6 @@
 # Patch boot.img Manually (magiskboot)
 
-> [!TIP]
-> Use the [official magiskboot build](https://github.com/topjohnwu/Magisk/releases) — works on Android and Linux.
+Use the [official magiskboot build](https://github.com/topjohnwu/Magisk/releases) — works on Android and Linux.
 
 See [Installation](installation.md) for prerequisites, supported versions, and risks.
 
