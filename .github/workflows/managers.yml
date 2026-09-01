@@ -229,10 +229,15 @@ jobs:
 
       - name: Summary
         run: |
-          echo "### Resolved manager sources" >> "$GITHUB_STEP_SUMMARY"
-          echo '```json' >> "$GITHUB_STEP_SUMMARY"
-          echo '${{ steps.manager.outputs.manager_list }}' | jq . >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo '${{ steps.manager.outputs.manager_list }}' >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "## Managers — Resolved Sources" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Flavor | Upstream | Commit | Run | Artifacts |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo '${{ steps.manager.outputs.manager_list }}' | jq -r '.[] | "| \(.flavor) | \(.owner)/\(.repo) | \(.stock[0:8]) | [\(.run_id)](https://github.com/\(.owner)/\(.repo)/actions/runs/\(.run_id)) | \(.want) |"' >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || {
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            echo '${{ steps.manager.outputs.manager_list }}' | jq . >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo '${{ steps.manager.outputs.manager_list }}' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          }
 
   list-manager-apks:
     needs: resolve-managers
@@ -319,10 +324,21 @@ jobs:
               '. + [{owner:$o,repo:$r,apk:$n}]')
           done < "$MANIFEST"
           echo "apk_list=${APK_JSON}" >> "$GITHUB_OUTPUT"
-          echo "Found $(wc -l < "$MANIFEST") manager APKs"
-          ls -1 "$OUT_APKS" || true
-          echo "### Manager APKs" >> "$GITHUB_STEP_SUMMARY"
-          cat "$MANIFEST" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+          count=$(wc -l < "$MANIFEST" 2>/dev/null | tr -d ' ' || echo 0)
+          echo "Found $count manager APKs"
+          ls -lh "$OUT_APKS" || true
+          {
+            echo "## Managers — Fetched APKs ($count)"
+            echo ""
+            echo "| APK | Source | Size |"
+            echo "|---|---|---|"
+            while IFS='|' read -r o r n; do
+              [ -n "$n" ] || continue
+              sz=$(stat -c%s "$OUT_APKS/$n" 2>/dev/null || stat -f%z "$OUT_APKS/$n" 2>/dev/null || echo "?")
+              hr=$(numfmt --to=iec-i --suffix=B "$sz" 2>/dev/null || echo "${sz} B")
+              echo "| \`$n\` | $o/$r | $hr |"
+            done < "$MANIFEST"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload all manager APKs as one cross-blob
         uses: actions/upload-artifact@v7
@@ -739,8 +755,24 @@ jobs:
             APK_JSON=$(echo "$APK_JSON" | jq -c --arg n "$n" '. + [{apk:$n}]')
           done < /tmp/list.txt
           echo "apk_list=${APK_JSON}" >> "$GITHUB_OUTPUT"
-          echo "### Source-built Manager APKs" >> "$GITHUB_STEP_SUMMARY"
-          cat /tmp/list.txt >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "_none_" >> "$GITHUB_STEP_SUMMARY"
+          count=$(wc -l < /tmp/list.txt 2>/dev/null | tr -d ' ' || echo 0)
+          {
+            echo "## Managers — Built from Source ($count)"
+            echo ""
+            if [ "$count" = "0" ]; then
+              echo "_No APKs produced._"
+            else
+              echo "| APK | Size |"
+              echo "|---|---|"
+              while IFS= read -r f; do
+                [ -n "$f" ] || continue
+                n="$(basename "$f")"
+                sz=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null || echo "?")
+                hr=$(numfmt --to=iec-i --suffix=B "$sz" 2>/dev/null || echo "${sz} B")
+                echo "| \`$n\` | $hr |"
+              done < /tmp/list.txt
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload merged manager-apks (source)
         uses: actions/upload-artifact@v7
