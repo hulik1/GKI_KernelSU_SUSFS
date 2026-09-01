@@ -60,7 +60,7 @@ See **[Installation Guide](docs/installation.md)**.
 > [!NOTE]
 > These lists are maintained by the community — please update as needed!
 
-See **[Supported Devices](docs/supported-devices.md)** for the full tested matrix (Pixel 6 through Pixel 11 Pro Fold, plus Samsung / OnePlus / etc. placeholders).
+See **[Supported Devices](docs/supported-devices.md)**.
 
 ---
 

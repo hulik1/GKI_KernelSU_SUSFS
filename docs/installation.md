@@ -40,7 +40,7 @@ For Pre-GKI or GKI 1.0 kernels, contact [@TheWildJames](https://t.me/TheWildJame
 > [!NOTE]
 > These lists are maintained by the community — please update as needed!
 
-See **[Supported Devices](supported-devices.md)** for the full tested matrix (Pixel 6 through Pixel 11 Pro Fold, plus Samsung / OnePlus / etc. placeholders).
+See **[Supported Devices](supported-devices.md)**.
 
 ## After flashing
 
