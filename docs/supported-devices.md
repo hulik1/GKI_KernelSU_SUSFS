@@ -11,7 +11,7 @@
 > [!NOTE]
 > Wild Kernels GKI builds are **Generic** (GKI 2.0, 5.10+). This table lists Pixel devices commonly tested / expected to work. Being GKI-based, many other GKI 2.0 devices may work — Pixel entries are just the primary tested matrix.
 
-*Last updated: 2026-08-30 — covers Pixel 6 through Pixel 9a (latest available). Pixel 10/11 will be added as they release.*
+*Last updated: 2026-09-01 — covers Pixel 6 through Pixel 11 (Pixel 10/11 codenames per leaks, pending factory images on [developers.google.com/android/images](https://developers.google.com/android/images)).*
 
 | Device | Codename | GKI Kernel | Firmware | Status |
 |--------|----------|------------|----------|--------|
@@ -31,6 +31,15 @@
 | Pixel 9 Pro XL | komodo | android14-6.1 | stock | Supported · 2026-08-30 |
 | Pixel 9 Pro Fold | comet | android14-6.1 | stock | Supported · 2026-08-30 |
 | Pixel 9a | tegu | android14-6.1 | stock | Supported · 2026-08-30 |
+| Pixel 10 | frankel | — | — | Expected — codename per leaks, pending factory image |
+| Pixel 10 Pro | blazer | — | — | Expected — codename per leaks, pending factory image |
+| Pixel 10 Pro XL | mustang | — | — | Expected — codename per leaks, pending factory image |
+| Pixel 10 Pro Fold | rango | — | — | Expected — codename per leaks, pending factory image |
+| Pixel 10a | stallion | — | — | Expected — codename per leaks, pending factory image |
+| Pixel 11 | cubs (4CS4) | — | — | Expected — codename per leaks, pending factory image |
+| Pixel 11 Pro | grizzly (CGY4) | — | — | Expected — codename per leaks, pending factory image |
+| Pixel 11 Pro XL | kodiak (PKK4) | — | — | Expected — codename per leaks, pending factory image |
+| Pixel 11 Pro Fold | yogi (9YI4) | — | — | Expected — codename per leaks, pending factory image |
 
 ## Samsung
 
