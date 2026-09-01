@@ -873,16 +873,17 @@ jobs:
           if-no-files-found: warn
 
   # Unified publisher: works for both fetch and source paths (whichever produced manager-apks)
+  # Skips entirely when apk_list is empty/[] to avoid "Matrix vector item does not contain any values" (Line 818 col 15)
   publish-manager-artifacts:
     needs:
       - list-manager-apks
       - collect-source-managers
-    if: ${{ always() && (needs.list-manager-apks.outputs.apk_list != '' || needs.collect-source-managers.outputs.apk_list != '') }}
+    if: ${{ always() && ( (needs.list-manager-apks.outputs.apk_list != '' && needs.list-manager-apks.outputs.apk_list != '[]') || (needs.collect-source-managers.outputs.apk_list != '' && needs.collect-source-managers.outputs.apk_list != '[]') ) }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        item: ${{ fromJson(needs.list-manager-apks.outputs.apk_list != '' && needs.list-manager-apks.outputs.apk_list || needs.collect-source-managers.outputs.apk_list) }}
+        item: ${{ fromJson(needs.list-manager-apks.outputs.apk_list != '' && needs.list-manager-apks.outputs.apk_list != '[]' && needs.list-manager-apks.outputs.apk_list || needs.collect-source-managers.outputs.apk_list) }}
     steps:
       - uses: actions/checkout@v7
 
