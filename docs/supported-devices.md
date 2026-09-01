@@ -1,14 +1,14 @@
 # Supported Devices
 
 > [!TIP]
-> Looking for your device? Use `Ctrl+F` / `+F` to search this page. Devices not listed may still work.
+> Looking for your device? Use `Ctrl+F` to search this page. Devices not listed may still work.
 
 > [!NOTE]
 > These lists are maintained by the community — please update as needed!
 
 ## Google Pixel
 
-*Last updated: 2026-09-01 — Pixel 10 codenames confirmed at [source.android.com — Device codenames](https://source.android.com/docs/setup/reference/build-numbers#build-targets); Pixel 10 family also listed on [developers.google.com/android/images](https://developers.google.com/android/images) (May 2026 bootloader note).*
+*Last updated: 2026-09-01.*
 
 | Device | Codename | GKI Kernel | Firmware | Status |
 |--------|----------|------------|----------|--------|
@@ -32,6 +32,11 @@
 | Pixel 10 Pro | blazer | — | — | Expected — codename confirmed at source.android.com, pending factory image |
 | Pixel 10 Pro XL | mustang | — | — | Expected — codename confirmed at source.android.com, pending factory image |
 | Pixel 10 Pro Fold | rango | — | — | Expected — codename confirmed at source.android.com, pending factory image |
+| Pixel 10a | stallion | — | — | Expected — codename per leaks, pending factory image |
+| Pixel 11 | cubs | — | — | Expected — codename per leaks, pending factory image |
+| Pixel 11 Pro | grizzly | — | — | Expected — codename per leaks, pending factory image |
+| Pixel 11 Pro XL | kodiak | — | — | Expected — codename per leaks, pending factory image |
+| Pixel 11 Pro Fold | yogi | — | — | Expected — codename per leaks, pending factory image |
 
 ## Samsung
 
