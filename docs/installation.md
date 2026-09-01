@@ -73,8 +73,7 @@ See **[Supported Devices](supported-devices.md)**.
 <details>
 <summary><b> Patch boot.img Manually (magiskboot) — Android / Linux</b></summary>
 
-> [!TIP]
-> Use the [official magiskboot build](https://github.com/topjohnwu/Magisk/releases) — works on Android and Linux.
+Use the [official magiskboot build](https://github.com/topjohnwu/Magisk/releases) — works on Android and Linux.
 
 **Preparation:**
 
