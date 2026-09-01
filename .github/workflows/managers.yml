@@ -694,9 +694,9 @@ jobs:
           mkdir -p "$dir/app/src/main/jniLibs/arm64-v8a" "$dir/app/src/main/jniLibs/x86_64"
           for p in "/tmp/ksud-dl-aarch64/ksud" "/tmp/ksud-dl-aarch64/aarch64-linux-android/release/ksud"; do [ -f "$p" ] && cp -fv "$p" "$dir/app/src/main/jniLibs/arm64-v8a/libksud.so" && echo "copied aarch64 ksud" && break || true; done
           # fallback search
-          if [ ! -f "$dir/app/src/main/jniLibs/arm64-v8a/libksud.so" ]; then f=$(find /tmp/ksud-dl-aarch64 -type f -name ksud 2>/dev/null | head -1); [ -n "${f:-}" ] && cp -fv "$f" "$dir/app/src/main/jniLibs/arm64-v8a/libksud.so" || echo "no aarch64 ksud — manager will build without it"; fi
+          if [ ! -f "$dir/app/src/main/jniLibs/arm64-v8a/libksud.so" ]; then f=$(find /tmp/ksud-dl-aarch64 -type f -name ksud 2>/dev/null | head -1 || true); [ -n "${f:-}" ] && cp -fv "$f" "$dir/app/src/main/jniLibs/arm64-v8a/libksud.so" || echo "no aarch64 ksud — manager will build without it"; fi
           for p in "/tmp/ksud-dl-x86_64/ksud" "/tmp/ksud-dl-x86_64/x86_64-linux-android/release/ksud"; do [ -f "$p" ] && cp -fv "$p" "$dir/app/src/main/jniLibs/x86_64/libksud.so" && echo "copied x86_64 ksud" && break || true; done
-          if [ ! -f "$dir/app/src/main/jniLibs/x86_64/libksud.so" ]; then f=$(find /tmp/ksud-dl-x86_64 -type f -name ksud 2>/dev/null | head -1); [ -n "${f:-}" ] && cp -fv "$f" "$dir/app/src/main/jniLibs/x86_64/libksud.so" || echo "no x86_64 ksud — manager will build without it"; fi
+          if [ ! -f "$dir/app/src/main/jniLibs/x86_64/libksud.so" ]; then f=$(find /tmp/ksud-dl-x86_64 -type f -name ksud 2>/dev/null | head -1 || true); [ -n "${f:-}" ] && cp -fv "$f" "$dir/app/src/main/jniLibs/x86_64/libksud.so" || echo "no x86_64 ksud — manager will build without it"; fi
           ls -lh "$dir/app/src/main/jniLibs"/*/* 2>&1 | head -20 || echo "no jniLibs"
 
       - name: Spoof Package ID (Next only, like upstream build-manager-ci)
