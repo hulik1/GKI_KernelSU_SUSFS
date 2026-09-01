@@ -11,7 +11,7 @@ body:
     id: manufacturer
     attributes:
       label: Manufacturer
-      description: Pick the table to update
+      description: Pick the table to update, or choose Other to add a new OEM
       options:
         - Google Pixel
         - Samsung
@@ -25,6 +25,15 @@ body:
         - Other
     validations:
       required: true
+
+  - type: input
+    id: custom_manufacturer
+    attributes:
+      label: Custom manufacturer (if Other)
+      description: If you selected Other, specify the OEM name to create a new table (e.g., Sony, Motorola, Fairphone)
+      placeholder: "e.g., Sony"
+    validations:
+      required: false
 
   - type: input
     id: device

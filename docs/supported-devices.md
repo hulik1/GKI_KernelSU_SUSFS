@@ -38,20 +38,9 @@
 | Pixel 11 Pro XL | kodiak | — | — | Expected |
 | Pixel 11 Pro Fold | yogi | — | — | Expected |
 
-## Samsung
+## Don't see your device?
 
-| Device | Codename | GKI Kernel | Firmware | Status |
-|--------|----------|------------|----------|--------|
-| — | — | — | — | Placeholder — add entries |
+> [!NOTE]
+> These lists are maintained by the community — please update as needed!
 
-## OnePlus
-
-| Device | Codename | GKI Kernel | Firmware | Status |
-|--------|----------|------------|----------|--------|
-| — | — | — | — | Placeholder — add entries |
-
-## Other
-
-| Device | Codename | GKI Kernel | Firmware | Status |
-|--------|----------|------------|----------|--------|
-| — | — | — | — | Placeholder — add entries |
+Don't see your OEM or device? [Open a device-support issue](https://github.com/WildKernels/GKI_KernelSU_SUSFS/issues/new?template=device_support.yml) — you can specify any manufacturer and we'll add the table.

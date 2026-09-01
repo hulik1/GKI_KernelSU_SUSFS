@@ -10,30 +10,20 @@ def field(id):
     # we match by id label text variations
     labels = {
         "manufacturer": "Manufacturer",
+        "custom_manufacturer": "Custom manufacturer (if Other)",
         "device": "Device",
         "codename": "Codename",
         "gki_kernel": "GKI Kernel",
         "firmware": "Firmware",
         "status": "Status",
     }
-    label = labels[id]
+    label = labels.get(id, id)
     m = re.search(rf"### {re.escape(label)}\s*\n+([^\n#]+)", ISSUE_BODY)
     if m:
         return m.group(1).strip()
     # fallback: try id
     m = re.search(rf"### {re.escape(id)}\s*\n+([^\n#]+)", ISSUE_BODY)
     return m.group(1).strip() if m else ""
-
-manufacturer = field("manufacturer") or "Other"
-device = field("device").strip()
-codename = field("codename").strip()
-gki = field("gki_kernel").strip()
-firmware = field("firmware").strip() or "stock"
-status = field("status").strip() or "Supported"
-
-if not device or not codename or not gki:
-    print("missing required fields", file=sys.stderr)
-    sys.exit(0)
 
 heading_map = {
     "Google Pixel": "## Google Pixel",
@@ -47,7 +37,24 @@ heading_map = {
     "Nothing": "## Nothing",
     "Other": "## Other",
 }
-heading = heading_map.get(manufacturer, "## Other")
+
+manufacturer = field("manufacturer") or "Other"
+device = field("device").strip()
+codename = field("codename").strip()
+gki = field("gki_kernel").strip()
+firmware = field("firmware").strip() or "stock"
+status = field("status").strip() or "Supported"
+custom_oem = field("custom_manufacturer").strip()
+# handle custom OEM when Other is selected
+if manufacturer == "Other" and custom_oem and custom_oem.lower() not in ("none", "_no response_", ""):
+    manufacturer = custom_oem.strip().title()
+    heading_map[manufacturer] = f"## {manufacturer}"
+
+if not device or not codename or not gki:
+    print("missing required fields", file=sys.stderr)
+    sys.exit(0)
+
+heading = heading_map.get(manufacturer, f"## {manufacturer}")
 # Xiaomi/POCO/Redmi share same file section expansion if not present -> create heading
 text = MD.read_text()
 if heading not in text and manufacturer in ("Xiaomi", "POCO", "Redmi"):
