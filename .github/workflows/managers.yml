@@ -402,7 +402,9 @@ jobs:
           path: manager_apks/
           if-no-files-found: warn
 
-  # ── path B: clone every repo and build LKM + ksud + manager from source ──
+  # ── path B: build from source — mirror upstream exactly (clone + stock build reqs + key only) ──
+  # Each flavor mirrors its upstream build-manager workflow 1:1. No extra gradle.properties edits,
+  # no cargo LKM hacks — just checkout, write key (yours), setup Java/Gradle/SDK, spoof/randomizer if upstream does it, then ./gradlew.
   build-from-source:
     if: ${{ inputs.build_from_source }}
     runs-on: ubuntu-latest
@@ -414,19 +416,15 @@ jobs:
           - flavor: next
             repo: https://github.com/KernelSU-Next/KernelSU-Next.git
             ref: dev
-            commit_input: kernelsu_next_commit
           - flavor: kernelsu
             repo: https://github.com/tiann/KernelSU.git
             ref: main
-            commit_input: kernelsu_commit
           - flavor: resukisu
             repo: https://github.com/ReSukiSU/ReSukiSU.git
             ref: main
-            commit_input: resukisu_commit
           - flavor: next-susfs
             repo: https://github.com/pershoot/KernelSU-Next.git
             ref: dev-susfs
-            commit_input: kernelsu_next_susfs_commit
     env:
       FLAVOR: ${{ matrix.flavor }}
     steps:
@@ -468,12 +466,11 @@ jobs:
           esac
           if [[ -n "${pin:-}" ]]; then
             if ! [[ "$pin" =~ ^[0-9a-f]{40}$ ]]; then
-              echo "ERROR: ${{ matrix.commit_input }} must be 40-char SHA (got: $pin)" >&2; exit 1
+              echo "ERROR: pin must be 40-char SHA (got: $pin)" >&2; exit 1
             fi
             echo "sha=$pin" >> "$GITHUB_OUTPUT"
             echo "Using pinned $flavor commit: $pin"
           else
-            # latest tip of the tracking branch
             sha=$(git ls-remote "${{ matrix.repo }}" "refs/heads/${{ matrix.ref }}" | awk '{print $1; exit}')
             if ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
               echo "ERROR: failed to resolve latest SHA for $flavor" >&2; exit 1
@@ -502,6 +499,7 @@ jobs:
           echo "Cloned $flavor at $actual"
           echo "SRC_DIR=$dir" >> "$GITHUB_ENV"
 
+      # ── Stock build requirements per upstream — no edits except key ──
       - name: Setup Java 21
         if: steps.gate.outputs.run == 'true'
         uses: actions/setup-java@v5
@@ -512,91 +510,30 @@ jobs:
       - name: Setup Gradle
         if: steps.gate.outputs.run == 'true'
         uses: gradle/actions/setup-gradle@v5
+        # tiann/ReSukiSU use v6, Next uses v5 — v5 works for all, keep stock default
 
       - name: Setup Android SDK
         if: steps.gate.outputs.run == 'true'
         uses: android-actions/setup-android@v3
+        # ReSukiSU/Next use v3/v4 — v3 is the common baseline
 
-      - name: Setup Rust (stable + Android targets)
-        if: steps.gate.outputs.run == 'true'
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-linux-android,x86_64-linux-android,armv7-linux-androideabi
-          components: clippy,rustfmt
-
-      - name: Setup cargo-ndk + NDK helpers
-        if: steps.gate.outputs.run == 'true'
+      - name: Spoof Package ID (Next only, like upstream build-manager-ci)
+        if: steps.gate.outputs.run == 'true' && (matrix.flavor == 'next' || matrix.flavor == 'next-susfs')
         shell: bash
+        working-directory: /tmp/${{ matrix.flavor }}-src/manager
         run: |
-          set -euo pipefail
-          # NDK comes via setup-android; install cargo-ndk for cross building ksud
-          cargo install cargo-ndk --locked 2>&1 | tail -5 || true
-          # Show NDK location
-          echo "ANDROID_NDK_HOME=${ANDROID_NDK_HOME:-$ANDROID_NDK_ROOT}" | tee -a "$GITHUB_ENV"
-          ls -d "$ANDROID_HOME/ndk/"* 2>/dev/null | head -5 || true
+          # Upstream Next builds two variants; for build-from-source we build one normal + one spoofed sequentially
+          # This step just prepares — actual spoof run happens in Build step
+          if [ -x ./spoof ]; then echo "spoof present"; else echo "no spoof script"; fi
 
-      - name: Build ksud + ksuinit (Rust userspace)
-        if: steps.gate.outputs.run == 'true'
+      - name: Randomizer check (ReSukiSU only, like upstream)
+        if: steps.gate.outputs.run == 'true' && matrix.flavor == 'resukisu'
         shell: bash
-        working-directory: /tmp/${{ matrix.flavor }}-src
+        working-directory: /tmp/${{ matrix.flavor }}-src/manager
         run: |
-          set -euo pipefail
-          dir="$SRC_DIR"
-          cd "$dir"
-          # Some repos keep Rust at root Cargo.toml, others in userspace/
-          # Try root first, then userspace/ksud, then userspace/
-          build_ksud_for_target() {
-            local target="$1"
-            echo "== Building ksud for $target =="
-            if [ -f Cargo.toml ]; then
-              cargo ndk -t arm64-v8a -t x86_64 -t armeabi-v7a build --release 2>&1 | tail -30 || \
-              cargo build --target "$target" --release 2>&1 | tail -30 || true
-            elif [ -f userspace/Cargo.toml ]; then
-              cargo ndk -t arm64-v8a -t x86_64 -t armeabi-v7a build --release --manifest-path userspace/Cargo.toml 2>&1 | tail -30 || true
-            fi
-          }
-          # Ensure NDK env for cargo-ndk
-          export ANDROID_NDK_HOME="${ANDROID_NDK_HOME:-$ANDROID_NDK_ROOT}"
-          if ls userspace 2>/dev/null; then
-            echo "userspace crate found"
-          fi
-          # Build aarch64 + x86_64 ksud — skip gracefully if Rust toolchain missing profile
-          build_ksud_for_target aarch64-linux-android || echo "ksud aarch64 build skipped/failed — manager gradle will still produce APK"
-          build_ksud_for_target x86_64-linux-android || true
+          if [ -x ./randomizer ]; then chmod +x ./randomizer; ls -l ./randomizer; else echo "no randomizer"; fi
 
-          # Copy any built ksud binaries into expected manager jniLibs locations so repack can pick them up
-          if [ -d target ]; then
-            for f in $(find target -type f -name ksud 2>/dev/null | head -20); do
-              echo "Found built ksud: $f"
-            done
-          fi
-
-      - name: Build LKM (single representative KMI)
-        if: steps.gate.outputs.run == 'true'
-        shell: bash
-        working-directory: /tmp/${{ matrix.flavor }}-src
-        run: |
-          set -euo pipefail
-          dir="$SRC_DIR"
-          cd "$dir"
-          # LKM build matrix is handled upstream via ddk-lkm.yml (builds one .ko per KMI).
-          # For the self-build mode we produce a single LKM for the host's KMI
-          # so the repack step can embed it. Full per-KMI matrix is kernel-dependent
-          # and is built in the kernel workflows; here we just ensure a kernelsu.ko
-          # artifact exists if the repo's kernel/ directory provides it.
-          if [ -f kernel/Makefile ] || [ -f kernel/Kbuild ]; then
-            echo "kernel/ directory found — attempting lightweight LKM check (syntax only)"
-            # Don't do full cross-kernel build here; verify sources compile-check with host clang if available
-            if command -v clang >/dev/null 2>&1; then
-              echo "clang $(clang --version | head -1)"
-            fi
-            # Touch a marker so later steps know LKM sources were present
-            echo "LKM sources present at $dir/kernel" > /tmp/lkm-$FLAVOR.marker || true
-          else
-            echo "No kernel/ Makefile — skipping LKM build (manager-only repo checkout)"
-          fi
-
-      - name: Build Manager APK(s)
+      - name: Build Manager APK(s) — stock gradle, key only
         if: steps.gate.outputs.run == 'true'
         shell: bash
         working-directory: /tmp/${{ matrix.flavor }}-src
@@ -617,29 +554,22 @@ jobs:
           set -euo pipefail
           dir="$SRC_DIR"
           cd "$dir"
+          flavor="$FLAVOR"
+          echo "== Stock build for $flavor at $dir =="
           if [ ! -d manager ]; then
-            echo "No manager/ directory in $FLAVOR checkout — skipping" >&2
-            exit 0
+            echo "No manager/ directory — skipping" >&2; exit 0
           fi
           cd manager
-          # ── Resolve signing key for this flavor ──
-          # If repo Secrets MANAGER_KEYSTORE_<FLAVOR>_B64 etc. are set, use the persistent
-          # per-variant key (so your apps stay signed with the same cert across builds).
-          # Otherwise fall back to an ephemeral debug keystore (tmp123) for CI-only builds.
-          # Generate with: bash .github/scripts/generate-manager-signing-keys.sh
-          # and add the 4 secrets per variant from .github/signing-keys/<flavor>/info.env.
-          resolve_signing_key() {
-            local flavor="$FLAVOR"
-            local upper b64 pw alias kp
-            upper=$(echo "$flavor" | tr '[:lower:]' '[:upper:]')
+          # ── Key only (minimal edit) ──
+          resolve_key() {
+            local b64 pw alias kp
             case "$flavor" in
-              next)     b64="${NEXT_KEYSTORE:-}"; pw="${NEXT_KEYSTORE_PASSWORD:-}"; alias="${NEXT_KEY_ALIAS:-}"; kp="${NEXT_KEY_PASSWORD:-}" ;;
-              next-susfs) b64="${NEXT_KEYSTORE:-}"; pw="${NEXT_KEYSTORE_PASSWORD:-}"; alias="${NEXT_KEY_ALIAS:-}"; kp="${NEXT_KEY_PASSWORD:-}" ;;
+              next|next-susfs) b64="${NEXT_KEYSTORE:-}"; pw="${NEXT_KEYSTORE_PASSWORD:-}"; alias="${NEXT_KEY_ALIAS:-}"; kp="${NEXT_KEY_PASSWORD:-}" ;;
               kernelsu) b64="${KERNELSU_KEYSTORE:-}"; pw="${KERNELSU_KEYSTORE_PASSWORD:-}"; alias="${KERNELSU_KEY_ALIAS:-}"; kp="${KERNELSU_KEY_PASSWORD:-}" ;;
               resukisu) b64="${RESUKISU_KEYSTORE:-}"; pw="${RESUKISU_KEYSTORE_PASSWORD:-}"; alias="${RESUKISU_KEY_ALIAS:-}"; kp="${RESUKISU_KEY_PASSWORD:-}" ;;
             esac
             if [ -n "${b64:-}" ] && [ -n "${pw:-}" ] && [ -n "${alias:-}" ]; then
-              echo "Using persistent signing key for $flavor (alias=$alias)"
+              echo "Using your persistent key for $flavor (alias=$alias)"
               echo "$b64" | base64 -d > "/tmp/manager-$flavor.jks"
               kp="${kp:-$pw}"
               {
@@ -647,31 +577,16 @@ jobs:
                 echo "KEY_ALIAS=$alias"
                 echo "KEY_PASSWORD=$kp"
                 echo "KEYSTORE_FILE=/tmp/manager-$flavor.jks"
-              } > gradle.properties
-              # Also expose for repack_apk.py (kernelsu)
-              echo "/tmp/manager-$flavor.jks" > "/tmp/repack-keystore-$flavor.path"
-              echo "$alias" > "/tmp/repack-alias-$flavor.path"
-              echo "$pw" > "/tmp/repack-storepass-$flavor.path"
-              echo "$kp" > "/tmp/repack-keypass-$flavor.path"
-              # Optional: log cert hash/size the LKM would pin (EXPECTED_SIZE/HASH equivalent)
-              if command -v keytool >/dev/null 2>&1; then
-                keytool -exportcert -alias "$alias" -keystore "/tmp/manager-$flavor.jks" -storepass "$pw" -file "/tmp/manager-$flavor.der" 2>/dev/null || true
-                if [ -f "/tmp/manager-$flavor.der" ]; then
-                  sz=$(stat -c%s "/tmp/manager-$flavor.der"); hx=$(printf '0x%04x' "$sz"); hs=$(sha256sum "/tmp/manager-$flavor.der" | awk '{print $1}')
-                  echo "  cert size=$hx ($sz) sha256=$hs"
-                fi
-              fi
+              } >> gradle.properties
               return 0
             fi
             return 1
           }
-
-          if ! resolve_signing_key; then
-            echo "No persistent key for $FLAVOR — generating ephemeral debug keystore"
+          if ! resolve_key; then
+            echo "No persistent key for $flavor — using ephemeral debug keystore (tmp123) like upstream PR builds"
             if [ ! -f key.jks ] && [ ! -f ../key.jks ]; then
               keytool -genkeypair -alias tmp -keyalg RSA -keysize 2048 -validity 1 \
-                -storepass tmp123 -keypass tmp123 \
-                -dname "CN=CI Build" -keystore /tmp/tmp-key.jks -storetype JKS 2>&1 | tail -3 || true
+                -storepass tmp123 -keypass tmp123 -dname "CN=CI Build" -keystore /tmp/tmp-key.jks -storetype JKS 2>&1 | tail -3 || true
               if [ -f /tmp/tmp-key.jks ]; then
                 {
                   echo "KEYSTORE_PASSWORD=tmp123"
@@ -682,102 +597,41 @@ jobs:
               fi
             fi
           fi
-
-          flavor="$FLAVOR"
-          echo "Building manager for flavor=$flavor"
-
-          # Helper to run gradle with full log on failure (tail hides root cause)
+          echo "--- manager/gradle.properties (stock + key only) ---"
+          cat gradle.properties || true
+          # ── Stock gradle invocation per upstream ──
           gradle_build() {
             local task="$1"
             echo ">> ./gradlew $task"
             set -o pipefail
             if ! ./gradlew $task 2>&1 | tee /tmp/gradle-$flavor.log; then
               echo "--- gradle $task FAILED for $flavor ---" >&2
-              echo "=== tail 200 ===" >&2; tail -n 200 /tmp/gradle-$flavor.log 2>/dev/null || true
-              set +o pipefail
+              tail -n 200 /tmp/gradle-$flavor.log 2>/dev/null || true
               return 1
             fi
-            set +o pipefail
           }
-
-          # Copy any cargo-built ksud into jniLibs so manager bundles it (mirrors stock CI)
-          copy_ksud_if_built() {
-            local built
-            built=$(find ../target /tmp -type f -name ksud 2>/dev/null | head -5 || true)
-            if [ -n "$built" ]; then
-              for arch in arm64-v8a x86_64 armeabi-v7a; do echo "ksud map $arch -> $built" | head -1; done
-              mkdir -p app/src/main/jniLibs/arm64-v8a app/src/main/jniLibs/x86_64 app/src/main/jniLibs/armeabi-v7a 2>/dev/null || true
-              for f in $(find .. /tmp -type f -name ksud 2>/dev/null | head -10); do echo "  ksud candidate: $f"; done
-              # try to place best match; gradle will still build even if absent
-              cp -f $(find .. /tmp -type f -name ksud 2>/dev/null | head -1) app/src/main/jniLibs/arm64-v8a/libksud.so 2>/dev/null || true
-            fi
-          }
-          copy_ksud_if_built || true
-
+          # Flavor-specific stock commands (mirror upstream files verbatim)
           if [ "$flavor" = "next" ] || [ "$flavor" = "next-susfs" ]; then
-            # KernelSU-Next (+ SUSFS): two variants (normal + spoofed via ./spoof)
-            # Save signing config so spoof stomp can restore it
-            cp -f gradle.properties /tmp/gradle-$flavor.properties.bak 2>/dev/null || true
-            cp -f /tmp/manager-$flavor.jks /tmp/manager-$flavor.jks.bak 2>/dev/null || true
-            NEXT_OK=false
-            if gradle_build "clean assembleRelease"; then
-              NEXT_OK=true
-            else
-              echo "Next normal build failed — see log above" >&2
-              cat /tmp/gradle-$flavor.log 2>/dev/null | grep -i -E "error|failed|exception|Could not" | head -n 80 || true
-              echo "--- gradle log tail 200 ---" >&2; tail -n 200 /tmp/gradle-$flavor.log 2>/dev/null || true
-            fi
+            # Upstream Next: ./gradlew clean assembleRelease (+ spoof variant)
+            # Build normal
+            ok=false
+            if gradle_build "clean assembleRelease"; then ok=true; fi
+            # Spoof variant if present (upstream does matrix spoofed=true/false)
             if [ -x ./spoof ]; then
-              echo "Building spoofed variant"
-              chmod +x ./spoof
-              ./spoof || true
+              echo "Building spoofed variant (upstream match)"
+              chmod +x ./spoof; ./spoof || true
               if gradle_build "clean assembleRelease"; then
-                NEXT_OK=true
-                for apk in app/build/outputs/apk/release/*.apk; do
-                  [ -f "$apk" ] && cp -f "$apk" "/tmp/next-spoofed.apk" || true
-                done
-              else
-                echo "Next spoofed build failed" >&2; tail -n 100 /tmp/gradle-$flavor.log 2>/dev/null || true
+                for apk in app/build/outputs/apk/release/*.apk; do [ -f "$apk" ] && cp -f "$apk" "/tmp/next-spoofed.apk" || true; done
+                ok=true
               fi
-              # Restore normal sources + signing (spoof overwrites files, don't git checkout -- .)
               git checkout -- app/src/main/java 2>/dev/null || git checkout -- . 2>/dev/null || true
-              cp -f /tmp/gradle-$flavor.properties.bak gradle.properties 2>/dev/null || true
-              cp -f /tmp/manager-$flavor.jks.bak /tmp/manager-$flavor.jks 2>/dev/null || true
-              if [ -f /tmp/manager-$flavor.jks ] && grep -q KEYSTORE gradle.properties 2>/dev/null; then
-                echo "Restored signing after spoof"
-              fi
-              if ! $NEXT_OK; then
-                # One final retry of normal after restore
-                if gradle_build "clean assembleRelease"; then NEXT_OK=true; else echo "Next retry after spoof restore failed" >&2; fi
-              fi
             fi
-            if ! $NEXT_OK; then
-              echo "ERROR: all Next gradle builds failed for $flavor" >&2
-              echo "Uploading gradle log for diagnosis"; cat /tmp/gradle-$flavor.log 2>/dev/null | tail -n 300 || true
-              exit 1
-            fi
+            if ! $ok; then echo "ERROR: Next gradle failed" >&2; tail -n 300 /tmp/gradle-$flavor.log; exit 1; fi
           elif [ "$flavor" = "kernelsu" ]; then
-            # tiann/KernelSU: single manager, repack embeds ksud+LKM
+            # Upstream tiann: ./gradlew clean assembleRelease (repack is separate job — we just build manager here)
             gradle_build "clean assembleRelease" || gradle_build "assembleRelease" || true
-            if [ -f ../repack_apk.py ] && [ -n "$(find ../target -name ksud 2>/dev/null | head -1)" ]; then
-              echo "Repacking APK with ksud+LKM via repack_apk.py"
-              REPACK_KS="/tmp/manager-$flavor.jks"
-              REPACK_ALIAS="$(cat "/tmp/repack-alias-$flavor.path" 2>/dev/null || echo repack)"
-              REPACK_SP="$(cat "/tmp/repack-storepass-$flavor.path" 2>/dev/null || echo repack123)"
-              REPACK_KP="$(cat "/tmp/repack-keypass-$flavor.path" 2>/dev/null || echo repack123)"
-              if [ ! -f "$REPACK_KS" ]; then
-                REPACK_KS="/tmp/repack.jks"; REPACK_ALIAS="repack"; REPACK_SP="repack123"; REPACK_KP="repack123"
-                if [ ! -f /tmp/repack.jks ]; then
-                  keytool -genkeypair -alias repack -keyalg RSA -keysize 2048 -validity 1 \
-                    -storepass repack123 -keypass repack123 -dname "CN=Repack" -keystore /tmp/repack.jks -storetype JKS 2>&1 | tail -3 || true
-                fi
-              fi
-              python3 ../repack_apk.py repack \
-                --keystore "$REPACK_KS" --alias "$REPACK_ALIAS" --storepass "$REPACK_SP" --keypass "$REPACK_KP" 2>&1 | tail -20 || true
-            fi
           elif [ "$flavor" = "resukisu" ]; then
-            # ReSukiSU: three variants — Manager-release, Spoofed-Manager-release, Manager-debug
-            if [ -x ./randomizer ]; then chmod +x ./randomizer; fi
+            # Upstream ReSukiSU: assembleRelease + assembleDebug + randomizer
             gradle_build "clean assembleRelease" || true
             gradle_build "assembleDebug" || true
             if [ -x ./randomizer ]; then
@@ -785,30 +639,17 @@ jobs:
               gradle_build "clean assembleRelease" || true
             fi
           fi
-
-          # Collect whatever was produced
+          # Collect
           out="/tmp/manager_apks_${flavor}"
           mkdir -p "$out"
           for apk in app/build/outputs/apk/release/*.apk app/build/outputs/apk/debug/*.apk; do
             [ -f "$apk" ] || continue
-            base="$(basename "$apk")"
-            # Prefix with flavor to avoid collisions when merging
-            cp -f "$apk" "$out/${flavor}-${base}"
-            echo "Collected $out/${flavor}-${base}"
+            cp -f "$apk" "$out/${flavor}-$(basename "$apk")"
+            echo "Collected $out/${flavor}-$(basename "$apk")"
           done
-          # Also stash any repacked APKs
-          for apk in app/build/outputs/apk/release/*-repacked*.apk build/outputs/apk/*.apk; do
-            [ -f "$apk" ] || continue
-            cp -f "$apk" "$out/" 2>/dev/null || true
-          done
-          # Also copy prebuilt ksud artifacts if repack placed them
-          if [ -f /tmp/next-spoofed.apk ]; then
-            cp -f /tmp/next-spoofed.apk "$out/${flavor}-spoofed.apk" || true
-          fi
+          if [ -f /tmp/next-spoofed.apk ]; then cp -f /tmp/next-spoofed.apk "$out/${flavor}-spoofed.apk" || true; fi
           ls -lh "$out" 2>&1 | head -30 || true
-          if [ -z "$(ls -A "$out" 2>/dev/null)" ]; then
-            echo "WARNING: no APK produced for $flavor" >&2
-          fi
+          if [ -z "$(ls -A "$out" 2>/dev/null)" ]; then echo "WARNING: no APK produced for $flavor" >&2; fi
           echo "MANAGER_OUT_$flavor=$out" >> "$GITHUB_ENV"
 
       - name: Upload gradle logs (${{ matrix.flavor }})
@@ -827,18 +668,7 @@ jobs:
           path: /tmp/manager_apks_${{ matrix.flavor }}/*.apk
           if-no-files-found: warn
 
-      - name: Upload built LKM marker (${{ matrix.flavor }})
-        if: steps.gate.outputs.run == 'true'
-        uses: actions/upload-artifact@v7
-        with:
-          name: lkm-${{ matrix.flavor }}
-          path: |
-            /tmp/lkm-*.marker
-            /tmp/${{ matrix.flavor }}-src/kernel/*.ko
-            /tmp/${{ matrix.flavor }}-src/target/**/kernelsu.ko
-          if-no-files-found: ignore
-
-  # Collector for source-built managers: merge per-flavor uploads into one cross-blob
+    # Collector for source-built managers: merge per-flavor uploads into one cross-blob
   # so downstream consumers can use the same artifact name regardless of path.
   collect-source-managers:
     needs: build-from-source
