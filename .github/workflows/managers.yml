@@ -227,18 +227,6 @@ jobs:
             echo "manager_list=[]" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Summary
-        run: |
-          echo "## Managers — Resolved Sources" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Flavor | Upstream | Commit | Run | Artifacts |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|---|---|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
-          echo '${{ steps.manager.outputs.manager_list }}' | jq -r '.[] | "| \(.flavor) | \(.owner)/\(.repo) | \(.stock[0:8]) | [\(.run_id)](https://github.com/\(.owner)/\(.repo)/actions/runs/\(.run_id)) | \(.want) |"' >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || {
-            echo '```json' >> "$GITHUB_STEP_SUMMARY"
-            echo '${{ steps.manager.outputs.manager_list }}' | jq . >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo '${{ steps.manager.outputs.manager_list }}' >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-          }
-
   list-manager-apks:
     needs: resolve-managers
     if: ${{ !inputs.build_from_source && needs.resolve-managers.outputs.manager_list != '' && needs.resolve-managers.outputs.manager_list != '[]' }}
@@ -328,7 +316,15 @@ jobs:
           echo "Found $count manager APKs"
           ls -lh "$OUT_APKS" || true
           {
-            echo "## Managers — Fetched APKs ($count)"
+            echo "## Managers"
+            echo ""
+            echo "### Resolved Sources"
+            echo ""
+            echo "| Flavor | Upstream | Commit | Run | Artifacts |"
+            echo "|---|---|---|---|---|"
+            echo "$MANAGER_LIST" | jq -r '.[] | "| \(.flavor) | \(.owner)/\(.repo) | \(.stock[0:8]) | [\(.run_id)](https://github.com/\(.owner)/\(.repo)/actions/runs/\(.run_id)) | \(.want) |"' 2>/dev/null || echo "| _error parsing manager list_ | | | | |"
+            echo ""
+            echo "### Fetched APKs ($count)"
             echo ""
             echo "| APK | Source | Size |"
             echo "|---|---|---|"
