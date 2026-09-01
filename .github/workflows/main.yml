@@ -1299,59 +1299,59 @@ jobs:
           # KSU version not computed here; render will show placeholder if release job skipped
         run: |
           set -e
-          python3 - <<'PYEOF' > release_body.md
-        import json, os
-        def env(n,d=""): return os.environ.get(n,d).strip()
-        def parse_managers(raw):
-            try: return json.loads(raw) if raw.strip() else []
-            except: return []
-        root = env("ROOT_FLAVOR","unknown")
-        feats=[]
-        if env("USE_SUSFS","true")=="true": feats.append("SUSFS")
-        if env("USE_BBG","true")=="true": feats.append("Baseband Guard")
-        if env("USE_DS","true")=="true": feats.append("DroidSpaces-OSS")
-        if env("USE_NET","true")=="true": feats.append("Networking")
-        if env("USE_NTSYNC","true")=="true": feats.append("NTSync")
-        if env("USE_PTRACE","true")=="true": feats.append("Ptrace Leak Fix")
-        if env("USE_UNICODE","true")=="true": feats.append("Unicode Fix")
-        if env("USE_BPF","true")=="true": feats.append("BTF / eBPF / FUSE-BPF")
-        if env("USE_PERF","true")=="true": feats.append("Performance Tuning")
-        lines=[]
-        lines.append("# Wild Kernels for GKI2 Devices")
-        lines.append("")
-        lines.append("## Features")
-        lines.append("")
-        lines.append(f"- **Root:** `{root}`")
-        for f in feats: lines.append(f"- {f}")
-        if not feats: lines.append("- (none)")
-        lines.append("")
-        lines.append("## Commits")
-        lines.append("")
-        ver=env("KSU_VERSION","")
-        if ver: lines.append(f"- **KSU Version:** `{ver}`")
-        tag=env("KSU_GIT_TAG","")
-        if tag and tag!="no-tag": lines.append(f"- **KSU Tag:** `{tag}`")
-        br=env("KSUN_BRANCH","")
-        if br: lines.append(f"- **KSU Branch:** `{br}`")
-        cm=env("KSUN_COMMIT","")
-        if cm: lines.append(f"- **KSU Commit:** `{cm[:12]}` `{cm}`" if len(cm)==40 else f"- **KSU Commit:** `{cm}`")
-        for var,key in [("android12-5.10","susfs_commit_android12_5_10"),("android13-5.10","susfs_commit_android13_5_10"),("android13-5.15","susfs_commit_android13_5_15"),("android14-5.15","susfs_commit_android14_5_15"),("android14-6.1","susfs_commit_android14_6_1"),("android15-6.6","susfs_commit_android15_6_6"),("android16-6.12","susfs_commit_android16_6_12")]:
-            sha=env(key)
-            if sha and len(sha)==40: lines.append(f"- **SUSFS {var}:** `{sha[:12]}` `{sha}`")
-        sha=env("SUSFS_COMMIT")
-        if sha and len(sha)==40 and not any(env(k) for _,k in [("android12-5.10","susfs_commit_android12_5_10"),("android13-5.10","susfs_commit_android13_5_10"),("android13-5.15","susfs_commit_android13_5_15"),("android14-5.15","susfs_commit_android14_5_15"),("android14-6.1","susfs_commit_android14_6_1"),("android15-6.6","susfs_commit_android15_6_6"),("android16-6.12","susfs_commit_android16_6_12")]): lines.append(f"- **SUSFS:** `{sha[:12]}` `{sha}`")
-        mgrs=parse_managers(env("MANAGER_LIST",""))
-        if mgrs:
-            for m in mgrs:
-                label={"next":"KernelSU-Next","kernelsu":"KernelSU","resukisu":"ReSukiSU"}.get(m.get("flavor",""), m.get("flavor",""))
-                stock=m.get("stock","")
-                if stock: lines.append(f"- **Manager {label}:** `{stock[:12]}` `{stock}`")
-                elif m.get("run_id"): lines.append(f"- **Manager {label}:** run `{m.get('run_id')}`")
-        output="\n".join(lines)+"\n"
-        print(output,end="")
-        s=os.environ.get("GITHUB_STEP_SUMMARY")
-        if s: open(s,"a").write(output)
-        PYEOF
+            python3 - <<'PYEOF' > release_body.md
+          import json, os
+          def env(n,d=""): return os.environ.get(n,d).strip()
+          def parse_managers(raw):
+              try: return json.loads(raw) if raw.strip() else []
+              except: return []
+          root = env("ROOT_FLAVOR","unknown")
+          feats=[]
+          if env("USE_SUSFS","true")=="true": feats.append("SUSFS")
+          if env("USE_BBG","true")=="true": feats.append("Baseband Guard")
+          if env("USE_DS","true")=="true": feats.append("DroidSpaces-OSS")
+          if env("USE_NET","true")=="true": feats.append("Networking")
+          if env("USE_NTSYNC","true")=="true": feats.append("NTSync")
+          if env("USE_PTRACE","true")=="true": feats.append("Ptrace Leak Fix")
+          if env("USE_UNICODE","true")=="true": feats.append("Unicode Fix")
+          if env("USE_BPF","true")=="true": feats.append("BTF / eBPF / FUSE-BPF")
+          if env("USE_PERF","true")=="true": feats.append("Performance Tuning")
+          lines=[]
+          lines.append("# Wild Kernels for GKI2 Devices")
+          lines.append("")
+          lines.append("## Features")
+          lines.append("")
+          lines.append(f"- **Root:** `{root}`")
+          for f in feats: lines.append(f"- {f}")
+          if not feats: lines.append("- (none)")
+          lines.append("")
+          lines.append("## Commits")
+          lines.append("")
+          ver=env("KSU_VERSION","")
+          if ver: lines.append(f"- **KSU Version:** `{ver}`")
+          tag=env("KSU_GIT_TAG","")
+          if tag and tag!="no-tag": lines.append(f"- **KSU Tag:** `{tag}`")
+          br=env("KSUN_BRANCH","")
+          if br: lines.append(f"- **KSU Branch:** `{br}`")
+          cm=env("KSUN_COMMIT","")
+          if cm: lines.append(f"- **KSU Commit:** `{cm[:12]}` `{cm}`" if len(cm)==40 else f"- **KSU Commit:** `{cm}`")
+          for var,key in [("android12-5.10","susfs_commit_android12_5_10"),("android13-5.10","susfs_commit_android13_5_10"),("android13-5.15","susfs_commit_android13_5_15"),("android14-5.15","susfs_commit_android14_5_15"),("android14-6.1","susfs_commit_android14_6_1"),("android15-6.6","susfs_commit_android15_6_6"),("android16-6.12","susfs_commit_android16_6_12")]:
+              sha=env(key)
+              if sha and len(sha)==40: lines.append(f"- **SUSFS {var}:** `{sha[:12]}` `{sha}`")
+          sha=env("SUSFS_COMMIT")
+          if sha and len(sha)==40 and not any(env(k) for _,k in [("android12-5.10","susfs_commit_android12_5_10"),("android13-5.10","susfs_commit_android13_5_10"),("android13-5.15","susfs_commit_android13_5_15"),("android14-5.15","susfs_commit_android14_5_15"),("android14-6.1","susfs_commit_android14_6_1"),("android15-6.6","susfs_commit_android15_6_6"),("android16-6.12","susfs_commit_android16_6_12")]): lines.append(f"- **SUSFS:** `{sha[:12]}` `{sha}`")
+          mgrs=parse_managers(env("MANAGER_LIST",""))
+          if mgrs:
+              for m in mgrs:
+                  label={"next":"KernelSU-Next","kernelsu":"KernelSU","resukisu":"ReSukiSU"}.get(m.get("flavor",""), m.get("flavor",""))
+                  stock=m.get("stock","")
+                  if stock: lines.append(f"- **Manager {label}:** `{stock[:12]}` `{stock}`")
+                  elif m.get("run_id"): lines.append(f"- **Manager {label}:** run `{m.get('run_id')}`")
+          output="\n".join(lines)+"\n"
+          print(output,end="")
+          s=os.environ.get("GITHUB_STEP_SUMMARY")
+          if s: open(s,"a").write(output)
+          PYEOF
           {
             echo "## Release Notes Preview (CI Summary)"
             echo
