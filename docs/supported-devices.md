@@ -32,11 +32,11 @@
 | Pixel 10 Pro | blazer | — | — | Expected — codename confirmed at source.android.com, pending factory image |
 | Pixel 10 Pro XL | mustang | — | — | Expected — codename confirmed at source.android.com, pending factory image |
 | Pixel 10 Pro Fold | rango | — | — | Expected — codename confirmed at source.android.com, pending factory image |
-| Pixel 10a | stallion | — | — | Expected — codename per leaks, pending factory image |
-| Pixel 11 | cubs | — | — | Expected — codename per leaks, pending factory image |
-| Pixel 11 Pro | grizzly | — | — | Expected — codename per leaks, pending factory image |
-| Pixel 11 Pro XL | kodiak | — | — | Expected — codename per leaks, pending factory image |
-| Pixel 11 Pro Fold | yogi | — | — | Expected — codename per leaks, pending factory image |
+| Pixel 10a | stallion | — | — | Expected |
+| Pixel 11 | cubs | — | — | Expected |
+| Pixel 11 Pro | grizzly | — | — | Expected |
+| Pixel 11 Pro XL | kodiak | — | — | Expected |
+| Pixel 11 Pro Fold | yogi | — | — | Expected |
 
 ## Samsung
 
