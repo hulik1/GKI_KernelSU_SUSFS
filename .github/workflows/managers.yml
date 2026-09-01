@@ -1,0 +1,318 @@
+name: Fetch Root Managers
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      root_flavor:
+        description: "Root flavor to fetch managers for"
+        type: choice
+        options:
+          - All
+          - KernelSU-Next
+          - KernelSU
+          - ReSukiSU
+        default: All
+      kernelsu_next_commit:
+        description: "Pin KernelSU-Next manager to this commit (40-char SHA, empty = latest dev tip)"
+        required: false
+        type: string
+        default: ""
+      kernelsu_commit:
+        description: "Pin KernelSU manager to this commit (40-char SHA, empty = latest main tip)"
+        required: false
+        type: string
+        default: ""
+      resukisu_commit:
+        description: "Pin ReSukiSU manager to this commit (40-char SHA, empty = latest main tip)"
+        required: false
+        type: string
+        default: ""
+  workflow_call:
+    inputs:
+      root_flavor:
+        description: "Root flavor to fetch managers for"
+        required: false
+        type: string
+        default: All
+      kernelsu_next_commit:
+        description: "Pin KernelSU-Next manager commit"
+        required: false
+        type: string
+        default: ""
+      kernelsu_commit:
+        description: "Pin KernelSU manager commit"
+        required: false
+        type: string
+        default: ""
+      resukisu_commit:
+        description: "Pin ReSukiSU manager commit"
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  resolve-managers:
+    runs-on: ubuntu-latest
+    outputs:
+      manager_list: ${{ steps.manager.outputs.manager_list }}
+    steps:
+      - name: Resolve manager builds for selected root flavor(s)
+        id: manager
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_ROOT_FLAVOR: ${{ inputs.root_flavor }}
+          INPUT_NEXT_COMMIT: ${{ inputs.kernelsu_next_commit }}
+          INPUT_KSU_COMMIT: ${{ inputs.kernelsu_commit }}
+          INPUT_RESUKISU_COMMIT: ${{ inputs.resukisu_commit }}
+        run: |
+          set -euo pipefail
+
+          # Exact extraction of main.yml#resolve-managers / manager step.
+          # Each selected root must ship ALL manager APK builds. KernelSU-Next publishes
+          # its manager APKs (manager + manager-spoofed) from the official dev-tip
+          # build-manager-ci run; kernelsu (KernelSU) and ReSukiSU expose theirs as
+          # CI-run artifacts. All three are pinned to an exact commit.
+
+          retry() {
+            local n=0
+            until [ "$n" -ge 5 ]; do
+              "$@" && return 0
+              n=$((n+1))
+              echo "retry $n/5 failed for: $*" >&2
+              sleep 5
+            done
+            return 1
+          }
+
+          resolve_sha() { # repo ref
+            retry git ls-remote "$1" "$2" | awk '{print $1; exit}'
+          }
+
+          resolve_one() { # flavor
+            local flavor="$1"
+            local owner repo wf stock
+            case "$flavor" in
+              next)
+                owner="KernelSU-Next"; repo="KernelSU-Next"; wf="build-manager-ci.yml"
+                if [[ -n "${INPUT_NEXT_COMMIT:-}" ]]; then
+                  stock="$INPUT_NEXT_COMMIT"
+                  if ! [[ "$stock" =~ ^[0-9a-f]{40}$ ]]; then
+                    echo "ERROR: kernelsu_next_commit must be a 40-char SHA (got: $stock)" >&2
+                    exit 1
+                  fi
+                else
+                  stock=$(resolve_sha https://github.com/KernelSU-Next/KernelSU-Next.git refs/heads/dev)
+                fi
+                run_id=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                  -H "Authorization: Bearer $GH_TOKEN" \
+                  "https://api.github.com/repos/${owner}/${repo}/actions/workflows/${wf}/runs?head_sha=${stock}" \
+                  | jq -r '.workflow_runs[0].id // empty')
+                if [[ -z "${run_id}" ]]; then
+                  echo "ERROR: no ${repo} manager build exists for dev commit ${stock}" >&2
+                  exit 1
+                fi
+                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s","want":"manager,manager-spoofed"}' \
+                  "$flavor" "$owner" "$repo" "$run_id" "$stock"
+                ;;
+
+              kernelsu)
+                owner="tiann"; repo="KernelSU"; wf="build-manager.yml"
+                if [[ -n "${INPUT_KSU_COMMIT:-}" ]]; then
+                  stock="$INPUT_KSU_COMMIT"
+                  if ! [[ "$stock" =~ ^[0-9a-f]{40}$ ]]; then
+                    echo "ERROR: kernelsu_commit must be a 40-char SHA (got: $stock)" >&2
+                    exit 1
+                  fi
+                else
+                  stock=$(resolve_sha https://github.com/tiann/KernelSU.git refs/heads/main)
+                fi
+                run_id=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                  "https://api.github.com/repos/${owner}/${repo}/actions/workflows/${wf}/runs?head_sha=${stock}" \
+                  | jq -r '.workflow_runs[0].id // empty')
+                if [[ -z "${run_id}" ]]; then
+                  echo "ERROR: no ${repo} manager build exists for stock commit ${stock}" >&2
+                  exit 1
+                fi
+                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s","want":"manager"}' \
+                  "$flavor" "$owner" "$repo" "$run_id" "$stock"
+                ;;
+
+              resukisu)
+                owner="ReSukiSU"; repo="ReSukiSU"; wf="build-manager.yml"
+                if [[ -n "${INPUT_RESUKISU_COMMIT:-}" ]]; then
+                  stock="$INPUT_RESUKISU_COMMIT"
+                  if ! [[ "$stock" =~ ^[0-9a-f]{40}$ ]]; then
+                    echo "ERROR: resukisu_commit must be a 40-char SHA (got: $stock)" >&2
+                    exit 1
+                  fi
+                else
+                  stock=$(resolve_sha https://github.com/ReSukiSU/ReSukiSU.git refs/heads/main)
+                fi
+                run_id=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                  "https://api.github.com/repos/${owner}/${repo}/actions/workflows/${wf}/runs?head_sha=${stock}" \
+                  | jq -r '.workflow_runs[0].id // empty')
+                if [[ -z "${run_id}" ]]; then
+                  echo "ERROR: no ${repo} manager build exists for stock commit ${stock}" >&2
+                  exit 1
+                fi
+                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s","want":"Manager-release,Spoofed-Manager-release,Manager-debug"}' \
+                  "$flavor" "$owner" "$repo" "$run_id" "$stock"
+                ;;
+
+              *)
+                echo "skipping unknown flavor: $flavor" >&2
+                return 0
+                ;;
+            esac
+          }
+
+          FLAVORS="${INPUT_ROOT_FLAVOR:-All}"
+          echo "Root flavor: ${FLAVORS}"
+          LIST=""
+          case "${FLAVORS}" in
+            All) LIST=$(jq -c -n '[inputs]' <<< "$(resolve_one next)"$'\n'"$(resolve_one kernelsu)"$'\n'"$(resolve_one resukisu)") ;;
+            KernelSU-Next) LIST=$(jq -c -n '[inputs]' <<< "$(resolve_one next)") ;;
+            KernelSU) LIST=$(jq -c -n '[inputs]' <<< "$(resolve_one kernelsu)") ;;
+            ReSukiSU) LIST=$(jq -c -n '[inputs]' <<< "$(resolve_one resukisu)") ;;
+            *) echo "Skipping manager resolution (no root flavor / none)." ;;
+          esac
+          if [ -n "$LIST" ]; then
+            echo "manager_list=$LIST" >> "$GITHUB_OUTPUT"
+            echo "Manager sources resolved: $LIST"
+          else
+            echo "manager_list=[]" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Summary
+        run: |
+          echo "### Resolved manager sources" >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          echo '${{ steps.manager.outputs.manager_list }}' | jq . >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo '${{ steps.manager.outputs.manager_list }}' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  list-manager-apks:
+    needs: resolve-managers
+    if: needs.resolve-managers.outputs.manager_list != '' && needs.resolve-managers.outputs.manager_list != '[]'
+    runs-on: ubuntu-latest
+    outputs:
+      apk_list: ${{ steps.scan.outputs.apk_list }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download and scan all manager APKs
+        id: scan
+        shell: bash
+        env:
+          MANAGER_LIST: ${{ needs.resolve-managers.outputs.manager_list }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          MANAGER_LIST=$(echo "$MANAGER_LIST" | sed 's/^\[,/[/')
+          if ! echo "$MANAGER_LIST" | jq empty 2>/dev/null; then
+            echo "ERROR: Invalid MANAGER_LIST JSON"
+            echo "Raw: $MANAGER_LIST"
+            exit 0
+          fi
+          OUT_APKS="${GITHUB_WORKSPACE:-$PWD}/manager_apks"
+          MANIFEST="${GITHUB_WORKSPACE:-$PWD}/manifest.txt"
+          rm -rf "$OUT_APKS" "$MANIFEST"
+          mkdir -p "$OUT_APKS"
+          : > "$MANIFEST"
+          echo "$MANAGER_LIST" | jq -c '.[]' | while read -r M; do
+            OWNER=$(echo "$M" | jq -r .owner)
+            REPO=$(echo "$M" | jq -r .repo)
+            SRC=$(echo "$M" | jq -r .source)
+            RUN_ID=$(echo "$M" | jq -r .run_id)
+            WANT=$(echo "$M" | jq -r '.want // ""')
+            DLDIR="dl_${REPO}"
+            mkdir -p "$DLDIR"
+            (
+              cd "$DLDIR"
+              if [ "$SRC" = "release" ]; then
+                curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                  "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest" > rel.json
+                for URL in $(jq -r '.assets[] | select(.name | endswith(".apk")) | .browser_download_url' rel.json); do
+                  NAME="${URL##*/}"
+                  curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o "$NAME" "$URL"
+                  cp -f "$NAME" "$OUT_APKS/$NAME"
+                  echo "$OWNER|$REPO|$NAME" >> "$MANIFEST"
+                done
+              else
+                AJSON=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                  -H "Authorization: Bearer $GH_TOKEN" \
+                  "https://api.github.com/repos/${OWNER}/${REPO}/actions/runs/${RUN_ID}/artifacts")
+                if [ -z "$WANT" ]; then
+                  ART_IDS=$(echo "$AJSON" | jq -r '.artifacts[].id')
+                else
+                  ART_IDS=$(echo "$AJSON" | jq -r --arg want "$WANT" '
+                    ($want | split(",")) as $wl |
+                    .artifacts[] | select(.name as $n | any($wl[]; $n == .)) | .id')
+                fi
+                echo "$ART_IDS" | while read -r AID; do
+                  [ -n "$AID" ] || continue
+                  curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+                    -H "Authorization: Bearer $GH_TOKEN" \
+                    -o "_${AID}.zip" \
+                    "https://api.github.com/repos/${OWNER}/${REPO}/actions/artifacts/${AID}/zip"
+                  mkdir -p "_${AID}"
+                  unzip -o -q "_${AID}.zip" -d "_${AID}" || true
+                  rm -f "_${AID}.zip"
+                  for apk in _${AID}/*.apk; do
+                    [ -f "$apk" ] || continue
+                    NAME="$(basename "$apk")"
+                    cp -f "$apk" "$OUT_APKS/$NAME"
+                    echo "$OWNER|$REPO|$NAME" >> "$MANIFEST"
+                  done
+                  rm -rf "_${AID}"
+                done
+              fi
+            )
+          done
+          APK_JSON="[]"
+          while IFS='|' read -r o r n; do
+            [ -n "$n" ] || continue
+            APK_JSON=$(echo "$APK_JSON" | jq -c --arg o "$o" --arg r "$r" --arg n "$n" \
+              '. + [{owner:$o,repo:$r,apk:$n}]')
+          done < "$MANIFEST"
+          echo "apk_list=${APK_JSON}" >> "$GITHUB_OUTPUT"
+          echo "Found $(wc -l < "$MANIFEST") manager APKs"
+          ls -1 "$OUT_APKS" || true
+          echo "### Manager APKs" >> "$GITHUB_STEP_SUMMARY"
+          cat "$MANIFEST" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
+      - name: Upload all manager APKs as one cross-blob
+        uses: actions/upload-artifact@v7
+        with:
+          name: manager-apks
+          path: manager_apks/
+          if-no-files-found: warn
+
+  publish-manager-artifacts:
+    needs: list-manager-apks
+    if: needs.list-manager-apks.outputs.apk_list != '' && needs.list-manager-apks.outputs.apk_list != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        item: ${{ fromJson(needs.list-manager-apks.outputs.apk_list) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download manager cross-blob
+        uses: actions/download-artifact@v7
+        with:
+          name: manager-apks
+          path: manager_apks
+          merge-multiple: true
+
+      - name: Upload ${{ matrix.item.apk }} as its own artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: manager-apk-${{ matrix.item.apk }}
+          path: manager_apks/${{ matrix.item.apk }}
+          if-no-files-found: error
