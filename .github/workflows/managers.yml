@@ -897,6 +897,6 @@ jobs:
       - name: Upload ${{ matrix.item.apk }} as its own artifact
         uses: actions/upload-artifact@v7
         with:
-          name: manager-apk-${{ matrix.item.apk }}
+          name: ${{ matrix.item.apk }}
           path: manager_apks/${{ matrix.item.apk }}
           if-no-files-found: error
