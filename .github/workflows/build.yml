@@ -115,8 +115,6 @@ jobs:
         sublevel: ${{ inputs.sublevel }}
         kernel_patches_commit: ${{ inputs.kernel_patches_commit }}
         anykernel3_commit: ${{ inputs.anykernel3_commit }}
-      env:
-        BOOT_SIGN_KEY: ${{ secrets.BOOT_SIGN_KEY }}
           
     - name: Download Kernel Repository
       uses: ./.github/actions/download-kernel
