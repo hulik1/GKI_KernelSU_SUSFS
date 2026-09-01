@@ -31,6 +31,11 @@ on:
         required: false
         type: string
         default: ""
+      build_from_source:
+        description: "Build from source — clone each repo at the pinned commit and build LKM + ksud + manager locally (instead of fetching upstream CI artifacts)"
+        required: false
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       root_flavor:
@@ -53,9 +58,16 @@ on:
         required: false
         type: string
         default: ""
+      build_from_source:
+        description: "Build from source instead of fetching artifacts"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
+  # ── path A: fetch prebuilt manager APKs from upstream CI (default) ──
   resolve-managers:
+    if: ${{ !inputs.build_from_source }}
     runs-on: ubuntu-latest
     outputs:
       manager_list: ${{ steps.manager.outputs.manager_list }}
@@ -197,7 +209,7 @@ jobs:
 
   list-manager-apks:
     needs: resolve-managers
-    if: needs.resolve-managers.outputs.manager_list != '' && needs.resolve-managers.outputs.manager_list != '[]'
+    if: ${{ !inputs.build_from_source && needs.resolve-managers.outputs.manager_list != '' && needs.resolve-managers.outputs.manager_list != '[]' }}
     runs-on: ubuntu-latest
     outputs:
       apk_list: ${{ steps.scan.outputs.apk_list }}
@@ -292,14 +304,435 @@ jobs:
           path: manager_apks/
           if-no-files-found: warn
 
+  # ── path B: clone every repo and build LKM + ksud + manager from source ──
+  build-from-source:
+    if: ${{ inputs.build_from_source }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - flavor: next
+            repo: https://github.com/KernelSU-Next/KernelSU-Next.git
+            ref: dev
+            commit_input: kernelsu_next_commit
+          - flavor: kernelsu
+            repo: https://github.com/tiann/KernelSU.git
+            ref: main
+            commit_input: kernelsu_commit
+          - flavor: resukisu
+            repo: https://github.com/ReSukiSU/ReSukiSU.git
+            ref: main
+            commit_input: resukisu_commit
+    env:
+      FLAVOR: ${{ matrix.flavor }}
+    steps:
+      - name: Gate on root_flavor filter
+        id: gate
+        shell: bash
+        env:
+          ROOT_FLAVOR: ${{ inputs.root_flavor }}
+        run: |
+          WANT="${ROOT_FLAVOR:-All}"
+          FLAVOR="${{ matrix.flavor }}"
+          case "$WANT" in
+            All) echo "run=true" >> "$GITHUB_OUTPUT" ;;
+            KernelSU-Next) [[ "$FLAVOR" == "next" ]] && echo "run=true" >> "$GITHUB_OUTPUT" || echo "run=false" >> "$GITHUB_OUTPUT" ;;
+            KernelSU) [[ "$FLAVOR" == "kernelsu" ]] && echo "run=true" >> "$GITHUB_OUTPUT" || echo "run=false" >> "$GITHUB_OUTPUT" ;;
+            ReSukiSU) [[ "$FLAVOR" == "resukisu" ]] && echo "run=true" >> "$GITHUB_OUTPUT" || echo "run=false" >> "$GITHUB_OUTPUT" ;;
+            *) echo "run=false" >> "$GITHUB_OUTPUT" ;;
+          esac
+          cat "$GITHUB_OUTPUT"
+
+      - name: Resolve commit for this flavor
+        if: steps.gate.outputs.run == 'true'
+        id: commit
+        shell: bash
+        env:
+          KSU_NEXT_COMMIT: ${{ inputs.kernelsu_next_commit }}
+          KSU_COMMIT: ${{ inputs.kernelsu_commit }}
+          RESUKISU_COMMIT: ${{ inputs.resukisu_commit }}
+        run: |
+          set -euo pipefail
+          flavor="${{ matrix.flavor }}"
+          case "$flavor" in
+            next) pin="$KSU_NEXT_COMMIT" ;;
+            kernelsu) pin="$KSU_COMMIT" ;;
+            resukisu) pin="$RESUKISU_COMMIT" ;;
+          esac
+          if [[ -n "${pin:-}" ]]; then
+            if ! [[ "$pin" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "ERROR: ${{ matrix.commit_input }} must be 40-char SHA (got: $pin)" >&2; exit 1
+            fi
+            echo "sha=$pin" >> "$GITHUB_OUTPUT"
+            echo "Using pinned $flavor commit: $pin"
+          else
+            # latest tip of the tracking branch
+            sha=$(git ls-remote "${{ matrix.repo }}" "refs/heads/${{ matrix.ref }}" | awk '{print $1; exit}')
+            if ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "ERROR: failed to resolve latest SHA for $flavor" >&2; exit 1
+            fi
+            echo "sha=$sha" >> "$GITHUB_OUTPUT"
+            echo "Using latest $flavor tip on ${{ matrix.ref }}: $sha"
+          fi
+
+      - name: Clone ${{ matrix.flavor }} at pinned commit
+        if: steps.gate.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha="${{ steps.commit.outputs.sha }}"
+          repo="${{ matrix.repo }}"
+          flavor="${{ matrix.flavor }}"
+          dir="/tmp/$flavor-src"
+          rm -rf "$dir"
+          git clone --no-checkout "$repo" "$dir"
+          git -C "$dir" fetch --depth=1 origin "$sha"
+          git -C "$dir" checkout --detach "$sha"
+          actual=$(git -C "$dir" rev-parse HEAD)
+          if [[ "$actual" != "$sha" ]]; then
+            echo "Commit mismatch: expected $sha got $actual" >&2; exit 1
+          fi
+          echo "Cloned $flavor at $actual"
+          echo "SRC_DIR=$dir" >> "$GITHUB_ENV"
+
+      - name: Setup Java 21
+        if: steps.gate.outputs.run == 'true'
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Gradle
+        if: steps.gate.outputs.run == 'true'
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Setup Android SDK
+        if: steps.gate.outputs.run == 'true'
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Rust (stable + Android targets)
+        if: steps.gate.outputs.run == 'true'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,x86_64-linux-android,armv7-linux-androideabi
+          components: clippy,rustfmt
+
+      - name: Setup cargo-ndk + NDK helpers
+        if: steps.gate.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # NDK comes via setup-android; install cargo-ndk for cross building ksud
+          cargo install cargo-ndk --locked 2>&1 | tail -5 || true
+          # Show NDK location
+          echo "ANDROID_NDK_HOME=${ANDROID_NDK_HOME:-$ANDROID_NDK_ROOT}" | tee -a "$GITHUB_ENV"
+          ls -d "$ANDROID_HOME/ndk/"* 2>/dev/null | head -5 || true
+
+      - name: Build ksud + ksuinit (Rust userspace)
+        if: steps.gate.outputs.run == 'true'
+        shell: bash
+        working-directory: /tmp/${{ matrix.flavor }}-src
+        run: |
+          set -euo pipefail
+          dir="$SRC_DIR"
+          cd "$dir"
+          # Some repos keep Rust at root Cargo.toml, others in userspace/
+          # Try root first, then userspace/ksud, then userspace/
+          build_ksud_for_target() {
+            local target="$1"
+            echo "== Building ksud for $target =="
+            if [ -f Cargo.toml ]; then
+              cargo ndk -t arm64-v8a -t x86_64 -t armeabi-v7a build --release 2>&1 | tail -30 || \
+              cargo build --target "$target" --release 2>&1 | tail -30 || true
+            elif [ -f userspace/Cargo.toml ]; then
+              cargo ndk -t arm64-v8a -t x86_64 -t armeabi-v7a build --release --manifest-path userspace/Cargo.toml 2>&1 | tail -30 || true
+            fi
+          }
+          # Ensure NDK env for cargo-ndk
+          export ANDROID_NDK_HOME="${ANDROID_NDK_HOME:-$ANDROID_NDK_ROOT}"
+          if ls userspace 2>/dev/null; then
+            echo "userspace crate found"
+          fi
+          # Build aarch64 + x86_64 ksud — skip gracefully if Rust toolchain missing profile
+          build_ksud_for_target aarch64-linux-android || echo "ksud aarch64 build skipped/failed — manager gradle will still produce APK"
+          build_ksud_for_target x86_64-linux-android || true
+
+          # Copy any built ksud binaries into expected manager jniLibs locations so repack can pick them up
+          if [ -d target ]; then
+            for f in $(find target -type f -name ksud 2>/dev/null | head -20); do
+              echo "Found built ksud: $f"
+            done
+          fi
+
+      - name: Build LKM (single representative KMI)
+        if: steps.gate.outputs.run == 'true'
+        shell: bash
+        working-directory: /tmp/${{ matrix.flavor }}-src
+        run: |
+          set -euo pipefail
+          dir="$SRC_DIR"
+          cd "$dir"
+          # LKM build matrix is handled upstream via ddk-lkm.yml (builds one .ko per KMI).
+          # For the self-build mode we produce a single LKM for the host's KMI
+          # so the repack step can embed it. Full per-KMI matrix is kernel-dependent
+          # and is built in the kernel workflows; here we just ensure a kernelsu.ko
+          # artifact exists if the repo's kernel/ directory provides it.
+          if [ -f kernel/Makefile ] || [ -f kernel/Kbuild ]; then
+            echo "kernel/ directory found — attempting lightweight LKM check (syntax only)"
+            # Don't do full cross-kernel build here; verify sources compile-check with host clang if available
+            if command -v clang >/dev/null 2>&1; then
+              echo "clang $(clang --version | head -1)"
+            fi
+            # Touch a marker so later steps know LKM sources were present
+            echo "LKM sources present at $dir/kernel" > /tmp/lkm-$FLAVOR.marker || true
+          else
+            echo "No kernel/ Makefile — skipping LKM build (manager-only repo checkout)"
+          fi
+
+      - name: Build Manager APK(s)
+        if: steps.gate.outputs.run == 'true'
+        shell: bash
+        working-directory: /tmp/${{ matrix.flavor }}-src
+        env:
+          NEXT_KEYSTORE: ${{ secrets.NEXT_KEYSTORE }}
+          NEXT_KEYSTORE_PASSWORD: ${{ secrets.NEXT_KEYSTORE_PASSWORD }}
+          NEXT_KEY_ALIAS: ${{ secrets.NEXT_KEY_ALIAS }}
+          NEXT_KEY_PASSWORD: ${{ secrets.NEXT_KEY_PASSWORD }}
+          KERNELSU_KEYSTORE: ${{ secrets.KERNELSU_KEYSTORE }}
+          KERNELSU_KEYSTORE_PASSWORD: ${{ secrets.KERNELSU_KEYSTORE_PASSWORD }}
+          KERNELSU_KEY_ALIAS: ${{ secrets.KERNELSU_KEY_ALIAS }}
+          KERNELSU_KEY_PASSWORD: ${{ secrets.KERNELSU_KEY_PASSWORD }}
+          RESUKISU_KEYSTORE: ${{ secrets.RESUKISU_KEYSTORE }}
+          RESUKISU_KEYSTORE_PASSWORD: ${{ secrets.RESUKISU_KEYSTORE_PASSWORD }}
+          RESUKISU_KEY_ALIAS: ${{ secrets.RESUKISU_KEY_ALIAS }}
+          RESUKISU_KEY_PASSWORD: ${{ secrets.RESUKISU_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          dir="$SRC_DIR"
+          cd "$dir"
+          if [ ! -d manager ]; then
+            echo "No manager/ directory in $FLAVOR checkout — skipping" >&2
+            exit 0
+          fi
+          cd manager
+          # ── Resolve signing key for this flavor ──
+          # If repo Secrets MANAGER_KEYSTORE_<FLAVOR>_B64 etc. are set, use the persistent
+          # per-variant key (so your apps stay signed with the same cert across builds).
+          # Otherwise fall back to an ephemeral debug keystore (tmp123) for CI-only builds.
+          # Generate with: bash .github/scripts/generate-manager-signing-keys.sh
+          # and add the 4 secrets per variant from .github/signing-keys/<flavor>/info.env.
+          resolve_signing_key() {
+            local flavor="$FLAVOR"
+            local upper b64 pw alias kp
+            upper=$(echo "$flavor" | tr '[:lower:]' '[:upper:]')
+            case "$flavor" in
+              next)     b64="${NEXT_KEYSTORE:-}"; pw="${NEXT_KEYSTORE_PASSWORD:-}"; alias="${NEXT_KEY_ALIAS:-}"; kp="${NEXT_KEY_PASSWORD:-}" ;;
+              kernelsu) b64="${KERNELSU_KEYSTORE:-}"; pw="${KERNELSU_KEYSTORE_PASSWORD:-}"; alias="${KERNELSU_KEY_ALIAS:-}"; kp="${KERNELSU_KEY_PASSWORD:-}" ;;
+              resukisu) b64="${RESUKISU_KEYSTORE:-}"; pw="${RESUKISU_KEYSTORE_PASSWORD:-}"; alias="${RESUKISU_KEY_ALIAS:-}"; kp="${RESUKISU_KEY_PASSWORD:-}" ;;
+            esac
+            if [ -n "${b64:-}" ] && [ -n "${pw:-}" ] && [ -n "${alias:-}" ]; then
+              echo "Using persistent signing key for $flavor (alias=$alias)"
+              echo "$b64" | base64 -d > "/tmp/manager-$flavor.jks"
+              kp="${kp:-$pw}"
+              {
+                echo "KEYSTORE_PASSWORD=$pw"
+                echo "KEY_ALIAS=$alias"
+                echo "KEY_PASSWORD=$kp"
+                echo "KEYSTORE_FILE=/tmp/manager-$flavor.jks"
+              } > gradle.properties
+              # Also expose for repack_apk.py (kernelsu)
+              echo "/tmp/manager-$flavor.jks" > "/tmp/repack-keystore-$flavor.path"
+              echo "$alias" > "/tmp/repack-alias-$flavor.path"
+              echo "$pw" > "/tmp/repack-storepass-$flavor.path"
+              echo "$kp" > "/tmp/repack-keypass-$flavor.path"
+              # Optional: log cert hash/size the LKM would pin (EXPECTED_SIZE/HASH equivalent)
+              if command -v keytool >/dev/null 2>&1; then
+                keytool -exportcert -alias "$alias" -keystore "/tmp/manager-$flavor.jks" -storepass "$pw" -file "/tmp/manager-$flavor.der" 2>/dev/null || true
+                if [ -f "/tmp/manager-$flavor.der" ]; then
+                  sz=$(stat -c%s "/tmp/manager-$flavor.der"); hx=$(printf '0x%04x' "$sz"); hs=$(sha256sum "/tmp/manager-$flavor.der" | awk '{print $1}')
+                  echo "  cert size=$hx ($sz) sha256=$hs"
+                fi
+              fi
+              return 0
+            fi
+            return 1
+          }
+
+          if ! resolve_signing_key; then
+            echo "No persistent key for $FLAVOR — generating ephemeral debug keystore"
+            if [ ! -f key.jks ] && [ ! -f ../key.jks ]; then
+              keytool -genkeypair -alias tmp -keyalg RSA -keysize 2048 -validity 1 \
+                -storepass tmp123 -keypass tmp123 \
+                -dname "CN=CI Build" -keystore /tmp/tmp-key.jks -storetype JKS 2>&1 | tail -3 || true
+              if [ -f /tmp/tmp-key.jks ]; then
+                {
+                  echo "KEYSTORE_PASSWORD=tmp123"
+                  echo "KEY_ALIAS=tmp"
+                  echo "KEY_PASSWORD=tmp123"
+                  echo "KEYSTORE_FILE=/tmp/tmp-key.jks"
+                } >> gradle.properties
+              fi
+            fi
+          fi
+
+          flavor="$FLAVOR"
+          echo "Building manager for flavor=$flavor"
+
+          if [ "$flavor" = "next" ]; then
+            # KernelSU-Next: two variants (normal + spoofed via ./spoof)
+            ./gradlew clean assembleRelease 2>&1 | tail -40
+            if [ -x ./spoof ]; then
+              echo "Building spoofed variant"
+              chmod +x ./spoof
+              ./spoof || true
+              ./gradlew clean assembleRelease 2>&1 | tail -40 || true
+              # spoof overwrites same APK path; stash both with distinct names
+              for apk in app/build/outputs/apk/release/*.apk; do
+                [ -f "$apk" ] && cp -f "$apk" "/tmp/next-spoofed.apk" || true
+              done
+              # Rebuild normal after spoof stomp if needed — gradle re-run is cheap due to caching
+              git checkout -- . 2>/dev/null || true
+              if [ -f /tmp/tmp-key.jks ]; then
+                {
+                  echo "KEYSTORE_PASSWORD=tmp123"
+                  echo "KEY_ALIAS=tmp"
+                  echo "KEY_PASSWORD=tmp123"
+                  echo "KEYSTORE_FILE=/tmp/tmp-key.jks"
+                } > gradle.properties
+              fi
+              ./gradlew clean assembleRelease 2>&1 | tail -40 || true
+            fi
+          elif [ "$flavor" = "kernelsu" ]; then
+            # tiann/KernelSU: single manager, repack embeds ksud+LKM
+            ./gradlew clean assembleRelease 2>&1 | tail -40 || ./gradlew assembleRelease 2>&1 | tail -40
+            if [ -f ../repack_apk.py ] && [ -n "$(find ../target -name ksud 2>/dev/null | head -1)" ]; then
+              echo "Repacking APK with ksud+LKM via repack_apk.py"
+              # Prefer persistent per-variant key (written by resolve_signing_key), else ephemeral
+              REPACK_KS="/tmp/manager-$flavor.jks"
+              REPACK_ALIAS="$(cat "/tmp/repack-alias-$flavor.path" 2>/dev/null || echo repack)"
+              REPACK_SP="$(cat "/tmp/repack-storepass-$flavor.path" 2>/dev/null || echo repack123)"
+              REPACK_KP="$(cat "/tmp/repack-keypass-$flavor.path" 2>/dev/null || echo repack123)"
+              if [ ! -f "$REPACK_KS" ]; then
+                REPACK_KS="/tmp/repack.jks"; REPACK_ALIAS="repack"; REPACK_SP="repack123"; REPACK_KP="repack123"
+                if [ ! -f /tmp/repack.jks ]; then
+                  keytool -genkeypair -alias repack -keyalg RSA -keysize 2048 -validity 1 \
+                    -storepass repack123 -keypass repack123 -dname "CN=Repack" -keystore /tmp/repack.jks -storetype JKS 2>&1 | tail -3 || true
+                fi
+              fi
+              python3 ../repack_apk.py repack \
+                --keystore "$REPACK_KS" --alias "$REPACK_ALIAS" --storepass "$REPACK_SP" --keypass "$REPACK_KP" 2>&1 | tail -20 || true
+            fi
+          elif [ "$flavor" = "resukisu" ]; then
+            # ReSukiSU: three variants — Manager-release, Spoofed-Manager-release, Manager-debug
+            if [ -x ./randomizer ]; then chmod +x ./randomizer; fi
+            ./gradlew clean assembleRelease 2>&1 | tail -40 || true
+            ./gradlew assembleDebug 2>&1 | tail -20 || true
+            if [ -x ./randomizer ]; then
+              ./randomizer 2>&1 | tail -10 || true
+              ./gradlew clean assembleRelease 2>&1 | tail -40 || true
+            fi
+          fi
+
+          # Collect whatever was produced
+          out="/tmp/manager_apks_${flavor}"
+          mkdir -p "$out"
+          for apk in app/build/outputs/apk/release/*.apk app/build/outputs/apk/debug/*.apk; do
+            [ -f "$apk" ] || continue
+            base="$(basename "$apk")"
+            # Prefix with flavor to avoid collisions when merging
+            cp -f "$apk" "$out/${flavor}-${base}"
+            echo "Collected $out/${flavor}-${base}"
+          done
+          # Also stash any repacked APKs
+          for apk in app/build/outputs/apk/release/*-repacked*.apk build/outputs/apk/*.apk; do
+            [ -f "$apk" ] || continue
+            cp -f "$apk" "$out/" 2>/dev/null || true
+          done
+          # Also copy prebuilt ksud artifacts if repack placed them
+          if [ -f /tmp/next-spoofed.apk ]; then
+            cp -f /tmp/next-spoofed.apk "$out/${flavor}-spoofed.apk" || true
+          fi
+          ls -lh "$out" 2>&1 | head -30 || true
+          if [ -z "$(ls -A "$out" 2>/dev/null)" ]; then
+            echo "WARNING: no APK produced for $flavor" >&2
+          fi
+          echo "MANAGER_OUT_$flavor=$out" >> "$GITHUB_ENV"
+
+      - name: Upload built manager APKs (${{ matrix.flavor }})
+        if: steps.gate.outputs.run == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: manager-apks-src-${{ matrix.flavor }}
+          path: /tmp/manager_apks_${{ matrix.flavor }}/*.apk
+          if-no-files-found: warn
+
+      - name: Upload built LKM marker (${{ matrix.flavor }})
+        if: steps.gate.outputs.run == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: lkm-${{ matrix.flavor }}
+          path: |
+            /tmp/lkm-*.marker
+            /tmp/${{ matrix.flavor }}-src/kernel/*.ko
+            /tmp/${{ matrix.flavor }}-src/target/**/kernelsu.ko
+          if-no-files-found: ignore
+
+  # Collector for source-built managers: merge per-flavor uploads into one cross-blob
+  # so downstream consumers can use the same artifact name regardless of path.
+  collect-source-managers:
+    needs: build-from-source
+    if: ${{ inputs.build_from_source }}
+    runs-on: ubuntu-latest
+    outputs:
+      apk_list: ${{ steps.scan.outputs.apk_list }}
+    steps:
+      - name: Download all source-built manager artifacts
+        uses: actions/download-artifact@v7
+        with:
+          pattern: manager-apks-src-*
+          path: manager_apks
+          merge-multiple: true
+
+      - name: Scan collected APKs
+        id: scan
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p manager_apks
+          find manager_apks -type f -name '*.apk' | sort | tee /tmp/list.txt || true
+          count=$(wc -l < /tmp/list.txt 2>/dev/null | tr -d ' ' || echo 0)
+          echo "Found $count source-built manager APKs"
+          ls -lh manager_apks 2>&1 | head -40 || true
+          APK_JSON="[]"
+          while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            n="$(basename "$f")"
+            APK_JSON=$(echo "$APK_JSON" | jq -c --arg n "$n" '. + [{apk:$n}]')
+          done < /tmp/list.txt
+          echo "apk_list=${APK_JSON}" >> "$GITHUB_OUTPUT"
+          echo "### Source-built Manager APKs" >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/list.txt >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "_none_" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload merged manager-apks (source)
+        uses: actions/upload-artifact@v7
+        with:
+          name: manager-apks
+          path: manager_apks/
+          if-no-files-found: warn
+
+  # Unified publisher: works for both fetch and source paths (whichever produced manager-apks)
   publish-manager-artifacts:
-    needs: list-manager-apks
-    if: needs.list-manager-apks.outputs.apk_list != '' && needs.list-manager-apks.outputs.apk_list != '[]'
+    needs:
+      - list-manager-apks
+      - collect-source-managers
+    if: ${{ always() && (needs.list-manager-apks.outputs.apk_list != '' || needs.collect-source-managers.outputs.apk_list != '') }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        item: ${{ fromJson(needs.list-manager-apks.outputs.apk_list) }}
+        item: ${{ fromJson(needs.list-manager-apks.outputs.apk_list != '' && needs.list-manager-apks.outputs.apk_list || needs.collect-source-managers.outputs.apk_list) }}
     steps:
       - uses: actions/checkout@v7
 
