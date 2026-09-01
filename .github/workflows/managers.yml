@@ -515,21 +515,24 @@ jobs:
             local target="$1"
             echo "== cargo ndk $target =="
             if [ -f userspace/ksud/Cargo.toml ]; then
-              cargo ndk -t "$target" -o "/tmp/ksud-$target" build --release --manifest-path userspace/ksud/Cargo.toml 2>&1 | tail -40 || return 1
+              cargo ndk -t "$target" build --release --manifest-path userspace/ksud/Cargo.toml 2>&1 | tail -60 || return 1
             elif [ -f Cargo.toml ]; then
-              cargo ndk -t "$target" -o "/tmp/ksud-$target" build --release 2>&1 | tail -40 || return 1
+              cargo ndk -t "$target" build --release 2>&1 | tail -60 || return 1
             else
               echo "No Cargo.toml found" >&2; return 1
             fi
-            ls -lh "/tmp/ksud-$target" 2>&1 | head -20 || true
           }
-          mkdir -p /tmp/ksud-aarch64-linux-android /tmp/ksud-x86_64-linux-android
           build_one aarch64-linux-android || echo "aarch64 ksud build failed — will still try manager without it"
           build_one x86_64-linux-android || true
           mkdir -p "/tmp/ksud-out-${{ matrix.flavor }}/aarch64-linux-android/release" "/tmp/ksud-out-${{ matrix.flavor }}/x86_64-linux-android/release"
-          for f in /tmp/ksud-aarch64-linux-android/* /tmp/ksud-aarch64-linux-android/release/* target/*/release/ksud userspace/ksud/target/*/release/ksud; do [ -f "$f" ] && cp -f "$f" "/tmp/ksud-out-${{ matrix.flavor }}/aarch64-linux-android/release/ksud" && break || true; done
-          for f in /tmp/ksud-x86_64-linux-android/* /tmp/ksud-x86_64-linux-android/release/* target/*/release/ksud userspace/ksud/target/*/release/ksud; do [ -f "$f" ] && cp -f "$f" "/tmp/ksud-out-${{ matrix.flavor }}/x86_64-linux-android/release/ksud" && break || true; done
+          # cargo-ndk leaves binary at target/<triple>/release/ksud or userspace/ksud/target/...
+          for p in "target/aarch64-linux-android/release/ksud" "userspace/ksud/target/aarch64-linux-android/release/ksud" "target/release/ksud"; do [ -f "$p" ] && cp -fv "$p" "/tmp/ksud-out-${{ matrix.flavor }}/aarch64-linux-android/release/ksud" && break || true; done
+          for p in "target/x86_64-linux-android/release/ksud" "userspace/ksud/target/x86_64-linux-android/release/ksud" "target/release/ksud"; do [ -f "$p" ] && cp -fv "$p" "/tmp/ksud-out-${{ matrix.flavor }}/x86_64-linux-android/release/ksud" && break || true; done
+          # also search any ksud
+          if [ ! -f "/tmp/ksud-out-${{ matrix.flavor }}/aarch64-linux-android/release/ksud" ]; then f=$(find . -type f -name ksud -path "*aarch64*" | head -1); [ -n "${f:-}" ] && cp -fv "$f" "/tmp/ksud-out-${{ matrix.flavor }}/aarch64-linux-android/release/ksud" || true; fi
+          if [ ! -f "/tmp/ksud-out-${{ matrix.flavor }}/x86_64-linux-android/release/ksud" ]; then f=$(find . -type f -name ksud -path "*x86_64*" | head -1); [ -n "${f:-}" ] && cp -fv "$f" "/tmp/ksud-out-${{ matrix.flavor }}/x86_64-linux-android/release/ksud" || true; fi
           ls -lhR /tmp/ksud-out-${{ matrix.flavor }} 2>&1 | head -50 || true
+          echo "ksud build summary: aarch64=$(ls -l /tmp/ksud-out-${{ matrix.flavor }}/aarch64-linux-android/release/ksud 2>&1 | head -1); x86_64=$(ls -l /tmp/ksud-out-${{ matrix.flavor }}/x86_64-linux-android/release/ksud 2>&1 | head -1)"
 
       - name: Upload ksud (${{ matrix.flavor }} aarch64)
         if: steps.gate.outputs.run == 'true'
@@ -668,17 +671,19 @@ jobs:
 
       - name: Download ksud aarch64 (Next/pershoot, like upstream)
         if: steps.gate.outputs.run == 'true' && (matrix.flavor == 'next' || matrix.flavor == 'next-susfs')
+        continue-on-error: true
         uses: actions/download-artifact@v7
         with:
           name: ksud-${{ matrix.flavor }}-aarch64-linux-android
-          path: /tmp/ksud-dl
+          path: /tmp/ksud-dl-aarch64
 
       - name: Download ksud x86_64 (Next/pershoot, like upstream)
         if: steps.gate.outputs.run == 'true' && (matrix.flavor == 'next' || matrix.flavor == 'next-susfs')
+        continue-on-error: true
         uses: actions/download-artifact@v7
         with:
           name: ksud-${{ matrix.flavor }}-x86_64-linux-android
-          path: /tmp/ksud-dl
+          path: /tmp/ksud-dl-x86_64
 
       - name: Copy ksud to jniLibs (like upstream build-manager)
         if: steps.gate.outputs.run == 'true' && (matrix.flavor == 'next' || matrix.flavor == 'next-susfs')
@@ -687,22 +692,11 @@ jobs:
           set -euo pipefail
           dir="/tmp/${{ matrix.flavor }}-src/manager"
           mkdir -p "$dir/app/src/main/jniLibs/arm64-v8a" "$dir/app/src/main/jniLibs/x86_64"
-          if [ -f /tmp/ksud-dl/ksud ]; then
-            echo "Single ksud artifact"
-            cp -f /tmp/ksud-dl/ksud "$dir/app/src/main/jniLibs/arm64-v8a/libksud.so" || true
-            cp -f /tmp/ksud-dl/ksud "$dir/app/src/main/jniLibs/x86_64/libksud.so" || true
-          fi
-          # flavor-specific layout from our upload
-          if [ -f /tmp/ksud-dl/aarch64-linux-android/release/ksud ]; then
-            cp -f /tmp/ksud-dl/aarch64-linux-android/release/ksud "$dir/app/src/main/jniLibs/arm64-v8a/libksud.so"
-          elif ls /tmp/ksud-dl/**/ksud 2>/dev/null | head -1; then
-            f=$(find /tmp/ksud-dl -name ksud | head -1)
-            echo "Found ksud at $f"
-            cp -f "$f" "$dir/app/src/main/jniLibs/arm64-v8a/libksud.so" || true
-          fi
-          if [ -f /tmp/ksud-dl/x86_64-linux-android/release/ksud ]; then
-            cp -f /tmp/ksud-dl/x86_64-linux-android/release/ksud "$dir/app/src/main/jniLibs/x86_64/libksud.so"
-          fi
+          for p in "/tmp/ksud-dl-aarch64/ksud" "/tmp/ksud-dl-aarch64/aarch64-linux-android/release/ksud"; do [ -f "$p" ] && cp -fv "$p" "$dir/app/src/main/jniLibs/arm64-v8a/libksud.so" && echo "copied aarch64 ksud" && break || true; done
+          # fallback search
+          if [ ! -f "$dir/app/src/main/jniLibs/arm64-v8a/libksud.so" ]; then f=$(find /tmp/ksud-dl-aarch64 -type f -name ksud 2>/dev/null | head -1); [ -n "${f:-}" ] && cp -fv "$f" "$dir/app/src/main/jniLibs/arm64-v8a/libksud.so" || echo "no aarch64 ksud — manager will build without it"; fi
+          for p in "/tmp/ksud-dl-x86_64/ksud" "/tmp/ksud-dl-x86_64/x86_64-linux-android/release/ksud"; do [ -f "$p" ] && cp -fv "$p" "$dir/app/src/main/jniLibs/x86_64/libksud.so" && echo "copied x86_64 ksud" && break || true; done
+          if [ ! -f "$dir/app/src/main/jniLibs/x86_64/libksud.so" ]; then f=$(find /tmp/ksud-dl-x86_64 -type f -name ksud 2>/dev/null | head -1); [ -n "${f:-}" ] && cp -fv "$f" "$dir/app/src/main/jniLibs/x86_64/libksud.so" || echo "no x86_64 ksud — manager will build without it"; fi
           ls -lh "$dir/app/src/main/jniLibs"/*/* 2>&1 | head -20 || echo "no jniLibs"
 
       - name: Spoof Package ID (Next only, like upstream build-manager-ci)
