@@ -343,8 +343,15 @@ jobs:
                   "https://api.github.com/repos/${owner}/${repo}/actions/workflows/${wf}/runs?head_sha=${stock}" \
                   | jq -r '.workflow_runs[0].id // empty')
                 if [[ -z "${run_id}" ]]; then
-                  echo "ERROR: no ${repo} manager build exists for dev commit ${stock}" >&2
-                  exit 1
+                  echo "No manager build for dev tip ${stock}, falling back to latest successful run" >&2
+                  fb=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -H "Authorization: Bearer ${{ github.token }}" "https://api.github.com/repos/${owner}/${repo}/actions/workflows/${wf}/runs?branch=dev&status=success&per_page=1")
+                  run_id=$(echo "$fb" | jq -r '.workflow_runs[0].id // empty')
+                  stock=$(echo "$fb" | jq -r '.workflow_runs[0].head_sha // empty')
+                  if [[ -n "$run_id" ]]; then echo "Fallback to ${stock} run ${run_id}" >&2; fi
+                  if [[ -z "${run_id}" ]]; then
+                    echo "ERROR: no ${repo} manager build exists for dev commit ${stock}" >&2
+                    exit 1
+                  fi
                 fi
                 printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s","want":"manager,manager-spoofed"}' \
                   "$flavor" "$owner" "$repo" "$run_id" "$stock"
@@ -357,8 +364,15 @@ jobs:
                   "https://api.github.com/repos/${owner}/${repo}/actions/workflows/${wf}/runs?head_sha=${stock}" \
                   | jq -r '.workflow_runs[0].id // empty')
                 if [[ -z "${run_id}" ]]; then
-                  echo "ERROR: no ${repo} manager build exists for stock commit ${stock}" >&2
-                  exit 1
+                  echo "No manager build for stock ${stock}, falling back to latest successful run" >&2
+                  fb=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors "https://api.github.com/repos/${owner}/${repo}/actions/workflows/${wf}/runs?branch=main&status=success&per_page=1")
+                  run_id=$(echo "$fb" | jq -r '.workflow_runs[0].id // empty')
+                  stock=$(echo "$fb" | jq -r '.workflow_runs[0].head_sha // empty')
+                  if [[ -n "$run_id" ]]; then echo "Fallback to ${stock} run ${run_id}" >&2; fi
+                  if [[ -z "${run_id}" ]]; then
+                    echo "ERROR: no ${repo} manager build exists for stock commit ${stock}" >&2
+                    exit 1
+                  fi
                 fi
                 printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s","want":"manager"}' \
                   "$flavor" "$owner" "$repo" "$run_id" "$stock"
@@ -370,8 +384,15 @@ jobs:
                   "https://api.github.com/repos/${owner}/${repo}/actions/workflows/${wf}/runs?head_sha=${stock}" \
                   | jq -r '.workflow_runs[0].id // empty')
                 if [[ -z "${run_id}" ]]; then
-                  echo "ERROR: no ${repo} manager build exists for stock commit ${stock}" >&2
-                  exit 1
+                  echo "No manager build for stock ${stock}, falling back to latest successful run" >&2
+                  fb=$(curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors "https://api.github.com/repos/${owner}/${repo}/actions/workflows/${wf}/runs?branch=main&status=success&per_page=1")
+                  run_id=$(echo "$fb" | jq -r '.workflow_runs[0].id // empty')
+                  stock=$(echo "$fb" | jq -r '.workflow_runs[0].head_sha // empty')
+                  if [[ -n "$run_id" ]]; then echo "Fallback to ${stock} run ${run_id}" >&2; fi
+                  if [[ -z "${run_id}" ]]; then
+                    echo "ERROR: no ${repo} manager build exists for stock commit ${stock}" >&2
+                    exit 1
+                  fi
                 fi
                 printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s","want":"Manager-release,Spoofed-Manager-release,Manager-debug"}' \
                   "$flavor" "$owner" "$repo" "$run_id" "$stock"
