@@ -8,10 +8,7 @@
 
 ## Google Pixel
 
-> [!NOTE]
-> Wild Kernels GKI builds are **Generic** (GKI 2.0, 5.10+). This table lists Pixel devices commonly tested / expected to work. Being GKI-based, many other GKI 2.0 devices may work — Pixel entries are just the primary tested matrix.
-
-*Last updated: 2026-09-01 — covers Pixel 6 through Pixel 10 Pro Fold. Pixel 10 codenames confirmed at [source.android.com — Device codenames](https://source.android.com/docs/setup/reference/build-numbers#build-targets); Pixel 10 family also listed on [developers.google.com/android/images](https://developers.google.com/android/images) (May 2026 bootloader note).*
+*Last updated: 2026-09-01 — Pixel 10 codenames confirmed at [source.android.com — Device codenames](https://source.android.com/docs/setup/reference/build-numbers#build-targets); Pixel 10 family also listed on [developers.google.com/android/images](https://developers.google.com/android/images) (May 2026 bootloader note).*
 
 | Device | Codename | GKI Kernel | Firmware | Status |
 |--------|----------|------------|----------|--------|
