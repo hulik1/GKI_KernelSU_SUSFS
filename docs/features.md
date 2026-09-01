@@ -4,20 +4,6 @@ Per-feature documentation for the GKI2 kernels built from this repository.
 
 *Last updated: 2026-08-30*
 
-<details>
-<summary><b> Table of Contents</b></summary>
-
-- [ Root Implementations](#-root-implementations)
-- [ Root Hiding](#-root-hiding)
-- [ Meta Module](#-meta-module)
-- [ Security](#-security)
-- [ Networking](#-networking)
-- [ Debugging, Tracing & BPF](#-debugging-tracing--bpf)
-- [ Performance](#-performance)
-- [ Container Runtime](#-container-runtime)
-
-</details>
-
 ---
 
 ## Root Implementations

@@ -10,20 +10,6 @@
 > [!CAUTION]
 > Wild Kernels is not responsible for bricked devices or damage. By flashing, you assume all risk. Back up your data and understand the risks before flashing.
 
-<details>
-<summary><b> Table of Contents</b></summary>
-
-- [About](#about)
-- [Features](#features)
-- [Installation](#installation)
-- [Supported Devices](#supported-devices)
-- [Our Projects](#our-projects)
-- [Special Thanks](#special-thanks)
-- [Community](#community)
-- [Donations](#donations)
-
-</details>
-
 ---
 
 ## About
