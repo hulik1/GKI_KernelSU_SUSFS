@@ -16,6 +16,7 @@
 - [About](#about)
 - [Features](#features)
 - [Installation](#installation)
+- [Supported Devices](#supported-devices)
 - [Our Projects](#our-projects)
 - [Special Thanks](#special-thanks)
 - [Community](#community)
@@ -51,6 +52,15 @@ Generic kernels built on [Google's GKI sources](https://android.googlesource.com
 ## Installation
 
 See **[Installation Guide](docs/installation.md)**.
+
+---
+
+## Supported Devices
+
+> [!NOTE]
+> These lists are maintained by the community — please update as needed!
+
+See **[Supported Devices](docs/supported-devices.md)** for the full tested matrix (Pixel 6 through Pixel 11 Pro Fold, plus Samsung / OnePlus / etc. placeholders).
 
 ---
 
