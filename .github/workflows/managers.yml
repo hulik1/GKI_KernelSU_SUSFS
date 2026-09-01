@@ -690,12 +690,14 @@ jobs:
           gradle_build() {
             local task="$1"
             echo ">> ./gradlew $task"
+            set -o pipefail
             if ! ./gradlew $task 2>&1 | tee /tmp/gradle-$flavor.log; then
-              echo "--- gradle $task FAILED for $flavor ---"
-              # show full log tail for diagnosis but keep beginning
-              echo "=== tail 200 ==="; tail -n 200 /tmp/gradle-$flavor.log || true
+              echo "--- gradle $task FAILED for $flavor ---" >&2
+              echo "=== tail 200 ===" >&2; tail -n 200 /tmp/gradle-$flavor.log 2>/dev/null || true
+              set +o pipefail
               return 1
             fi
+            set +o pipefail
           }
 
           # Copy any cargo-built ksud into jniLibs so manager bundles it (mirrors stock CI)
@@ -717,18 +719,25 @@ jobs:
             # Save signing config so spoof stomp can restore it
             cp -f gradle.properties /tmp/gradle-$flavor.properties.bak 2>/dev/null || true
             cp -f /tmp/manager-$flavor.jks /tmp/manager-$flavor.jks.bak 2>/dev/null || true
-            if ! gradle_build "clean assembleRelease"; then
+            NEXT_OK=false
+            if gradle_build "clean assembleRelease"; then
+              NEXT_OK=true
+            else
               echo "Next normal build failed — see log above" >&2
-              cat /tmp/gradle-$flavor.log 2>/dev/null | grep -i -E "error|failed|exception" | head -n 50 || true
+              cat /tmp/gradle-$flavor.log 2>/dev/null | grep -i -E "error|failed|exception|Could not" | head -n 80 || true
+              echo "--- gradle log tail 200 ---" >&2; tail -n 200 /tmp/gradle-$flavor.log 2>/dev/null || true
             fi
             if [ -x ./spoof ]; then
               echo "Building spoofed variant"
               chmod +x ./spoof
               ./spoof || true
               if gradle_build "clean assembleRelease"; then
+                NEXT_OK=true
                 for apk in app/build/outputs/apk/release/*.apk; do
                   [ -f "$apk" ] && cp -f "$apk" "/tmp/next-spoofed.apk" || true
                 done
+              else
+                echo "Next spoofed build failed" >&2; tail -n 100 /tmp/gradle-$flavor.log 2>/dev/null || true
               fi
               # Restore normal sources + signing (spoof overwrites files, don't git checkout -- .)
               git checkout -- app/src/main/java 2>/dev/null || git checkout -- . 2>/dev/null || true
@@ -737,7 +746,15 @@ jobs:
               if [ -f /tmp/manager-$flavor.jks ] && grep -q KEYSTORE gradle.properties 2>/dev/null; then
                 echo "Restored signing after spoof"
               fi
-              gradle_build "clean assembleRelease" || true
+              if ! $NEXT_OK; then
+                # One final retry of normal after restore
+                if gradle_build "clean assembleRelease"; then NEXT_OK=true; else echo "Next retry after spoof restore failed" >&2; fi
+              fi
+            fi
+            if ! $NEXT_OK; then
+              echo "ERROR: all Next gradle builds failed for $flavor" >&2
+              echo "Uploading gradle log for diagnosis"; cat /tmp/gradle-$flavor.log 2>/dev/null | tail -n 300 || true
+              exit 1
             fi
           elif [ "$flavor" = "kernelsu" ]; then
             # tiann/KernelSU: single manager, repack embeds ksud+LKM
@@ -793,6 +810,14 @@ jobs:
             echo "WARNING: no APK produced for $flavor" >&2
           fi
           echo "MANAGER_OUT_$flavor=$out" >> "$GITHUB_ENV"
+
+      - name: Upload gradle logs (${{ matrix.flavor }})
+        if: always() && steps.gate.outputs.run == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: gradle-log-${{ matrix.flavor }}
+          path: /tmp/gradle-*.log
+          if-no-files-found: ignore
 
       - name: Upload built manager APKs (${{ matrix.flavor }})
         if: steps.gate.outputs.run == 'true'
