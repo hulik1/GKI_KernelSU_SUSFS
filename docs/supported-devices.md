@@ -8,8 +8,6 @@
 
 ## Google Pixel
 
-*Last updated: 2026-09-01.*
-
 | Device | Codename | GKI Kernel | Firmware | Status |
 |--------|----------|------------|----------|--------|
 | Pixel 6 | oriole | android14-6.1 | stock | Supported · 2026-08-30 |
