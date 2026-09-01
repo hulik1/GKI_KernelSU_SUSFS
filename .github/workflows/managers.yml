@@ -619,36 +619,64 @@ jobs:
           flavor="$FLAVOR"
           echo "Building manager for flavor=$flavor"
 
+          # Helper to run gradle with full log on failure (tail hides root cause)
+          gradle_build() {
+            local task="$1"
+            echo ">> ./gradlew $task"
+            if ! ./gradlew $task 2>&1 | tee /tmp/gradle-$flavor.log; then
+              echo "--- gradle $task FAILED for $flavor ---"
+              # show full log tail for diagnosis but keep beginning
+              echo "=== tail 200 ==="; tail -n 200 /tmp/gradle-$flavor.log || true
+              return 1
+            fi
+          }
+
+          # Copy any cargo-built ksud into jniLibs so manager bundles it (mirrors stock CI)
+          copy_ksud_if_built() {
+            local built
+            built=$(find ../target /tmp -type f -name ksud 2>/dev/null | head -5 || true)
+            if [ -n "$built" ]; then
+              for arch in arm64-v8a x86_64 armeabi-v7a; do echo "ksud map $arch -> $built" | head -1; done
+              mkdir -p app/src/main/jniLibs/arm64-v8a app/src/main/jniLibs/x86_64 app/src/main/jniLibs/armeabi-v7a 2>/dev/null || true
+              for f in $(find .. /tmp -type f -name ksud 2>/dev/null | head -10); do echo "  ksud candidate: $f"; done
+              # try to place best match; gradle will still build even if absent
+              cp -f $(find .. /tmp -type f -name ksud 2>/dev/null | head -1) app/src/main/jniLibs/arm64-v8a/libksud.so 2>/dev/null || true
+            fi
+          }
+          copy_ksud_if_built || true
+
           if [ "$flavor" = "next" ]; then
             # KernelSU-Next: two variants (normal + spoofed via ./spoof)
-            ./gradlew clean assembleRelease 2>&1 | tail -40
+            # Save signing config so spoof stomp can restore it
+            cp -f gradle.properties /tmp/gradle-$flavor.properties.bak 2>/dev/null || true
+            cp -f /tmp/manager-$flavor.jks /tmp/manager-$flavor.jks.bak 2>/dev/null || true
+            if ! gradle_build "clean assembleRelease"; then
+              echo "Next normal build failed — see log above" >&2
+              cat /tmp/gradle-$flavor.log 2>/dev/null | grep -i -E "error|failed|exception" | head -n 50 || true
+            fi
             if [ -x ./spoof ]; then
               echo "Building spoofed variant"
               chmod +x ./spoof
               ./spoof || true
-              ./gradlew clean assembleRelease 2>&1 | tail -40 || true
-              # spoof overwrites same APK path; stash both with distinct names
-              for apk in app/build/outputs/apk/release/*.apk; do
-                [ -f "$apk" ] && cp -f "$apk" "/tmp/next-spoofed.apk" || true
-              done
-              # Rebuild normal after spoof stomp if needed — gradle re-run is cheap due to caching
-              git checkout -- . 2>/dev/null || true
-              if [ -f /tmp/tmp-key.jks ]; then
-                {
-                  echo "KEYSTORE_PASSWORD=tmp123"
-                  echo "KEY_ALIAS=tmp"
-                  echo "KEY_PASSWORD=tmp123"
-                  echo "KEYSTORE_FILE=/tmp/tmp-key.jks"
-                } > gradle.properties
+              if gradle_build "clean assembleRelease"; then
+                for apk in app/build/outputs/apk/release/*.apk; do
+                  [ -f "$apk" ] && cp -f "$apk" "/tmp/next-spoofed.apk" || true
+                done
               fi
-              ./gradlew clean assembleRelease 2>&1 | tail -40 || true
+              # Restore normal sources + signing (spoof overwrites files, don't git checkout -- .)
+              git checkout -- app/src/main/java 2>/dev/null || git checkout -- . 2>/dev/null || true
+              cp -f /tmp/gradle-$flavor.properties.bak gradle.properties 2>/dev/null || true
+              cp -f /tmp/manager-$flavor.jks.bak /tmp/manager-$flavor.jks 2>/dev/null || true
+              if [ -f /tmp/manager-$flavor.jks ] && grep -q KEYSTORE gradle.properties 2>/dev/null; then
+                echo "Restored signing after spoof"
+              fi
+              gradle_build "clean assembleRelease" || true
             fi
           elif [ "$flavor" = "kernelsu" ]; then
             # tiann/KernelSU: single manager, repack embeds ksud+LKM
-            ./gradlew clean assembleRelease 2>&1 | tail -40 || ./gradlew assembleRelease 2>&1 | tail -40
+            gradle_build "clean assembleRelease" || gradle_build "assembleRelease" || true
             if [ -f ../repack_apk.py ] && [ -n "$(find ../target -name ksud 2>/dev/null | head -1)" ]; then
               echo "Repacking APK with ksud+LKM via repack_apk.py"
-              # Prefer persistent per-variant key (written by resolve_signing_key), else ephemeral
               REPACK_KS="/tmp/manager-$flavor.jks"
               REPACK_ALIAS="$(cat "/tmp/repack-alias-$flavor.path" 2>/dev/null || echo repack)"
               REPACK_SP="$(cat "/tmp/repack-storepass-$flavor.path" 2>/dev/null || echo repack123)"
@@ -666,11 +694,11 @@ jobs:
           elif [ "$flavor" = "resukisu" ]; then
             # ReSukiSU: three variants — Manager-release, Spoofed-Manager-release, Manager-debug
             if [ -x ./randomizer ]; then chmod +x ./randomizer; fi
-            ./gradlew clean assembleRelease 2>&1 | tail -40 || true
-            ./gradlew assembleDebug 2>&1 | tail -20 || true
+            gradle_build "clean assembleRelease" || true
+            gradle_build "assembleDebug" || true
             if [ -x ./randomizer ]; then
-              ./randomizer 2>&1 | tail -10 || true
-              ./gradlew clean assembleRelease 2>&1 | tail -40 || true
+              ./randomizer 2>&1 | tail -20 || true
+              gradle_build "clean assembleRelease" || true
             fi
           fi
 
