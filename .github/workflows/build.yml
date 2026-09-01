@@ -67,6 +67,11 @@ on:
         required: false
         type: boolean
         default: false
+      use_cache:
+        description: "Enable ccache/bazel cache (restore/save via release buckets)"
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   build-gki:
@@ -388,6 +393,7 @@ jobs:
       continue-on-error: true
 
     - name: 'Setup Cache and Build Environment'
+      if: inputs.use_cache
       uses: ./.github/actions/cache-setup
       with:
         version: ${{ inputs.version }}
@@ -398,7 +404,7 @@ jobs:
     - name: Restore ccache
       id: restore-ccache
       continue-on-error: true
-      if: false && (inputs.version == 'android12-5.10' || inputs.version == 'android13-5.10' || inputs.version == 'android13-5.15')
+      if: inputs.use_cache && (inputs.version == 'android12-5.10' || inputs.version == 'android13-5.10' || inputs.version == 'android13-5.15')
       uses: ./.github/actions/cache-restore
       with:
         cache_path: /home/runner/.ccache
@@ -410,7 +416,7 @@ jobs:
     - name: Restore bazel-cache
       id: restore-bazel
       continue-on-error: true
-      if: false && (inputs.version == 'android14-5.15' || inputs.version == 'android14-6.1' || inputs.version == 'android15-6.6' || inputs.version == 'android16-6.12')
+      if: inputs.use_cache && (inputs.version == 'android14-5.15' || inputs.version == 'android14-6.1' || inputs.version == 'android15-6.6' || inputs.version == 'android16-6.12')
       uses: ./.github/actions/cache-restore
       with:
         cache_path: /home/runner/.cache/bazel
@@ -478,10 +484,21 @@ jobs:
       with:
         clear_stats: false
 
+    - name: Prune ccache before save
+      if: always() && inputs.use_cache && (inputs.version == 'android12-5.10' || inputs.version == 'android13-5.10' || inputs.version == 'android13-5.15')
+      shell: bash
+      run: |
+        if [ -d /home/runner/.ccache ]; then
+          ccache -c 2>/dev/null || true
+          find /home/runner/.ccache -type f -mtime +0.5 -delete 2>/dev/null || true
+          find /home/runner/.ccache -type d -empty -delete 2>/dev/null || true
+          echo "ccache pruned"; ccache -s 2>/dev/null | head -20 || true
+        fi
+
     - name: Save ccache
       continue-on-error: true
       uses: ./.github/actions/cache-save
-      if: false && (inputs.version == 'android12-5.10' || inputs.version == 'android13-5.10' || inputs.version == 'android13-5.15')
+      if: always() && inputs.use_cache && (inputs.version == 'android12-5.10' || inputs.version == 'android13-5.10' || inputs.version == 'android13-5.15')
       with:
         cache_path: /home/runner/.ccache
         cache_key: ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-${{ inputs.os_patch_level }}
@@ -492,7 +509,7 @@ jobs:
     - name: Save bazel-cache
       continue-on-error: true
       uses: ./.github/actions/cache-save
-      if: false && (inputs.version == 'android14-5.15' || inputs.version == 'android14-6.1' || inputs.version == 'android15-6.6' || inputs.version == 'android16-6.12')
+      if: always() && inputs.use_cache && (inputs.version == 'android14-5.15' || inputs.version == 'android14-6.1' || inputs.version == 'android15-6.6' || inputs.version == 'android16-6.12')
       with:
         cache_path: /home/runner/.cache/bazel
         cache_key: ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-${{ inputs.os_patch_level }}

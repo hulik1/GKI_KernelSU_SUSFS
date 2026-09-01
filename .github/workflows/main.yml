@@ -99,6 +99,10 @@ on:
         description: "Apply kernel version-check bypass hack"
         type: boolean
         default: false
+      use_cache:
+        description: "Use ccache/bazel cache (restore/save)"
+        type: boolean
+        default: true
 
 jobs:
   prepare-ccache:
@@ -626,6 +630,7 @@ jobs:
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
       bypass: ${{ inputs.bypass }}
+      use_cache: ${{ inputs.use_cache }}
     secrets: inherit
 
   build-android13-5-10:
@@ -655,6 +660,7 @@ jobs:
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
       bypass: ${{ inputs.bypass }}
+      use_cache: ${{ inputs.use_cache }}
     secrets: inherit
 
   build-android13-5-15:
@@ -684,6 +690,7 @@ jobs:
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
       bypass: ${{ inputs.bypass }}
+      use_cache: ${{ inputs.use_cache }}
     secrets: inherit
 
   build-android14-5-15:
@@ -713,6 +720,7 @@ jobs:
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
       bypass: ${{ inputs.bypass }}
+      use_cache: ${{ inputs.use_cache }}
     secrets: inherit
 
   build-android14-6-1:
@@ -742,6 +750,7 @@ jobs:
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
       bypass: ${{ inputs.bypass }}
+      use_cache: ${{ inputs.use_cache }}
     secrets: inherit
 
   build-android15-6-6:
@@ -771,6 +780,7 @@ jobs:
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
       bypass: ${{ inputs.bypass }}
+      use_cache: ${{ inputs.use_cache }}
     secrets: inherit
 
   build-android16-6-12:
@@ -800,6 +810,7 @@ jobs:
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
       bypass: ${{ inputs.bypass }}
+      use_cache: ${{ inputs.use_cache }}
     secrets: inherit
 
   update-verified-pins:

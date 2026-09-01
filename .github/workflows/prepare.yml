@@ -61,6 +61,11 @@ on:
         required: false
         type: boolean
         default: false
+      use_cache:
+        description: "Enable ccache/bazel cache"
+        required: false
+        type: boolean
+        default: true
       os_patch_level:
         description: "Optional filter: patch date (YYYY-MM), kernel sublevel, lts (LTS branch), or all"
         required: false
@@ -175,4 +180,5 @@ jobs:
       droidspaces_commit: ${{ inputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
       bypass: ${{ inputs.bypass }}
+      use_cache: ${{ inputs.use_cache }}
     secrets: inherit
