@@ -50,30 +50,6 @@
 |--------|----------|------------|----------|--------|
 | — | — | — | — | Placeholder — add entries |
 
-## OPPO
-
-| Device | Codename | GKI Kernel | Firmware | Status |
-|--------|----------|------------|----------|--------|
-| — | — | — | — | Placeholder — add entries |
-
-## Realme
-
-| Device | Codename | GKI Kernel | Firmware | Status |
-|--------|----------|------------|----------|--------|
-| — | — | — | — | Placeholder — add entries |
-
-## Xiaomi / POCO / Redmi
-
-| Device | Codename | GKI Kernel | Firmware | Status |
-|--------|----------|------------|----------|--------|
-| — | — | — | — | Placeholder — add entries |
-
-## Nothing
-
-| Device | Codename | GKI Kernel | Firmware | Status |
-|--------|----------|------------|----------|--------|
-| — | — | — | — | Placeholder — add entries |
-
 ## Other
 
 | Device | Codename | GKI Kernel | Firmware | Status |

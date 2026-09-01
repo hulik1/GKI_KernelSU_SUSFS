@@ -45,7 +45,7 @@ Generic kernels built on [Google's GKI sources](https://android.googlesource.com
 - **DroidSpaces** — container runtime
 
 > [!TIP]
-> Full documentation: [docs/features.md](docs/features.md) · [Supported Devices](docs/supported-devices.md)
+> Full documentation: [docs/features.md](docs/features.md)
 
 ---
 
