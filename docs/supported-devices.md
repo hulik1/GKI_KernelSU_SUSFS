@@ -1,7 +1,7 @@
 # Supported Devices
 
 > [!TIP]
-> Looking for your device? Use `Ctrl+F` / `+F` to search this page. GKI 2.0 devices not listed may still work — try matching your kernel version (`6.1.x-androidXX`).
+> Looking for your device? Use `Ctrl+F` / `+F` to search this page. Devices not listed may still work.
 
 > [!NOTE]
 > These lists are maintained by the community — please update as needed!
