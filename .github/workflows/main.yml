@@ -1147,178 +1147,57 @@ jobs:
         : > release_body.md
 
         python3 - <<'PYEOF' > release_body.md
-        import json
-        import os
-        from pathlib import Path
-
-        def env(name, default=""):
-            return os.environ.get(name, default).strip()
-
+        import json, os
+        def env(n,d=""): return os.environ.get(n,d).strip()
         def parse_managers(raw):
-            raw = raw.strip()
-            if not raw:
-                return []
-            try:
-                data = json.loads(raw)
-            except json.JSONDecodeError:
-                return []
-            return data if isinstance(data, list) else []
-
-        def build_preamble():
-            return (
-                "# Wild Kernels for GKI2 Devices\n\n"
-                "> [!CAUTION]\n"
-                "> This software is provided for testing and educational purposes only. "
-                "Use at your own risk. The developers are not responsible for any damage, "
-                "data loss, or issues that may occur. Please ensure you have proper backups "
-                "before installation.\n\n"
-                "Join the Telegram group: <https://t.me/WildKernelsTG>\n\n"
-                "---\n\n"
-            )
-
-        def build_managers_section(managers):
-            if not managers:
-                return ""
-            flavor_labels = {"next": "KernelSU-Next", "kernelsu": "KernelSU", "resukisu": "ReSukiSU"}
-            lines = []
-            for m in managers:
-                flavor = m.get("flavor", "")
-                label = flavor_labels.get(flavor, flavor or "unknown")
-                run_id = m.get("run_id")
-                stock = m.get("stock", "")
-                if run_id:
-                    url = f"https://github.com/{m.get('owner','')}/{m.get('repo','')}/actions/runs/{run_id}"
-                    stock_note = f" (stock `{stock[:12]}`)" if stock else ""
-                    lines.append(f"- **{label}:** [{url}]({url}){stock_note}")
-                else:
-                    lines.append(f"- **{label}:** release assets")
-            return "**Managers:**\n" + "\n".join(lines) + "\n"
-
-        def build_ksu_section():
-            version = env("KSU_VERSION", "unknown")
-            tag = env("KSU_GIT_TAG", "no-tag")
-            branch = env("KSUN_BRANCH", "dev")
-            commit = env("KSUN_COMMIT", "unknown")
-            manager_url = env("KSU_MANAGER", "")
-            manager_note = env("KSU_MANAGER_NOTE", "")
-            parts = ["## KernelSU", ""]
-            parts.append(f"- **Version:** `{version}`")
-            if tag and tag != "no-tag":
-                parts.append(f"- **Tag:** `{tag}`")
-            parts.append(f"- **Branch:** `{branch}`")
-            parts.append(f"- **Commit:** `{commit}`")
-            if manager_url:
-                note = f" - {manager_note}" if manager_note else ""
-                base = manager_url.split("/actions/")[0]
-                parts.append(f"- **Manager:** [{base}]({manager_url}){note}")
-            parts.append("")
-            return "\n".join(parts)
-
-        def build_susfs_section():
-            variant_envs = [
-                ("android12-5.10", "susfs_commit_android12_5_10"),
-                ("android13-5.10", "susfs_commit_android13_5_10"),
-                ("android13-5.15", "susfs_commit_android13_5_15"),
-                ("android14-5.15", "susfs_commit_android14_5_15"),
-                ("android14-6.1", "susfs_commit_android14_6_1"),
-                ("android15-6.6", "susfs_commit_android15_6_6"),
-                ("android16-6.12", "susfs_commit_android16_6_12"),
-            ]
-            per_variant = []
-            for variant, env_key in variant_envs:
-                sha = env(env_key)
-                if sha and len(sha) == 40:
-                    per_variant.append((variant, sha))
-            if per_variant:
-                parts = ["## SUSFS", "", "Pinned SUSFS commits per Android/kernel variant:", ""]
-                for variant, sha in per_variant:
-                    parts.append(f"- **{variant}:** `{sha}`")
-                parts.append("")
-                return "\n".join(parts)
-            sha = env("SUSFS_COMMIT", "")
-            if sha:
-                return f"## SUSFS\n\n- **Commit:** `{sha}`\n"
-            return ""
-
-        def build_root_section():
-            root_flavor = env("ROOT_FLAVOR", "unknown")
-            feature_set = env("FEATURE_SET", "")
-            parts = ["## This Build", ""]
-            parts.append(f"- **Root:** `{root_flavor}`")
-            if feature_set:
-                parts.append(f"- **Feature Set:** `{feature_set}`")
-            parts.append("")
-            return "\n".join(parts)
-
-        def build_features_section():
-            enabled = []
-            if env("USE_SUSFS", "true") == "true":
-                enabled.append("SUSFS")
-            if env("USE_BBG", "true") == "true":
-                enabled.append("Baseband Guard")
-            if env("USE_DS", "true") == "true":
-                enabled.append("DroidSpaces-OSS")
-            if env("USE_NET", "true") == "true":
-                enabled.append("Networking")
-            if env("USE_NTSYNC", "true") == "true":
-                enabled.append("NTSync")
-            if env("USE_PTRACE", "true") == "true":
-                enabled.append("Ptrace Leak Fix")
-            if env("USE_UNICODE", "true") == "true":
-                enabled.append("Unicode Fix")
-            if env("USE_BPF", "true") == "true":
-                enabled.append("BTF / eBPF / FUSE-BPF")
-            if env("USE_PERF", "true") == "true":
-                enabled.append("Performance Tuning")
-            if not enabled:
-                return ""
-            parts = ["## Features Included", "", "See [Kernel Features Documentation](https://github.com/WildKernels/GKI_KernelSU_SUSFS/blob/dev/docs/features.md) for full details.", ""]
-            feature_doc_map = [
-                ("SUSFS", "susfs.md"),
-                ("Baseband Guard", "bbg.md"),
-                ("DroidSpaces-OSS", "droidspaces.md"),
-                ("Networking", "networking.md"),
-                ("NTSync", "ntsync.md"),
-                ("Ptrace Leak Fix", "ptrace.md"),
-                ("Unicode Fix", "unicode.md"),
-                ("BTF / eBPF / FUSE-BPF", "bpf.md"),
-                ("Performance Tuning", "performance.md"),
-            ]
-            for feature, doc in feature_doc_map:
-                if feature in enabled:
-                    parts.append(f"- [{feature}](https://github.com/WildKernels/GKI_KernelSU_SUSFS/blob/dev/docs/{doc})")
-            parts.append("")
-            return "\n".join(parts)
-
-        def build_install_section():
-            return (
-                "## Install with Kernel Flasher\n\n"
-                "> [!NOTE]\n"
-                "> This method is more convenient when upgrading KernelSU and can be done without a computer. Make a backup first.\n\n"
-                "**Steps:**\n\n"
-                "1. **Download the AnyKernel3 ZIP.** If you don\'t know which file to download, carefully read the description of KMI and Security patch level in this document.\n"
-                "2. **Open the Kernel Flasher app**, grant necessary root permissions, and use the provided AnyKernel3 ZIP to flash.\n\n"
-                "This requires the [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) app to have root permissions. "
-                "Other apps that can be used include [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) and [PixelFlasher](https://github.com/badabing2005/PixelFlasher). "
-                "Full guide: [docs/installation.md](https://github.com/WildKernels/GKI_KernelSU_SUSFS/blob/dev/docs/installation.md)\n"
-            )
-
-        def render():
-            parts = []
-            parts.append(build_preamble())
-            parts.append(build_root_section())
-            parts.append(build_ksu_section())
-            parts.append(build_susfs_section())
-            parts.append(build_managers_section(parse_managers(env("MANAGER_LIST", ""))))
-            parts.append(build_features_section())
-            parts.append(build_install_section())
-            return "\n".join(parts)
-
-        output = render()
-        print(output, end="")
-        summary = os.environ.get("GITHUB_STEP_SUMMARY")
-        if summary:
-            Path(summary).write_text(output)
+            try: return json.loads(raw) if raw.strip() else []
+            except: return []
+        root = env("ROOT_FLAVOR","unknown")
+        feats=[]
+        if env("USE_SUSFS","true")=="true": feats.append("SUSFS")
+        if env("USE_BBG","true")=="true": feats.append("Baseband Guard")
+        if env("USE_DS","true")=="true": feats.append("DroidSpaces-OSS")
+        if env("USE_NET","true")=="true": feats.append("Networking")
+        if env("USE_NTSYNC","true")=="true": feats.append("NTSync")
+        if env("USE_PTRACE","true")=="true": feats.append("Ptrace Leak Fix")
+        if env("USE_UNICODE","true")=="true": feats.append("Unicode Fix")
+        if env("USE_BPF","true")=="true": feats.append("BTF / eBPF / FUSE-BPF")
+        if env("USE_PERF","true")=="true": feats.append("Performance Tuning")
+        lines=[]
+        lines.append("# Wild Kernels for GKI2 Devices")
+        lines.append("")
+        lines.append("## Features")
+        lines.append("")
+        lines.append(f"- **Root:** `{root}`")
+        for f in feats: lines.append(f"- {f}")
+        if not feats: lines.append("- (none)")
+        lines.append("")
+        lines.append("## Commits")
+        lines.append("")
+        ver=env("KSU_VERSION","")
+        if ver: lines.append(f"- **KSU Version:** `{ver}`")
+        tag=env("KSU_GIT_TAG","")
+        if tag and tag!="no-tag": lines.append(f"- **KSU Tag:** `{tag}`")
+        br=env("KSUN_BRANCH","")
+        if br: lines.append(f"- **KSU Branch:** `{br}`")
+        cm=env("KSUN_COMMIT","")
+        if cm: lines.append(f"- **KSU Commit:** `{cm[:12]}` `{cm}`" if len(cm)==40 else f"- **KSU Commit:** `{cm}`")
+        for var,key in [("android12-5.10","susfs_commit_android12_5_10"),("android13-5.10","susfs_commit_android13_5_10"),("android13-5.15","susfs_commit_android13_5_15"),("android14-5.15","susfs_commit_android14_5_15"),("android14-6.1","susfs_commit_android14_6_1"),("android15-6.6","susfs_commit_android15_6_6"),("android16-6.12","susfs_commit_android16_6_12")]:
+            sha=env(key)
+            if sha and len(sha)==40: lines.append(f"- **SUSFS {var}:** `{sha[:12]}` `{sha}`")
+        sha=env("SUSFS_COMMIT")
+        if sha and len(sha)==40 and not any(env(k) for _,k in [("android12-5.10","susfs_commit_android12_5_10"),("android13-5.10","susfs_commit_android13_5_10"),("android13-5.15","susfs_commit_android13_5_15"),("android14-5.15","susfs_commit_android14_5_15"),("android14-6.1","susfs_commit_android14_6_1"),("android15-6.6","susfs_commit_android15_6_6"),("android16-6.12","susfs_commit_android16_6_12")]): lines.append(f"- **SUSFS:** `{sha[:12]}` `{sha}`")
+        mgrs=parse_managers(env("MANAGER_LIST",""))
+        if mgrs:
+            for m in mgrs:
+                label={"next":"KernelSU-Next","kernelsu":"KernelSU","resukisu":"ReSukiSU"}.get(m.get("flavor",""), m.get("flavor",""))
+                stock=m.get("stock","")
+                if stock: lines.append(f"- **Manager {label}:** `{stock[:12]}` `{stock}`")
+                elif m.get("run_id"): lines.append(f"- **Manager {label}:** run `{m.get('run_id')}`")
+        output="\n".join(lines)+"\n"
+        print(output,end="")
+        s=os.environ.get("GITHUB_STEP_SUMMARY")
+        if s: open(s,"a").write(output)
         PYEOF
 
     - name: Publish release notes preview
@@ -1421,176 +1300,58 @@ jobs:
         run: |
           set -e
           python3 - <<'PYEOF' > release_body.md
-          import json
-          import os
-          from pathlib import Path
-
-          def env(name, default=""):
-              return os.environ.get(name, default).strip()
-
-          def parse_managers(raw):
-              raw = raw.strip()
-              if not raw:
-                  return []
-              try:
-                  data = json.loads(raw)
-              except json.JSONDecodeError:
-                  return []
-              return data if isinstance(data, list) else []
-
-          def build_preamble():
-              return (
-                  "# Wild Kernels for GKI2 Devices\n\n"
-                  "> [!CAUTION]\n"
-                  "> This software is provided for testing and educational purposes only. "
-                  "Use at your own risk. The developers are not responsible for any damage, "
-                  "data loss, or issues that may occur. Please ensure you have proper backups "
-                  "before installation.\n\n"
-                  "Join the Telegram group: <https://t.me/WildKernelsTG>\n\n"
-                  "---\n\n"
-              )
-
-          def build_managers_section(managers):
-              if not managers:
-                  return ""
-              flavor_labels = {"next": "KernelSU-Next", "kernelsu": "KernelSU", "resukisu": "ReSukiSU"}
-              lines = []
-              for m in managers:
-                  flavor = m.get("flavor", "")
-                  label = flavor_labels.get(flavor, flavor or "unknown")
-                  run_id = m.get("run_id")
-                  stock = m.get("stock", "")
-                  if run_id:
-                      url = f"https://github.com/{m.get('owner','')}/{m.get('repo','')}/actions/runs/{run_id}"
-                      stock_note = f" (stock `{stock[:12]}`)" if stock else ""
-                      lines.append(f"- **{label}:** [{url}]({url}){stock_note}")
-                  else:
-                      lines.append(f"- **{label}:** release assets")
-              return "**Managers:**\n" + "\n".join(lines) + "\n"
-
-          def build_ksu_section():
-              version = env("KSU_VERSION", "unknown")
-              tag = env("KSU_GIT_TAG", "no-tag")
-              branch = env("KSUN_BRANCH", "dev")
-              commit = env("KSUN_COMMIT", "unknown")
-              manager_url = env("KSU_MANAGER", "")
-              manager_note = env("KSU_MANAGER_NOTE", "")
-              parts = ["## KernelSU", ""]
-              parts.append(f"- **Version:** `{version}`")
-              if tag and tag != "no-tag":
-                  parts.append(f"- **Tag:** `{tag}`")
-              parts.append(f"- **Branch:** `{branch}`")
-              parts.append(f"- **Commit:** `{commit}`")
-              if manager_url:
-                  note = f" - {manager_note}" if manager_note else ""
-                  base = manager_url.split("/actions/")[0]
-                  parts.append(f"- **Manager:** [{base}]({manager_url}){note}")
-              parts.append("")
-              return "\n".join(parts)
-
-          def build_susfs_section():
-              variant_envs = [
-                  ("android12-5.10", "susfs_commit_android12_5_10"),
-                  ("android13-5.10", "susfs_commit_android13_5_10"),
-                  ("android13-5.15", "susfs_commit_android13_5_15"),
-                  ("android14-5.15", "susfs_commit_android14_5_15"),
-                  ("android14-6.1", "susfs_commit_android14_6_1"),
-                  ("android15-6.6", "susfs_commit_android15_6_6"),
-                  ("android16-6.12", "susfs_commit_android16_6_12"),
-              ]
-              per_variant = []
-              for variant, env_key in variant_envs:
-                  sha = env(env_key)
-                  if sha and len(sha) == 40:
-                      per_variant.append((variant, sha))
-              if per_variant:
-                  parts = ["## SUSFS", "", "Pinned SUSFS commits per Android/kernel variant:", ""]
-                  for variant, sha in per_variant:
-                      parts.append(f"- **{variant}:** `{sha}`")
-                  parts.append("")
-                  return "\n".join(parts)
-              sha = env("SUSFS_COMMIT", "")
-              if sha:
-                  return f"## SUSFS\n\n- **Commit:** `{sha}`\n"
-              return ""
-
-          def build_root_section():
-              root_flavor = env("ROOT_FLAVOR", "unknown")
-              feature_set = env("FEATURE_SET", "")
-              parts = ["## This Build", ""]
-              parts.append(f"- **Root:** `{root_flavor}`")
-              if feature_set:
-                  parts.append(f"- **Feature Set:** `{feature_set}`")
-              parts.append("")
-              return "\n".join(parts)
-
-          def build_features_section():
-              enabled = []
-              if env("USE_SUSFS", "true") == "true":
-                  enabled.append("SUSFS")
-              if env("USE_BBG", "true") == "true":
-                  enabled.append("Baseband Guard")
-              if env("USE_DS", "true") == "true":
-                  enabled.append("DroidSpaces-OSS")
-              if env("USE_NET", "true") == "true":
-                  enabled.append("Networking")
-              if env("USE_NTSYNC", "true") == "true":
-                  enabled.append("NTSync")
-              if env("USE_PTRACE", "true") == "true":
-                  enabled.append("Ptrace Leak Fix")
-              if env("USE_UNICODE", "true") == "true":
-                  enabled.append("Unicode Fix")
-              if env("USE_BPF", "true") == "true":
-                  enabled.append("BTF / eBPF / FUSE-BPF")
-              if env("USE_PERF", "true") == "true":
-                  enabled.append("Performance Tuning")
-              if not enabled:
-                  return ""
-              parts = ["## Features Included", "", "See [Kernel Features Documentation](https://github.com/WildKernels/GKI_KernelSU_SUSFS/blob/dev/docs/features.md) for full details.", ""]
-              feature_doc_map = [
-                  ("SUSFS", "susfs.md"),
-                  ("Baseband Guard", "bbg.md"),
-                  ("DroidSpaces-OSS", "droidspaces.md"),
-                  ("Networking", "networking.md"),
-                  ("NTSync", "ntsync.md"),
-                  ("Ptrace Leak Fix", "ptrace.md"),
-                  ("Unicode Fix", "unicode.md"),
-                  ("BTF / eBPF / FUSE-BPF", "bpf.md"),
-                  ("Performance Tuning", "performance.md"),
-              ]
-              for feature, doc in feature_doc_map:
-                  if feature in enabled:
-                      parts.append(f"- [{feature}](https://github.com/WildKernels/GKI_KernelSU_SUSFS/blob/dev/docs/{doc})")
-              parts.append("")
-              return "\n".join(parts)
-
-          def build_install_section():
-              return (
-                  "## Install with Kernel Flasher\n\n"
-                  "> [!NOTE]\n"
-                  "> This method is more convenient when upgrading KernelSU and can be done without a computer. Make a backup first.\n\n"
-                  "**Steps:**\n\n"
-                  "1. **Download the AnyKernel3 ZIP.** If you don\'t know which file to download, carefully read the description of KMI and Security patch level in this document.\n"
-                  "2. **Open the Kernel Flasher app**, grant necessary root permissions, and use the provided AnyKernel3 ZIP to flash.\n\n"
-                  "This requires the [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) app to have root permissions. "
-                  "Other apps that can be used include [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) and [PixelFlasher](https://github.com/badabing2005/PixelFlasher). "
-                  "Full guide: [docs/installation.md](https://github.com/WildKernels/GKI_KernelSU_SUSFS/blob/dev/docs/installation.md)\n"
-              )
-
-          def render():
-              parts = []
-              parts.append(build_preamble())
-              parts.append(build_root_section())
-              parts.append(build_ksu_section())
-              parts.append(build_susfs_section())
-              parts.append(build_managers_section(parse_managers(env("MANAGER_LIST", ""))))
-              parts.append(build_features_section())
-              parts.append(build_install_section())
-              return "\n".join(parts)
-
-          output = render()
-          print(output, end="")
-          PYEOF
+        import json, os
+        def env(n,d=""): return os.environ.get(n,d).strip()
+        def parse_managers(raw):
+            try: return json.loads(raw) if raw.strip() else []
+            except: return []
+        root = env("ROOT_FLAVOR","unknown")
+        feats=[]
+        if env("USE_SUSFS","true")=="true": feats.append("SUSFS")
+        if env("USE_BBG","true")=="true": feats.append("Baseband Guard")
+        if env("USE_DS","true")=="true": feats.append("DroidSpaces-OSS")
+        if env("USE_NET","true")=="true": feats.append("Networking")
+        if env("USE_NTSYNC","true")=="true": feats.append("NTSync")
+        if env("USE_PTRACE","true")=="true": feats.append("Ptrace Leak Fix")
+        if env("USE_UNICODE","true")=="true": feats.append("Unicode Fix")
+        if env("USE_BPF","true")=="true": feats.append("BTF / eBPF / FUSE-BPF")
+        if env("USE_PERF","true")=="true": feats.append("Performance Tuning")
+        lines=[]
+        lines.append("# Wild Kernels for GKI2 Devices")
+        lines.append("")
+        lines.append("## Features")
+        lines.append("")
+        lines.append(f"- **Root:** `{root}`")
+        for f in feats: lines.append(f"- {f}")
+        if not feats: lines.append("- (none)")
+        lines.append("")
+        lines.append("## Commits")
+        lines.append("")
+        ver=env("KSU_VERSION","")
+        if ver: lines.append(f"- **KSU Version:** `{ver}`")
+        tag=env("KSU_GIT_TAG","")
+        if tag and tag!="no-tag": lines.append(f"- **KSU Tag:** `{tag}`")
+        br=env("KSUN_BRANCH","")
+        if br: lines.append(f"- **KSU Branch:** `{br}`")
+        cm=env("KSUN_COMMIT","")
+        if cm: lines.append(f"- **KSU Commit:** `{cm[:12]}` `{cm}`" if len(cm)==40 else f"- **KSU Commit:** `{cm}`")
+        for var,key in [("android12-5.10","susfs_commit_android12_5_10"),("android13-5.10","susfs_commit_android13_5_10"),("android13-5.15","susfs_commit_android13_5_15"),("android14-5.15","susfs_commit_android14_5_15"),("android14-6.1","susfs_commit_android14_6_1"),("android15-6.6","susfs_commit_android15_6_6"),("android16-6.12","susfs_commit_android16_6_12")]:
+            sha=env(key)
+            if sha and len(sha)==40: lines.append(f"- **SUSFS {var}:** `{sha[:12]}` `{sha}`")
+        sha=env("SUSFS_COMMIT")
+        if sha and len(sha)==40 and not any(env(k) for _,k in [("android12-5.10","susfs_commit_android12_5_10"),("android13-5.10","susfs_commit_android13_5_10"),("android13-5.15","susfs_commit_android13_5_15"),("android14-5.15","susfs_commit_android14_5_15"),("android14-6.1","susfs_commit_android14_6_1"),("android15-6.6","susfs_commit_android15_6_6"),("android16-6.12","susfs_commit_android16_6_12")]): lines.append(f"- **SUSFS:** `{sha[:12]}` `{sha}`")
+        mgrs=parse_managers(env("MANAGER_LIST",""))
+        if mgrs:
+            for m in mgrs:
+                label={"next":"KernelSU-Next","kernelsu":"KernelSU","resukisu":"ReSukiSU"}.get(m.get("flavor",""), m.get("flavor",""))
+                stock=m.get("stock","")
+                if stock: lines.append(f"- **Manager {label}:** `{stock[:12]}` `{stock}`")
+                elif m.get("run_id"): lines.append(f"- **Manager {label}:** run `{m.get('run_id')}`")
+        output="\n".join(lines)+"\n"
+        print(output,end="")
+        s=os.environ.get("GITHUB_STEP_SUMMARY")
+        if s: open(s,"a").write(output)
+        PYEOF
           {
             echo "## Release Notes Preview (CI Summary)"
             echo
