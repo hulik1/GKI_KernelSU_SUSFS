@@ -371,29 +371,8 @@ jobs:
               '. + [{owner:$o,repo:$r,apk:$n}]')
           done < "$MANIFEST"
           echo "apk_list=${APK_JSON}" >> "$GITHUB_OUTPUT"
-          count=$(wc -l < "$MANIFEST" 2>/dev/null | tr -d ' ' || echo 0)
-          echo "Found $count manager APKs"
+          echo "Found $(wc -l < "$MANIFEST" 2>/dev/null | tr -d ' ' || echo 0) manager APKs"
           ls -lh "$OUT_APKS" || true
-          {
-            echo "## Managers"
-            echo ""
-            echo "### Resolved Sources"
-            echo ""
-            echo "| Flavor | Upstream | Commit | Run | Artifacts |"
-            echo "|---|---|---|---|---|"
-            echo "$MANAGER_LIST" | jq -r '.[] | "| \(.flavor) | \(.owner)/\(.repo) | \(.stock[0:8]) | [\(.run_id)](https://github.com/\(.owner)/\(.repo)/actions/runs/\(.run_id)) | \(.want) |"' 2>/dev/null || echo "| _error parsing manager list_ | | | | |"
-            echo ""
-            echo "### Fetched APKs ($count)"
-            echo ""
-            echo "| APK | Source | Size |"
-            echo "|---|---|---|"
-            while IFS='|' read -r o r n; do
-              [ -n "$n" ] || continue
-              sz=$(stat -c%s "$OUT_APKS/$n" 2>/dev/null || stat -f%z "$OUT_APKS/$n" 2>/dev/null || echo "?")
-              hr=$(numfmt --to=iec-i --suffix=B "$sz" 2>/dev/null || echo "${sz} B")
-              echo "| \`$n\` | $o/$r | $hr |"
-            done < "$MANIFEST"
-          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload all manager APKs as one cross-blob
         uses: actions/upload-artifact@v7
@@ -883,24 +862,7 @@ jobs:
             APK_JSON=$(echo "$APK_JSON" | jq -c --arg n "$n" '. + [{apk:$n}]')
           done < /tmp/list.txt
           echo "apk_list=${APK_JSON}" >> "$GITHUB_OUTPUT"
-          count=$(wc -l < /tmp/list.txt 2>/dev/null | tr -d ' ' || echo 0)
-          {
-            echo "## Managers — Built from Source ($count)"
-            echo ""
-            if [ "$count" = "0" ]; then
-              echo "_No APKs produced._"
-            else
-              echo "| APK | Size |"
-              echo "|---|---|"
-              while IFS= read -r f; do
-                [ -n "$f" ] || continue
-                n="$(basename "$f")"
-                sz=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null || echo "?")
-                hr=$(numfmt --to=iec-i --suffix=B "$sz" 2>/dev/null || echo "${sz} B")
-                echo "| \`$n\` | $hr |"
-              done < /tmp/list.txt
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Found $(wc -l < /tmp/list.txt 2>/dev/null | tr -d ' ' || echo 0) source-built manager APKs"
 
       - name: Upload merged manager-apks (source)
         uses: actions/upload-artifact@v7
@@ -1002,14 +964,6 @@ jobs:
               open(s, "a").write(output)
           PYEOF
           cat release_body.md
-
-      - name: Publish release notes preview
-        run: |
-          {
-            echo "## Release Notes Preview"
-            echo ""
-            cat release_body.md
-          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload release notes preview artifact
         uses: actions/upload-artifact@v7
