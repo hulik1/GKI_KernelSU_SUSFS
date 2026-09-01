@@ -945,14 +945,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Download manager APKs for notes
-        uses: actions/download-artifact@v7
-        with:
-          pattern: manager-apks-src-*
-          path: /tmp/notes-apks
-          merge-multiple: true
-        continue-on-error: true
-
       - name: Render release notes preview
         env:
           ROOT_FLAVOR: ${{ inputs.root_flavor }}
@@ -962,104 +954,52 @@ jobs:
           RESUKISU_COMMIT: ${{ inputs.resukisu_commit }}
           NEXT_SUSFS_COMMIT: ${{ inputs.kernelsu_next_susfs_commit }}
           MANAGER_LIST_FETCH: ${{ needs.resolve-managers.outputs.manager_list }}
-          APK_LIST_SRC: ${{ needs.collect-source-managers.outputs.apk_list }}
-          APK_LIST_FETCH: ${{ needs.list-manager-apks.outputs.apk_list }}
         run: |
           set -e
           python3 - <<'PYEOF' > release_body.md
           import json, os
-
           def env(k, d=""):
               return os.environ.get(k, d).strip()
-
           root = env("ROOT_FLAVOR", "All")
-          src = env("BUILD_FROM_SOURCE", "false")
-          mode = "source (clone + build ksud + manager)" if src == "true" else "fetch (upstream CI artifacts)"
-
+          src = env("BUILD_FROM_SOURCE", "false") == "true"
           commits = {
               "KernelSU-Next": env("NEXT_COMMIT") or "latest dev tip",
               "KernelSU": env("KSU_COMMIT") or "latest main tip",
               "ReSukiSU": env("RESUKISU_COMMIT") or "latest tip",
               "KernelSU-Next-SUSFS": env("NEXT_SUSFS_COMMIT") or "latest dev-susfs tip",
           }
-
-          # try to enrich with resolved manager_list from fetch path
-          fetch_raw = env("MANAGER_LIST_FETCH")
-          if fetch_raw:
+          # enrich from fetch path manager_list (pure commit info, same style as prebuilt)
+          raw = env("MANAGER_LIST_FETCH")
+          if raw:
               try:
-                  data = json.loads(fetch_raw)
-                  for m in data:
-                      flavor = m.get("flavor","")
-                      label_map = {"next":"KernelSU-Next","kernelsu":"KernelSU","resukisu":"ReSukiSU","next-susfs":"KernelSU-Next-SUSFS"}
-                      label = label_map.get(flavor, flavor)
-                      stock = m.get("stock","")
-                      if label in commits and stock:
-                          commits[label] = stock
+                  for m in json.loads(raw):
+                      label = {"next":"KernelSU-Next","kernelsu":"KernelSU","resukisu":"ReSukiSU","next-susfs":"KernelSU-Next-SUSFS"}.get(m.get("flavor",""), "")
+                      if label and m.get("stock"):
+                          commits[label] = m["stock"]
               except: pass
-
           lines = []
           lines.append("# Managers — Release Notes Preview")
           lines.append("")
-          lines.append(f"- **Root flavor:** `{root}`")
-          lines.append(f"- **Build mode:** `{mode}`")
-          lines.append("")
-          lines.append("## Versions / Commits")
-          lines.append("")
-          for k,v in commits.items():
-              short = v[:12] if len(v) >= 40 else v
-              lines.append(f"- **{k}:** `{short}`" + (f" (`{v}`)" if len(v)==40 else ""))
-          lines.append("")
-          lines.append("## Features Included")
+          lines.append("## Features")
           lines.append("")
           if root == "All":
-              lines.append("- All manager flavors built (KernelSU-Next, KernelSU, ReSukiSU, KernelSU-Next-SUSFS)")
+              lines.append("- All manager flavors (KernelSU-Next, KernelSU, ReSukiSU, KernelSU-Next-SUSFS)")
           else:
-              lines.append(f"- Manager flavor: `{root}`")
-          if src == "true":
-              lines.append("- Built from source with full history (`+refs/heads/* +refs/tags/*`)")
-              lines.append("- ksud built before manager and embedded at `app/src/main/jniLibs/{arm64-v8a,x86_64}/libksud.so` (aarch64 + x86_64)")
-              lines.append("- Manager built via upstream steps: Java 21, Gradle, Android SDK, `./gradlew clean assembleRelease` (spoof/randomizer where applicable)")
-          else:
-              lines.append("- Fetched from upstream CI release/run artifacts (no local build)")
+              lines.append(f"- {root}")
+          lines.append(f"- {'Built from source' if src else 'Fetched prebuilt (upstream CI)'}")
           lines.append("")
-
-          # list built APKs if available
-          import pathlib
-          apk_dirs = ["/tmp/notes-apks"]
-          apks = []
-          for d in apk_dirs:
-              p = pathlib.Path(d)
-              if p.exists():
-                  apks += sorted(p.rglob("*.apk"))
-          if apks:
-              lines.append("## Manager APKs Built")
-              lines.append("")
-              for f in apks:
-                  sz = f.stat().st_size
-                  hr = f"{sz/1024/1024:.1f} MB" if sz>1024*1024 else f"{sz/1024:.0f} KB"
-                  lines.append(f"- `{f.name}` ({hr})")
-              lines.append("")
-
-          # manager lists from outputs
-          for key in ["APK_LIST_SRC","APK_LIST_FETCH"]:
-              raw = env(key)
-              if raw and raw not in ("","[]"):
-                  try:
-                      j = json.loads(raw)
-                      if j:
-                          lines.append(f"## {key} ({len(j)} entries)")
-                          lines.append("")
-                          for it in j:
-                              lines.append(f"- `{it.get('apk','')}`")
-                          lines.append("")
-                  except: pass
-
-          output = "\n".join(lines)
-          print(output)
-          # also write to step summary
-          summary = os.environ.get("GITHUB_STEP_SUMMARY")
-          if summary:
-              pathlib.Path(summary).write_text(output + "\n")
+          lines.append("## Commits")
+          lines.append("")
+          for k, v in commits.items():
+              if len(v) == 40:
+                  lines.append(f"- **{k}:** `{v[:12]}` `{v}`")
+              else:
+                  lines.append(f"- **{k}:** `{v}`")
+          output = "\n".join(lines) + "\n"
+          print(output, end="")
+          s = os.environ.get("GITHUB_STEP_SUMMARY")
+          if s:
+              open(s, "a").write(output)
           PYEOF
           cat release_body.md
 
