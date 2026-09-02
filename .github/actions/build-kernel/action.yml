@@ -40,10 +40,9 @@ runs:
           sed -i '/name = "kernel_aarch64",/a\    check_defconfig = "disabled",' common/BUILD.bazel
         fi
         tools/bazel build \
-          --config=fast \
-          --config=stamp \
-          --disk_cache=/home/runner/.cache/bazel \
-          //common:kernel_aarch64/Image
+          --config=local \
+          --cache_dir=/home/runner/.cache/bazel \
+          //common:kernel_aarch64_dist/Image
       fi
 
   - name: 'Gather Build Artifacts'
