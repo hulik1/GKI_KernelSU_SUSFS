@@ -1364,6 +1364,7 @@ jobs:
         prerelease: ${{ inputs.release_type == 'Pre-Release' }}
         files: |
           release-assets/**/*.zip
+          release-assets/**/*.apk
           release-assets/**/*-boot*.img
 
   notes-preview:
