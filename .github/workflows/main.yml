@@ -1261,17 +1261,15 @@ jobs:
             _flavors={"KernelSU-Next":["next"],"KernelSU":["kernelsu"],"ReSukiSU":["resukisu"],"All":["next","kernelsu","resukisu"]}.get(root,["next","kernelsu","resukisu"])
         _labels={"next":"KernelSU-Next","kernelsu":"KernelSU","resukisu":"ReSukiSU"}
         _susfs_url="https://gitlab.com/simonpunk/susfs4ksu"
-        for _fl in _flavors:
-            _sm=sus_map_resukisu if _fl=="resukisu" else sus_map
-            lines.append(f"### {_labels.get(_fl,_fl)}")
-            lines.append("")
-            lines.append("| SUSFS branch | SUSFS commit |")
-            lines.append("|---|---|")
-            for v in variants:
+        lines.append("| Root | SUSFS branch | SUSFS commit |")
+        lines.append("|---|---|---|")
+        for v in variants:
+            for _fl in _flavors:
+                _sm=sus_map_resukisu if _fl=="resukisu" else sus_map
                 sha=_sm.get(v,"")
                 sha_s=f"[`{sha[:12]}`]({_susfs_url}/-/commit/{sha})" if sha else "_n/a_"
-                lines.append(f"| gki-{v} | {sha_s} |")
-            lines.append("")
+                lines.append(f"| {_labels.get(_fl,_fl)} | gki-{v} | {sha_s} |")
+        lines.append("")
         lines.append("")
         lines.append("## Commits (detailed)")
         lines.append("")
@@ -1490,17 +1488,15 @@ jobs:
               _flavors={"KernelSU-Next":["next"],"KernelSU":["kernelsu"],"ReSukiSU":["resukisu"],"All":["next","kernelsu","resukisu"]}.get(root,["next","kernelsu","resukisu"])
           _labels={"next":"KernelSU-Next","kernelsu":"KernelSU","resukisu":"ReSukiSU"}
           _susfs_url="https://gitlab.com/simonpunk/susfs4ksu"
-          for _fl in _flavors:
-              _sm=sus_map_resukisu if _fl=="resukisu" else sus_map
-              lines.append(f"### {_labels.get(_fl,_fl)}")
-              lines.append("")
-              lines.append("| SUSFS branch | SUSFS commit |")
-              lines.append("|---|---|")
-              for v in variants:
+          lines.append("| Root | SUSFS branch | SUSFS commit |")
+          lines.append("|---|---|---|")
+          for v in variants:
+              for _fl in _flavors:
+                  _sm=sus_map_resukisu if _fl=="resukisu" else sus_map
                   sha=_sm.get(v,"")
                   sha_s=f"[`{sha[:12]}`]({_susfs_url}/-/commit/{sha})" if sha else "_n/a_"
-                  lines.append(f"| gki-{v} | {sha_s} |")
-              lines.append("")
+                  lines.append(f"| {_labels.get(_fl,_fl)} | gki-{v} | {sha_s} |")
+          lines.append("")
           lines.append("")
           lines.append("## Commits (detailed)")
           lines.append("")
