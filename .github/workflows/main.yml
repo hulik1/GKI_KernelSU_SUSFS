@@ -1301,8 +1301,6 @@ jobs:
                 stock=m.get("stock","")
                 if stock: lines.append(f"- **Manager {label}:** `{stock[:12]}` `{stock}`")
                 elif m.get("run_id"): lines.append(f"- **Manager {label}:** run `{m.get('run_id')}`")
-        cache_s="enabled" if env("USE_CACHE","true")=="true" else "disabled"
-        lines.append(f"- **Cache:** `{cache_s}` (ccache 12G for 5.10/5.15, bazel for 5.15+/6.x)")
         output="\n".join(lines)+"\n"
         print(output,end="")
         s=os.environ.get("GITHUB_STEP_SUMMARY")
@@ -1531,8 +1529,6 @@ jobs:
                   stock=m.get("stock","")
                   if stock: lines.append(f"- **Manager {label}:** `{stock[:12]}` `{stock}`")
                   elif m.get("run_id"): lines.append(f"- **Manager {label}:** run `{m.get('run_id')}`")
-          cache_s="enabled" if env("USE_CACHE","true")=="true" else "disabled"
-          lines.append(f"- **Cache:** `{cache_s}` (ccache 12G for 5.10/5.15, bazel for 5.15+/6.x)")
           output="\n".join(lines)+"\n"
           print(output,end="")
           s=os.environ.get("GITHUB_STEP_SUMMARY")
