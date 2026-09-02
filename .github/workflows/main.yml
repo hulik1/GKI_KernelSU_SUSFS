@@ -423,7 +423,7 @@ jobs:
           echo "feature_set=${FEATURES%+}" >> "$GITHUB_OUTPUT"
 
       - name: Clone shared source repos once
-        if: inputs.use_nomount
+        if: inputs.use_nomount && !inputs.test_release_notes
         shell: bash
         run: |
           set -euo pipefail
@@ -438,7 +438,7 @@ jobs:
 
   list-manager-apks:
     needs: resolve-sources
-    if: needs.resolve-sources.outputs.manager_list != ''
+    if: "!inputs.test_release_notes && needs.resolve-sources.outputs.manager_list != ''"
     runs-on: ubuntu-latest
     outputs:
       apk_list: ${{ steps.scan.outputs.apk_list }}
@@ -551,7 +551,7 @@ jobs:
 
   publish-manager-artifacts:
     needs: list-manager-apks
-    if: needs.list-manager-apks.outputs.apk_list != ''
+    if: "!inputs.test_release_notes && needs.list-manager-apks.outputs.apk_list != ''"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -576,6 +576,7 @@ jobs:
 
   build-nomount-module:
     needs: resolve-sources
+    if: "!inputs.test_release_notes"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
