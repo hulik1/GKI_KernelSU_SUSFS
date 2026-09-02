@@ -1134,6 +1134,7 @@ jobs:
         FEATURE_SET: ${{ needs.resolve-sources.outputs.feature_set }}
         MANAGER_LIST: ${{ needs.resolve-sources.outputs.manager_list }}
         USE_SUSFS: ${{ inputs.use_susfs }}
+        USE_NOMOUNT: ${{ inputs.use_nomount }}
         USE_BBG: ${{ inputs.use_bbg }}
         USE_DS: ${{ inputs.use_ds }}
         USE_NET: ${{ inputs.use_net }}
@@ -1141,6 +1142,23 @@ jobs:
         USE_PTRACE: ${{ inputs.use_ptrace }}
         USE_UNICODE: ${{ inputs.use_unicode }}
         USE_BPF: ${{ inputs.use_bpf }}
+        USE_PERF: ${{ inputs.use_perf }}
+        USE_CACHE: ${{ inputs.use_cache }}
+        KERNEL_BUILD_VERSION: ${{ inputs.kernel_build_version }}
+        NOMOUNT_COMMIT: ${{ needs.resolve-sources.outputs.nomount_commit }}
+        KSU_COMMIT: ${{ needs.resolve-sources.outputs.ksu_commit }}
+        RESUKISU_COMMIT: ${{ needs.resolve-sources.outputs.resukisu_commit }}
+        KERNELSU_COMMIT: ${{ needs.resolve-sources.outputs.kernelsu_commit }}
+        KERNEL_PATCHES_COMMIT: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
+        ANYKERNEL3_COMMIT: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
+        DROIDSPACES_COMMIT: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
+        SUSFS_ANDROID12_5_10: ${{ needs.resolve-sources.outputs.susfs_commit_android12_5_10 }}
+        SUSFS_ANDROID13_5_10: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_10 }}
+        SUSFS_ANDROID13_5_15: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_15 }}
+        SUSFS_ANDROID14_5_15: ${{ needs.resolve-sources.outputs.susfs_commit_android14_5_15 }}
+        SUSFS_ANDROID14_6_1: ${{ needs.resolve-sources.outputs.susfs_commit_android14_6_1 }}
+        SUSFS_ANDROID15_6_6: ${{ needs.resolve-sources.outputs.susfs_commit_android15_6_6 }}
+        SUSFS_ANDROID16_6_12: ${{ needs.resolve-sources.outputs.susfs_commit_android16_6_12 }}
       run: |
         set -e
 
@@ -1155,6 +1173,7 @@ jobs:
         root = env("ROOT_FLAVOR","unknown")
         feats=[]
         if env("USE_SUSFS","true")=="true": feats.append("SUSFS")
+        if env("USE_NOMOUNT","true")=="true": feats.append("NoMount")
         if env("USE_BBG","true")=="true": feats.append("Baseband Guard")
         if env("USE_DS","true")=="true": feats.append("DroidSpaces-OSS")
         if env("USE_NET","true")=="true": feats.append("Networking")
@@ -1168,25 +1187,71 @@ jobs:
         lines.append("")
         lines.append("## Features")
         lines.append("")
-        lines.append(f"- **Root:** `{root}`")
+        lines.append(f"- **Root:** `{root}`  (All = KernelSU-Next + KernelSU + ReSukiSU)")
         for f in feats: lines.append(f"- {f}")
         if not feats: lines.append("- (none)")
+        # feature-to-source mapping
         lines.append("")
-        lines.append("## Commits")
+        lines.append("| Feature | Source | Commit / Branch |")
+        lines.append("|---|---|---|")
+        # root commits
+        ksun_branch=env("KSUN_BRANCH","dev-susfs")
+        ksun_commit=env("KSUN_COMMIT","")
+        ksu_commit=env("KSU_COMMIT","")
+        resukisu_commit=env("RESUKISU_COMMIT","")
+        kernelsu_commit=env("KERNELSU_COMMIT","")
+        if ksun_commit: lines.append(f"| KernelSU-Next (SUSFS) | pershoot/KernelSU-Next#{ksun_branch} | `{ksun_commit[:12]}` `{ksun_commit}` |")
+        elif kernelsu_commit: lines.append(f"| KernelSU-Next (official) | KernelSU-Next/KernelSU-Next#dev | `{kernelsu_commit[:12]}` |")
+        if ksu_commit: lines.append(f"| KernelSU (tiann) | tiann/KernelSU#main | `{ksu_commit[:12]}` `{ksu_commit}` |")
+        if resukisu_commit: lines.append(f"| ReSukiSU | ReSukiSU/ReSukiSU#main | `{resukisu_commit[:12]}` `{resukisu_commit}` |")
+        if env("USE_SUSFS","true")=="true":
+            lines.append(f"| SUSFS | simonpunk/susfs4ksu | per-variant (see below) |")
+        if env("USE_NOMOUNT","true")=="true":
+            nm=env("NOMOUNT_COMMIT","")
+            if nm: lines.append(f"| NoMount | maxsteeel/nomount#dev | `{nm[:12]}` `{nm}` |")
+        kp=env("KERNEL_PATCHES_COMMIT","")
+        if kp: lines.append(f"| BBG / NET / NTSync / BTF / Perf / Ptrace / Unicode | WildKernels/kernel_patches#main | `{kp[:12]}` `{kp}` |")
+        ak=env("ANYKERNEL3_COMMIT","")
+        if ak: lines.append(f"| AnyKernel3 | WildKernels/AnyKernel3#gki-2.0 | `{ak[:12]}` `{ak}` |")
+        ds=env("DROIDSPACES_COMMIT","")
+        if ds: lines.append(f"| DroidSpaces-OSS | ravindu644/Droidspaces-OSS#main | `{ds[:12]}` `{ds}` |")
+        lines.append("")
+        lines.append("## Kernel Variants")
+        lines.append("")
+        kbv=env("KERNEL_BUILD_VERSION","All")
+        variants=["android12-5.10","android13-5.10","android13-5.15","android14-5.15","android14-6.1","android15-6.6","android16-6.12"]
+        if kbv!="All" and kbv in variants: variants=[kbv]
+        lines.append(f"_Built variants: `{', '.join(variants)}` (filter: `{kbv}`)_")
+        lines.append("")
+        lines.append("| Variant | Cache | SUSFS branch | SUSFS commit |")
+        lines.append("|---|---|---|---|")
+        sus_map={"android12-5.10":env("SUSFS_ANDROID12_5_10",""),"android13-5.10":env("SUSFS_ANDROID13_5_10",""),"android13-5.15":env("SUSFS_ANDROID13_5_15",""),"android14-5.15":env("SUSFS_ANDROID14_5_15",""),"android14-6.1":env("SUSFS_ANDROID14_6_1",""),"android15-6.6":env("SUSFS_ANDROID15_6_6",""),"android16-6.12":env("SUSFS_ANDROID16_6_12","")}
+        for v in variants:
+            cache="ccache" if v in ["android12-5.10","android13-5.10","android13-5.15"] else "bazel"
+            sha=sus_map.get(v,"")
+            sha_s=f"`{sha[:12]}`" if sha else "_n/a_"
+            lines.append(f"| {v} | {cache} | gki-{v} | {sha_s} |")
+        lines.append("")
+        lines.append("## Commits (detailed)")
         lines.append("")
         ver=env("KSU_VERSION","")
         if ver: lines.append(f"- **KSU Version:** `{ver}`")
         tag=env("KSU_GIT_TAG","")
         if tag and tag!="no-tag": lines.append(f"- **KSU Tag:** `{tag}`")
-        br=env("KSUN_BRANCH","")
-        if br: lines.append(f"- **KSU Branch:** `{br}`")
-        cm=env("KSUN_COMMIT","")
-        if cm: lines.append(f"- **KSU Commit:** `{cm[:12]}` `{cm}`" if len(cm)==40 else f"- **KSU Commit:** `{cm}`")
-        for var,key in [("android12-5.10","susfs_commit_android12_5_10"),("android13-5.10","susfs_commit_android13_5_10"),("android13-5.15","susfs_commit_android13_5_15"),("android14-5.15","susfs_commit_android14_5_15"),("android14-6.1","susfs_commit_android14_6_1"),("android15-6.6","susfs_commit_android15_6_6"),("android16-6.12","susfs_commit_android16_6_12")]:
-            sha=env(key)
+        if ksun_branch: lines.append(f"- **KSU Branch:** `{ksun_branch}`")
+        if ksun_commit: lines.append(f"- **KSU Commit (pershoot dev-susfs):** `{ksun_commit[:12]}` `{ksun_commit}`" if len(ksun_commit)==40 else f"- **KSU Commit:** `{ksun_commit}`")
+        if kernelsu_commit and kernelsu_commit!=ksun_commit: lines.append(f"- **KSU-Next official dev:** `{kernelsu_commit[:12]}` `{kernelsu_commit}`")
+        if ksu_commit: lines.append(f"- **KernelSU (tiann):** `{ksu_commit[:12]}` `{ksu_commit}`")
+        if resukisu_commit: lines.append(f"- **ReSukiSU:** `{resukisu_commit[:12]}` `{resukisu_commit}`")
+        for var in ["android12-5.10","android13-5.10","android13-5.15","android14-5.15","android14-6.1","android15-6.6","android16-6.12"]:
+            sha=sus_map.get(var,"")
             if sha and len(sha)==40: lines.append(f"- **SUSFS {var}:** `{sha[:12]}` `{sha}`")
         sha=env("SUSFS_COMMIT")
-        if sha and len(sha)==40 and not any(env(k) for _,k in [("android12-5.10","susfs_commit_android12_5_10"),("android13-5.10","susfs_commit_android13_5_10"),("android13-5.15","susfs_commit_android13_5_15"),("android14-5.15","susfs_commit_android14_5_15"),("android14-6.1","susfs_commit_android14_6_1"),("android15-6.6","susfs_commit_android15_6_6"),("android16-6.12","susfs_commit_android16_6_12")]): lines.append(f"- **SUSFS:** `{sha[:12]}` `{sha}`")
+        if sha and len(sha)==40 and not any(sus_map.values()): lines.append(f"- **SUSFS:** `{sha[:12]}` `{sha}`")
+        if env("NOMOUNT_COMMIT"): lines.append(f"- **NoMount:** `{env('NOMOUNT_COMMIT')[:12]}` `{env('NOMOUNT_COMMIT')}`")
+        if kp: lines.append(f"- **kernel_patches:** `{kp[:12]}` `{kp}`")
+        if ak: lines.append(f"- **AnyKernel3:** `{ak[:12]}` `{ak}`")
+        if ds: lines.append(f"- **DroidSpaces:** `{ds[:12]}` `{ds}`")
         mgrs=parse_managers(env("MANAGER_LIST",""))
         if mgrs:
             for m in mgrs:
@@ -1194,6 +1259,8 @@ jobs:
                 stock=m.get("stock","")
                 if stock: lines.append(f"- **Manager {label}:** `{stock[:12]}` `{stock}`")
                 elif m.get("run_id"): lines.append(f"- **Manager {label}:** run `{m.get('run_id')}`")
+        cache_s="enabled" if env("USE_CACHE","true")=="true" else "disabled"
+        lines.append(f"- **Cache:** `{cache_s}` (ccache 12G for 5.10/5.15, bazel for 5.15+/6.x)")
         output="\n".join(lines)+"\n"
         print(output,end="")
         s=os.environ.get("GITHUB_STEP_SUMMARY")
@@ -1281,6 +1348,7 @@ jobs:
           FEATURE_SET: ${{ needs.resolve-sources.outputs.feature_set }}
           MANAGER_LIST: ${{ needs.resolve-sources.outputs.manager_list }}
           USE_SUSFS: ${{ inputs.use_susfs }}
+          USE_NOMOUNT: ${{ inputs.use_nomount }}
           USE_BBG: ${{ inputs.use_bbg }}
           USE_DS: ${{ inputs.use_ds }}
           USE_NET: ${{ inputs.use_net }}
@@ -1288,6 +1356,23 @@ jobs:
           USE_PTRACE: ${{ inputs.use_ptrace }}
           USE_UNICODE: ${{ inputs.use_unicode }}
           USE_BPF: ${{ inputs.use_bpf }}
+          USE_PERF: ${{ inputs.use_perf }}
+          USE_CACHE: ${{ inputs.use_cache }}
+          KERNEL_BUILD_VERSION: ${{ inputs.kernel_build_version }}
+          NOMOUNT_COMMIT: ${{ needs.resolve-sources.outputs.nomount_commit }}
+          KSU_COMMIT: ${{ needs.resolve-sources.outputs.ksu_commit }}
+          RESUKISU_COMMIT: ${{ needs.resolve-sources.outputs.resukisu_commit }}
+          KERNELSU_COMMIT: ${{ needs.resolve-sources.outputs.kernelsu_commit }}
+          KERNEL_PATCHES_COMMIT: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
+          ANYKERNEL3_COMMIT: ${{ needs.resolve-sources.outputs.anykernel3_commit }}
+          DROIDSPACES_COMMIT: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
+          SUSFS_ANDROID12_5_10: ${{ needs.resolve-sources.outputs.susfs_commit_android12_5_10 }}
+          SUSFS_ANDROID13_5_10: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_10 }}
+          SUSFS_ANDROID13_5_15: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_15 }}
+          SUSFS_ANDROID14_5_15: ${{ needs.resolve-sources.outputs.susfs_commit_android14_5_15 }}
+          SUSFS_ANDROID14_6_1: ${{ needs.resolve-sources.outputs.susfs_commit_android14_6_1 }}
+          SUSFS_ANDROID15_6_6: ${{ needs.resolve-sources.outputs.susfs_commit_android15_6_6 }}
+          SUSFS_ANDROID16_6_12: ${{ needs.resolve-sources.outputs.susfs_commit_android16_6_12 }}
           # KSU version not computed here; render will show placeholder if release job skipped
         run: |
           set -e
@@ -1300,6 +1385,7 @@ jobs:
           root = env("ROOT_FLAVOR","unknown")
           feats=[]
           if env("USE_SUSFS","true")=="true": feats.append("SUSFS")
+          if env("USE_NOMOUNT","true")=="true": feats.append("NoMount")
           if env("USE_BBG","true")=="true": feats.append("Baseband Guard")
           if env("USE_DS","true")=="true": feats.append("DroidSpaces-OSS")
           if env("USE_NET","true")=="true": feats.append("Networking")
@@ -1313,25 +1399,69 @@ jobs:
           lines.append("")
           lines.append("## Features")
           lines.append("")
-          lines.append(f"- **Root:** `{root}`")
+          lines.append(f"- **Root:** `{root}`  (All = KernelSU-Next + KernelSU + ReSukiSU)")
           for f in feats: lines.append(f"- {f}")
           if not feats: lines.append("- (none)")
           lines.append("")
-          lines.append("## Commits")
+          lines.append("| Feature | Source | Commit / Branch |")
+          lines.append("|---|---|---|")
+          ksun_branch=env("KSUN_BRANCH","dev-susfs")
+          ksun_commit=env("KSUN_COMMIT","")
+          ksu_commit=env("KSU_COMMIT","")
+          resukisu_commit=env("RESUKISU_COMMIT","")
+          kernelsu_commit=env("KERNELSU_COMMIT","")
+          if ksun_commit: lines.append(f"| KernelSU-Next (SUSFS) | pershoot/KernelSU-Next#{ksun_branch} | `{ksun_commit[:12]}` `{ksun_commit}` |")
+          elif kernelsu_commit: lines.append(f"| KernelSU-Next (official) | KernelSU-Next/KernelSU-Next#dev | `{kernelsu_commit[:12]}` |")
+          if ksu_commit: lines.append(f"| KernelSU (tiann) | tiann/KernelSU#main | `{ksu_commit[:12]}` `{ksu_commit}` |")
+          if resukisu_commit: lines.append(f"| ReSukiSU | ReSukiSU/ReSukiSU#main | `{resukisu_commit[:12]}` `{resukisu_commit}` |")
+          if env("USE_SUSFS","true")=="true":
+              lines.append(f"| SUSFS | simonpunk/susfs4ksu | per-variant (see below) |")
+          if env("USE_NOMOUNT","true")=="true":
+              nm=env("NOMOUNT_COMMIT","")
+              if nm: lines.append(f"| NoMount | maxsteeel/nomount#dev | `{nm[:12]}` `{nm}` |")
+          kp=env("KERNEL_PATCHES_COMMIT","")
+          if kp: lines.append(f"| BBG / NET / NTSync / BTF / Perf / Ptrace / Unicode | WildKernels/kernel_patches#main | `{kp[:12]}` `{kp}` |")
+          ak=env("ANYKERNEL3_COMMIT","")
+          if ak: lines.append(f"| AnyKernel3 | WildKernels/AnyKernel3#gki-2.0 | `{ak[:12]}` `{ak}` |")
+          ds=env("DROIDSPACES_COMMIT","")
+          if ds: lines.append(f"| DroidSpaces-OSS | ravindu644/Droidspaces-OSS#main | `{ds[:12]}` `{ds}` |")
+          lines.append("")
+          lines.append("## Kernel Variants")
+          lines.append("")
+          kbv=env("KERNEL_BUILD_VERSION","All")
+          variants=["android12-5.10","android13-5.10","android13-5.15","android14-5.15","android14-6.1","android15-6.6","android16-6.12"]
+          if kbv!="All" and kbv in variants: variants=[kbv]
+          lines.append(f"_Built variants: `{', '.join(variants)}` (filter: `{kbv}`)_")
+          lines.append("")
+          lines.append("| Variant | Cache | SUSFS branch | SUSFS commit |")
+          lines.append("|---|---|---|---|")
+          sus_map={"android12-5.10":env("SUSFS_ANDROID12_5_10",""),"android13-5.10":env("SUSFS_ANDROID13_5_10",""),"android13-5.15":env("SUSFS_ANDROID13_5_15",""),"android14-5.15":env("SUSFS_ANDROID14_5_15",""),"android14-6.1":env("SUSFS_ANDROID14_6_1",""),"android15-6.6":env("SUSFS_ANDROID15_6_6",""),"android16-6.12":env("SUSFS_ANDROID16_6_12","")}
+          for v in variants:
+              cache="ccache" if v in ["android12-5.10","android13-5.10","android13-5.15"] else "bazel"
+              sha=sus_map.get(v,"")
+              sha_s=f"`{sha[:12]}`" if sha else "_n/a_"
+              lines.append(f"| {v} | {cache} | gki-{v} | {sha_s} |")
+          lines.append("")
+          lines.append("## Commits (detailed)")
           lines.append("")
           ver=env("KSU_VERSION","")
           if ver: lines.append(f"- **KSU Version:** `{ver}`")
           tag=env("KSU_GIT_TAG","")
           if tag and tag!="no-tag": lines.append(f"- **KSU Tag:** `{tag}`")
-          br=env("KSUN_BRANCH","")
-          if br: lines.append(f"- **KSU Branch:** `{br}`")
-          cm=env("KSUN_COMMIT","")
-          if cm: lines.append(f"- **KSU Commit:** `{cm[:12]}` `{cm}`" if len(cm)==40 else f"- **KSU Commit:** `{cm}`")
-          for var,key in [("android12-5.10","susfs_commit_android12_5_10"),("android13-5.10","susfs_commit_android13_5_10"),("android13-5.15","susfs_commit_android13_5_15"),("android14-5.15","susfs_commit_android14_5_15"),("android14-6.1","susfs_commit_android14_6_1"),("android15-6.6","susfs_commit_android15_6_6"),("android16-6.12","susfs_commit_android16_6_12")]:
-              sha=env(key)
+          if ksun_branch: lines.append(f"- **KSU Branch:** `{ksun_branch}`")
+          if ksun_commit: lines.append(f"- **KSU Commit (pershoot dev-susfs):** `{ksun_commit[:12]}` `{ksun_commit}`" if len(ksun_commit)==40 else f"- **KSU Commit:** `{ksun_commit}`")
+          if kernelsu_commit and kernelsu_commit!=ksun_commit: lines.append(f"- **KSU-Next official dev:** `{kernelsu_commit[:12]}` `{kernelsu_commit}`")
+          if ksu_commit: lines.append(f"- **KernelSU (tiann):** `{ksu_commit[:12]}` `{ksu_commit}`")
+          if resukisu_commit: lines.append(f"- **ReSukiSU:** `{resukisu_commit[:12]}` `{resukisu_commit}`")
+          for var in ["android12-5.10","android13-5.10","android13-5.15","android14-5.15","android14-6.1","android15-6.6","android16-6.12"]:
+              sha=sus_map.get(var,"")
               if sha and len(sha)==40: lines.append(f"- **SUSFS {var}:** `{sha[:12]}` `{sha}`")
           sha=env("SUSFS_COMMIT")
-          if sha and len(sha)==40 and not any(env(k) for _,k in [("android12-5.10","susfs_commit_android12_5_10"),("android13-5.10","susfs_commit_android13_5_10"),("android13-5.15","susfs_commit_android13_5_15"),("android14-5.15","susfs_commit_android14_5_15"),("android14-6.1","susfs_commit_android14_6_1"),("android15-6.6","susfs_commit_android15_6_6"),("android16-6.12","susfs_commit_android16_6_12")]): lines.append(f"- **SUSFS:** `{sha[:12]}` `{sha}`")
+          if sha and len(sha)==40 and not any(sus_map.values()): lines.append(f"- **SUSFS:** `{sha[:12]}` `{sha}`")
+          if env("NOMOUNT_COMMIT"): lines.append(f"- **NoMount:** `{env('NOMOUNT_COMMIT')[:12]}` `{env('NOMOUNT_COMMIT')}`")
+          if kp: lines.append(f"- **kernel_patches:** `{kp[:12]}` `{kp}`")
+          if ak: lines.append(f"- **AnyKernel3:** `{ak[:12]}` `{ak}`")
+          if ds: lines.append(f"- **DroidSpaces:** `{ds[:12]}` `{ds}`")
           mgrs=parse_managers(env("MANAGER_LIST",""))
           if mgrs:
               for m in mgrs:
@@ -1339,6 +1469,8 @@ jobs:
                   stock=m.get("stock","")
                   if stock: lines.append(f"- **Manager {label}:** `{stock[:12]}` `{stock}`")
                   elif m.get("run_id"): lines.append(f"- **Manager {label}:** run `{m.get('run_id')}`")
+          cache_s="enabled" if env("USE_CACHE","true")=="true" else "disabled"
+          lines.append(f"- **Cache:** `{cache_s}` (ccache 12G for 5.10/5.15, bazel for 5.15+/6.x)")
           output="\n".join(lines)+"\n"
           print(output,end="")
           s=os.environ.get("GITHUB_STEP_SUMMARY")
