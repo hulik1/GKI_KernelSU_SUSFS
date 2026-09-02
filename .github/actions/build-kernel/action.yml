@@ -42,7 +42,7 @@ runs:
         tools/bazel build \
           --config=local \
           --cache_dir=/home/runner/.cache/bazel \
-          //common:kernel_aarch64_dist/Image
+          //common:kernel_aarch64_dist
       fi
 
   - name: 'Gather Build Artifacts'
