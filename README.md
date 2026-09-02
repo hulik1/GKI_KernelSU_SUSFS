@@ -31,13 +31,13 @@ Generic kernels built on [Google's GKI sources](https://android.googlesource.com
 - **DroidSpaces** — container runtime
 
 > [!TIP]
-> Full documentation: [docs/features.md](docs/features.md)
+> Full documentation: [Wiki](https://github.com/WildKernels/GKI_KernelSU_SUSFS/wiki)
 
 ---
 
 ## Installation
 
-See **[Installation Guide](docs/installation.md)**.
+See **[Installation Guide](https://github.com/WildKernels/GKI_KernelSU_SUSFS/wiki/Installation)**.
 
 ---
 
@@ -46,7 +46,7 @@ See **[Installation Guide](docs/installation.md)**.
 > [!NOTE]
 > These lists are maintained by the community — please update as needed!
 
-See **[Supported Devices](docs/supported-devices.md)**.
+See **[Supported Devices](https://github.com/WildKernels/GKI_KernelSU_SUSFS/wiki/Supported-Devices)**.
 
 ---
 
