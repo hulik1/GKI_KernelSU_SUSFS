@@ -15,6 +15,10 @@ on:
           - Pre-Release
           - Release
         default: Pre-Release
+      use_cache:
+        description: "Use ccache/bazel cache (restore/save)"
+        type: boolean
+        default: true
       kernel_build_version:
         description: "Kernel Version"
         type: choice
@@ -99,10 +103,6 @@ on:
         description: "Apply kernel version-check bypass hack"
         type: boolean
         default: false
-      use_cache:
-        description: "Use ccache/bazel cache (restore/save)"
-        type: boolean
-        default: true
 
 jobs:
   resolve-sources:
