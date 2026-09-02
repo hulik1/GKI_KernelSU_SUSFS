@@ -19,6 +19,10 @@ on:
         description: "Use ccache/bazel cache (restore/save)"
         type: boolean
         default: true
+      bypass:
+        description: "Apply kernel version-check bypass hack"
+        type: boolean
+        default: false
       kernel_build_version:
         description: "Kernel Version"
         type: choice
@@ -97,10 +101,6 @@ on:
         default: true
       use_perf:
         description: "Performance"
-        type: boolean
-        default: false
-      bypass:
-        description: "Apply kernel version-check bypass hack"
         type: boolean
         default: false
 
