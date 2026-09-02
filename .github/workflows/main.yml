@@ -1389,6 +1389,7 @@ jobs:
           {
             echo ""
             echo "- **Nightly artifacts:** https://nightly.link/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "- **Note:** not every kernel version is necessarily built in a nightly run — the link above lists exactly what this run produced."
           } >> nightly/release_body.md
           cat nightly/release_body.md >> "$GITHUB_STEP_SUMMARY"
 
