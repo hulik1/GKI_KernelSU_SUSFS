@@ -133,19 +133,37 @@ runs:
             local max_attempts=3
             for ((i=1; i<=max_attempts; i++)); do
               echo "  Attempt $i for $file..."
+              echo "  File: $file ($(stat -c%s "$file" 2>/dev/null || echo "?") bytes) -> tag $TAG_NAME repo $TARGET_REPO"
               
+              set +e
+              tmp_log=$(mktemp)
               if [ "${{ inputs.debug }}" = "true" ]; then
-                if timeout 10m gh release upload "$TAG_NAME" "$file" --clobber --repo "$TARGET_REPO"; then
-                  echo "  Successfully uploaded $file"
-                  return 0
-                fi
+                set -x
+                timeout 10m gh release upload "$TAG_NAME" "$file" --clobber --repo "$TARGET_REPO" 2>&1 | tee "$tmp_log"; rc=${PIPESTATUS[0]}
+                set +x
               else
-                if timeout 10m gh release upload "$TAG_NAME" "$file" --clobber --repo "$TARGET_REPO" > /dev/null 2>&1; then
-                  echo "  Successfully uploaded $file"
-                  return 0
-                fi
+                timeout 10m gh release upload "$TAG_NAME" "$file" --clobber --repo "$TARGET_REPO" >"$tmp_log" 2>&1; rc=$?
+                cat "$tmp_log"
+              fi
+              set -e
+              
+              if [ $rc -eq 0 ]; then
+                echo "  Successfully uploaded $file"
+                rm -f "$tmp_log"
+                return 0
               fi
               
+              if [ $rc -eq 124 ]; then
+                echo "  ⚠ Attempt $i timed out after 10m (timeout exit 124)"
+              else
+                echo "  ⚠ Attempt $i failed with exit $rc"
+              fi
+              echo "  --- gh upload log ---"
+              cat "$tmp_log" || true
+              echo "  --- end log ---"
+              rm -f "$tmp_log"
+              echo "  GH_TOKEN set: $([ -n "$GH_TOKEN" ] && echo yes || echo no) | tag exists: $(git rev-parse "$TAG_NAME" >/dev/null 2>&1 && echo yes || echo no)"
+              gh auth status 2>&1 | head -n 20 || true
               echo "  ⚠ Attempt $i failed or timed out. Retrying..."
               sleep 5
             done
