@@ -1155,6 +1155,7 @@ jobs:
         ROOT_FLAVOR: ${{ inputs.root_flavor }}
         FEATURE_SET: ${{ needs.resolve-sources.outputs.feature_set }}
         MANAGER_LIST: ${{ needs.resolve-sources.outputs.manager_list }}
+        ROOT_MATRIX: ${{ needs.resolve-sources.outputs.root_matrix }}
         USE_SUSFS: ${{ inputs.use_susfs }}
         USE_NOMOUNT: ${{ inputs.use_nomount }}
         USE_BBG: ${{ inputs.use_bbg }}
@@ -1225,8 +1226,15 @@ jobs:
         kp=env("KERNEL_PATCHES_COMMIT","")
         ak=env("ANYKERNEL3_COMMIT","")
         ds=env("DROIDSPACES_COMMIT","")
-        _root_urls={"next":"https://github.com/KernelSU-Next/KernelSU-Next/commit/","kernelsu":"https://github.com/tiann/KernelSU/commit/","resukisu":"https://github.com/ReSukiSU/ReSukiSU/commit/"}
-        _root_commits={"next":kernelsu_commit,"kernelsu":ksu_commit,"resukisu":resukisu_commit}
+        _rmatrix={}
+        try: _rmatrix={m.get("root_flavor",""):m.get("root_commit","") for m in json.loads(env("ROOT_MATRIX","[]")) if isinstance(m,dict)}
+        except: pass
+        if env("USE_SUSFS","true")=="true":
+            _next_url="https://github.com/pershoot/KernelSU-Next/commit/"
+        else:
+            _next_url="https://github.com/KernelSU-Next/KernelSU-Next/commit/"
+        _root_urls={"next":_next_url,"kernelsu":"https://github.com/tiann/KernelSU/commit/","resukisu":"https://github.com/ReSukiSU/ReSukiSU/commit/"}
+        _root_commits={"next":_rmatrix.get("next","") or kernelsu_commit,"kernelsu":_rmatrix.get("kernelsu","") or ksu_commit,"resukisu":_rmatrix.get("resukisu","") or resukisu_commit}
         _flavors0=[m.get("flavor","") for m in parse_managers(env("MANAGER_LIST","")) if m.get("flavor","")]
         if not _flavors0:
             _flavors0={"KernelSU-Next":["next"],"KernelSU":["kernelsu"],"ReSukiSU":["resukisu"],"All":["next","kernelsu","resukisu"]}.get(root,["next","kernelsu","resukisu"])
@@ -1369,6 +1377,7 @@ jobs:
           ROOT_FLAVOR: ${{ inputs.root_flavor }}
           FEATURE_SET: ${{ needs.resolve-sources.outputs.feature_set }}
           MANAGER_LIST: ${{ needs.resolve-sources.outputs.manager_list }}
+          ROOT_MATRIX: ${{ needs.resolve-sources.outputs.root_matrix }}
           USE_SUSFS: ${{ inputs.use_susfs }}
           USE_NOMOUNT: ${{ inputs.use_nomount }}
           USE_BBG: ${{ inputs.use_bbg }}
@@ -1437,8 +1446,15 @@ jobs:
           kp=env("KERNEL_PATCHES_COMMIT","")
           ak=env("ANYKERNEL3_COMMIT","")
           ds=env("DROIDSPACES_COMMIT","")
-          _root_urls={"next":"https://github.com/KernelSU-Next/KernelSU-Next/commit/","kernelsu":"https://github.com/tiann/KernelSU/commit/","resukisu":"https://github.com/ReSukiSU/ReSukiSU/commit/"}
-          _root_commits={"next":kernelsu_commit,"kernelsu":ksu_commit,"resukisu":resukisu_commit}
+          _rmatrix={}
+          try: _rmatrix={m.get("root_flavor",""):m.get("root_commit","") for m in json.loads(env("ROOT_MATRIX","[]")) if isinstance(m,dict)}
+          except: pass
+          if env("USE_SUSFS","true")=="true":
+              _next_url="https://github.com/pershoot/KernelSU-Next/commit/"
+          else:
+              _next_url="https://github.com/KernelSU-Next/KernelSU-Next/commit/"
+          _root_urls={"next":_next_url,"kernelsu":"https://github.com/tiann/KernelSU/commit/","resukisu":"https://github.com/ReSukiSU/ReSukiSU/commit/"}
+          _root_commits={"next":_rmatrix.get("next","") or kernelsu_commit,"kernelsu":_rmatrix.get("kernelsu","") or ksu_commit,"resukisu":_rmatrix.get("resukisu","") or resukisu_commit}
           _flavors0=[m.get("flavor","") for m in parse_managers(env("MANAGER_LIST","")) if m.get("flavor","")]
           if not _flavors0:
               _flavors0={"KernelSU-Next":["next"],"KernelSU":["kernelsu"],"ReSukiSU":["resukisu"],"All":["next","kernelsu","resukisu"]}.get(root,["next","kernelsu","resukisu"])
