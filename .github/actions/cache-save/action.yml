@@ -82,7 +82,7 @@ runs:
           echo "Release '$TAG_NAME' not found. Creating release..."
           # ensure tag is pushed before creating release
           git push origin "$TAG_NAME" --force >/dev/null 2>&1 || true
-          gh release create "$TAG_NAME" --title "General Cache" --notes "Automated storage for build assets" --repo "$TARGET_REPO" || true
+          gh release create "$TAG_NAME" --title "General Cache" --notes "Automated storage for build assets" --prerelease --repo "$TARGET_REPO" || true
           # verify
           if gh release view "$TAG_NAME" --repo "$TARGET_REPO" >/dev/null 2>&1; then
             echo "Release '$TAG_NAME' created."
