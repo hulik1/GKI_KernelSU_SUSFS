@@ -103,6 +103,10 @@ on:
         description: "Performance"
         type: boolean
         default: false
+      test_release_notes:
+        description: "Render release notes preview only (skip all builds + release)"
+        type: boolean
+        default: false
 
 jobs:
   resolve-sources:
@@ -1176,6 +1180,13 @@ jobs:
         SUSFS_ANDROID14_6_1: ${{ needs.resolve-sources.outputs.susfs_commit_android14_6_1 }}
         SUSFS_ANDROID15_6_6: ${{ needs.resolve-sources.outputs.susfs_commit_android15_6_6 }}
         SUSFS_ANDROID16_6_12: ${{ needs.resolve-sources.outputs.susfs_commit_android16_6_12 }}
+        SUSFS_ANDROID12_5_10_RESUKISU: ${{ needs.resolve-sources.outputs.susfs_commit_android12_5_10_resukisu }}
+        SUSFS_ANDROID13_5_10_RESUKISU: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_10_resukisu }}
+        SUSFS_ANDROID13_5_15_RESUKISU: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_15_resukisu }}
+        SUSFS_ANDROID14_5_15_RESUKISU: ${{ needs.resolve-sources.outputs.susfs_commit_android14_5_15_resukisu }}
+        SUSFS_ANDROID14_6_1_RESUKISU: ${{ needs.resolve-sources.outputs.susfs_commit_android14_6_1_resukisu }}
+        SUSFS_ANDROID15_6_6_RESUKISU: ${{ needs.resolve-sources.outputs.susfs_commit_android15_6_6_resukisu }}
+        SUSFS_ANDROID16_6_12_RESUKISU: ${{ needs.resolve-sources.outputs.susfs_commit_android16_6_12_resukisu }}
       run: |
         set -e
 
@@ -1232,19 +1243,33 @@ jobs:
         lines.append("")
         lines.append("## Kernel Variants")
         lines.append("")
+        all_variants=["android12-5.10","android13-5.10","android13-5.15","android14-5.15","android14-6.1","android15-6.6","android16-6.12"]
+        def kbv_to_variant(kbv):
+            if ".x-android" in kbv:
+                kv, av = kbv.split(".x-android", 1)
+                v = f"android{av}-{kv}"
+                return v if v in all_variants else ""
+            return ""
         kbv=env("KERNEL_BUILD_VERSION","All")
-        variants=["android12-5.10","android13-5.10","android13-5.15","android14-5.15","android14-6.1","android15-6.6","android16-6.12"]
-        if kbv!="All" and kbv in variants: variants=[kbv]
-        lines.append(f"_Built variants: `{', '.join(variants)}` (filter: `{kbv}`)_")
-        lines.append("")
-        lines.append("| Variant | Cache | SUSFS branch | SUSFS commit |")
-        lines.append("|---|---|---|---|")
+        _sel=kbv_to_variant(kbv)
+        variants=[_sel] if _sel else list(all_variants)
         sus_map={"android12-5.10":env("SUSFS_ANDROID12_5_10",""),"android13-5.10":env("SUSFS_ANDROID13_5_10",""),"android13-5.15":env("SUSFS_ANDROID13_5_15",""),"android14-5.15":env("SUSFS_ANDROID14_5_15",""),"android14-6.1":env("SUSFS_ANDROID14_6_1",""),"android15-6.6":env("SUSFS_ANDROID15_6_6",""),"android16-6.12":env("SUSFS_ANDROID16_6_12","")}
-        for v in variants:
-            cache="ccache" if v in ["android12-5.10","android13-5.10","android13-5.15"] else "bazel"
-            sha=sus_map.get(v,"")
-            sha_s=f"`{sha[:12]}`" if sha else "_n/a_"
-            lines.append(f"| {v} | {cache} | gki-{v} | {sha_s} |")
+        sus_map_resukisu={"android12-5.10":env("SUSFS_ANDROID12_5_10_RESUKISU",""),"android13-5.10":env("SUSFS_ANDROID13_5_10_RESUKISU",""),"android13-5.15":env("SUSFS_ANDROID13_5_15_RESUKISU",""),"android14-5.15":env("SUSFS_ANDROID14_5_15_RESUKISU",""),"android14-6.1":env("SUSFS_ANDROID14_6_1_RESUKISU",""),"android15-6.6":env("SUSFS_ANDROID15_6_6_RESUKISU",""),"android16-6.12":env("SUSFS_ANDROID16_6_12_RESUKISU","")}
+        _flavors=[m.get("flavor","") for m in parse_managers(env("MANAGER_LIST","")) if m.get("flavor","")]
+        if not _flavors:
+            _flavors={"KernelSU-Next":["next"],"KernelSU":["kernelsu"],"ReSukiSU":["resukisu"],"All":["next","kernelsu","resukisu"]}.get(root,["next","kernelsu","resukisu"])
+        _labels={"next":"KernelSU-Next","kernelsu":"KernelSU","resukisu":"ReSukiSU"}
+        for _fl in _flavors:
+            _sm=sus_map_resukisu if _fl=="resukisu" else sus_map
+            lines.append(f"### {_labels.get(_fl,_fl)}")
+            lines.append("")
+            lines.append("| Variant | SUSFS branch | SUSFS commit |")
+            lines.append("|---|---|---|")
+            for v in variants:
+                sha=_sm.get(v,"")
+                sha_s=f"`{sha[:12]}`" if sha else "_n/a_"
+                lines.append(f"| {v} | gki-{v} | {sha_s} |")
+            lines.append("")
         lines.append("")
         lines.append("## Commits (detailed)")
         lines.append("")
@@ -1257,9 +1282,11 @@ jobs:
         if kernelsu_commit and kernelsu_commit!=ksun_commit: lines.append(f"- **KSU-Next official dev:** `{kernelsu_commit[:12]}` `{kernelsu_commit}`")
         if ksu_commit: lines.append(f"- **KernelSU (tiann):** `{ksu_commit[:12]}` `{ksu_commit}`")
         if resukisu_commit: lines.append(f"- **ReSukiSU:** `{resukisu_commit[:12]}` `{resukisu_commit}`")
-        for var in ["android12-5.10","android13-5.10","android13-5.15","android14-5.15","android14-6.1","android15-6.6","android16-6.12"]:
+        for var in variants:
             sha=sus_map.get(var,"")
             if sha and len(sha)==40: lines.append(f"- **SUSFS {var}:** `{sha[:12]}` `{sha}`")
+            rsha=sus_map_resukisu.get(var,"")
+            if rsha and len(rsha)==40 and rsha!=sha: lines.append(f"- **SUSFS {var} (ReSukiSU):** `{rsha[:12]}` `{rsha}`")
         sha=env("SUSFS_COMMIT")
         if sha and len(sha)==40 and not any(sus_map.values()): lines.append(f"- **SUSFS:** `{sha[:12]}` `{sha}`")
         if env("NOMOUNT_COMMIT"): lines.append(f"- **NoMount:** `{env('NOMOUNT_COMMIT')[:12]}` `{env('NOMOUNT_COMMIT')}`")
@@ -1387,6 +1414,13 @@ jobs:
           SUSFS_ANDROID14_6_1: ${{ needs.resolve-sources.outputs.susfs_commit_android14_6_1 }}
           SUSFS_ANDROID15_6_6: ${{ needs.resolve-sources.outputs.susfs_commit_android15_6_6 }}
           SUSFS_ANDROID16_6_12: ${{ needs.resolve-sources.outputs.susfs_commit_android16_6_12 }}
+          SUSFS_ANDROID12_5_10_RESUKISU: ${{ needs.resolve-sources.outputs.susfs_commit_android12_5_10_resukisu }}
+          SUSFS_ANDROID13_5_10_RESUKISU: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_10_resukisu }}
+          SUSFS_ANDROID13_5_15_RESUKISU: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_15_resukisu }}
+          SUSFS_ANDROID14_5_15_RESUKISU: ${{ needs.resolve-sources.outputs.susfs_commit_android14_5_15_resukisu }}
+          SUSFS_ANDROID14_6_1_RESUKISU: ${{ needs.resolve-sources.outputs.susfs_commit_android14_6_1_resukisu }}
+          SUSFS_ANDROID15_6_6_RESUKISU: ${{ needs.resolve-sources.outputs.susfs_commit_android15_6_6_resukisu }}
+          SUSFS_ANDROID16_6_12_RESUKISU: ${{ needs.resolve-sources.outputs.susfs_commit_android16_6_12_resukisu }}
           # KSU version not computed here; render will show placeholder if release job skipped
         run: |
           set -e
@@ -1439,19 +1473,33 @@ jobs:
           lines.append("")
           lines.append("## Kernel Variants")
           lines.append("")
+          all_variants=["android12-5.10","android13-5.10","android13-5.15","android14-5.15","android14-6.1","android15-6.6","android16-6.12"]
+          def kbv_to_variant(kbv):
+              if ".x-android" in kbv:
+                  kv, av = kbv.split(".x-android", 1)
+                  v = f"android{av}-{kv}"
+                  return v if v in all_variants else ""
+              return ""
           kbv=env("KERNEL_BUILD_VERSION","All")
-          variants=["android12-5.10","android13-5.10","android13-5.15","android14-5.15","android14-6.1","android15-6.6","android16-6.12"]
-          if kbv!="All" and kbv in variants: variants=[kbv]
-          lines.append(f"_Built variants: `{', '.join(variants)}` (filter: `{kbv}`)_")
-          lines.append("")
-          lines.append("| Variant | Cache | SUSFS branch | SUSFS commit |")
-          lines.append("|---|---|---|---|")
+          _sel=kbv_to_variant(kbv)
+          variants=[_sel] if _sel else list(all_variants)
           sus_map={"android12-5.10":env("SUSFS_ANDROID12_5_10",""),"android13-5.10":env("SUSFS_ANDROID13_5_10",""),"android13-5.15":env("SUSFS_ANDROID13_5_15",""),"android14-5.15":env("SUSFS_ANDROID14_5_15",""),"android14-6.1":env("SUSFS_ANDROID14_6_1",""),"android15-6.6":env("SUSFS_ANDROID15_6_6",""),"android16-6.12":env("SUSFS_ANDROID16_6_12","")}
-          for v in variants:
-              cache="ccache" if v in ["android12-5.10","android13-5.10","android13-5.15"] else "bazel"
-              sha=sus_map.get(v,"")
-              sha_s=f"`{sha[:12]}`" if sha else "_n/a_"
-              lines.append(f"| {v} | {cache} | gki-{v} | {sha_s} |")
+          sus_map_resukisu={"android12-5.10":env("SUSFS_ANDROID12_5_10_RESUKISU",""),"android13-5.10":env("SUSFS_ANDROID13_5_10_RESUKISU",""),"android13-5.15":env("SUSFS_ANDROID13_5_15_RESUKISU",""),"android14-5.15":env("SUSFS_ANDROID14_5_15_RESUKISU",""),"android14-6.1":env("SUSFS_ANDROID14_6_1_RESUKISU",""),"android15-6.6":env("SUSFS_ANDROID15_6_6_RESUKISU",""),"android16-6.12":env("SUSFS_ANDROID16_6_12_RESUKISU","")}
+          _flavors=[m.get("flavor","") for m in parse_managers(env("MANAGER_LIST","")) if m.get("flavor","")]
+          if not _flavors:
+              _flavors={"KernelSU-Next":["next"],"KernelSU":["kernelsu"],"ReSukiSU":["resukisu"],"All":["next","kernelsu","resukisu"]}.get(root,["next","kernelsu","resukisu"])
+          _labels={"next":"KernelSU-Next","kernelsu":"KernelSU","resukisu":"ReSukiSU"}
+          for _fl in _flavors:
+              _sm=sus_map_resukisu if _fl=="resukisu" else sus_map
+              lines.append(f"### {_labels.get(_fl,_fl)}")
+              lines.append("")
+              lines.append("| Variant | SUSFS branch | SUSFS commit |")
+              lines.append("|---|---|---|")
+              for v in variants:
+                  sha=_sm.get(v,"")
+                  sha_s=f"`{sha[:12]}`" if sha else "_n/a_"
+                  lines.append(f"| {v} | gki-{v} | {sha_s} |")
+              lines.append("")
           lines.append("")
           lines.append("## Commits (detailed)")
           lines.append("")
@@ -1464,9 +1512,11 @@ jobs:
           if kernelsu_commit and kernelsu_commit!=ksun_commit: lines.append(f"- **KSU-Next official dev:** `{kernelsu_commit[:12]}` `{kernelsu_commit}`")
           if ksu_commit: lines.append(f"- **KernelSU (tiann):** `{ksu_commit[:12]}` `{ksu_commit}`")
           if resukisu_commit: lines.append(f"- **ReSukiSU:** `{resukisu_commit[:12]}` `{resukisu_commit}`")
-          for var in ["android12-5.10","android13-5.10","android13-5.15","android14-5.15","android14-6.1","android15-6.6","android16-6.12"]:
+          for var in variants:
               sha=sus_map.get(var,"")
               if sha and len(sha)==40: lines.append(f"- **SUSFS {var}:** `{sha[:12]}` `{sha}`")
+              rsha=sus_map_resukisu.get(var,"")
+              if rsha and len(rsha)==40 and rsha!=sha: lines.append(f"- **SUSFS {var} (ReSukiSU):** `{rsha[:12]}` `{rsha}`")
           sha=env("SUSFS_COMMIT")
           if sha and len(sha)==40 and not any(sus_map.values()): lines.append(f"- **SUSFS:** `{sha[:12]}` `{sha}`")
           if env("NOMOUNT_COMMIT"): lines.append(f"- **NoMount:** `{env('NOMOUNT_COMMIT')[:12]}` `{env('NOMOUNT_COMMIT')}`")
