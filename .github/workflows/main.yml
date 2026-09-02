@@ -1252,7 +1252,7 @@ jobs:
         ak=env("ANYKERNEL3_COMMIT","")
         ds=env("DROIDSPACES_COMMIT","")
         lines.append("")
-        lines.append("## SUSFS4KSU")
+        lines.append("## SUSFS commits")
         lines.append("")
         all_variants=["android12-5.10","android13-5.10","android13-5.15","android14-5.15","android14-6.1","android15-6.6","android16-6.12"]
         def kbv_to_variant(kbv):
@@ -1271,7 +1271,7 @@ jobs:
             _flavors={"KernelSU-Next":["next"],"KernelSU":["kernelsu"],"ReSukiSU":["resukisu"],"All":["next","kernelsu","resukisu"]}.get(root,["next","kernelsu","resukisu"])
         _labels={"next":"KernelSU-Next","kernelsu":"KernelSU","resukisu":"ReSukiSU"}
         _susfs_url="https://gitlab.com/simonpunk/susfs4ksu"
-        lines.append("| SUSFS branch |" + "".join(f" {_labels.get(_fl,_fl)} SUSFS commit |" for _fl in _flavors))
+        lines.append("| SUSFS branch |" + "".join(f" {_labels.get(_fl,_fl)} |" for _fl in _flavors))
         lines.append("|---" * (len(_flavors) + 1) + "|")
         for v in variants:
             _row=f"| gki-{v} |"
@@ -1464,7 +1464,7 @@ jobs:
           ak=env("ANYKERNEL3_COMMIT","")
           ds=env("DROIDSPACES_COMMIT","")
           lines.append("")
-          lines.append("## SUSFS4KSU")
+          lines.append("## SUSFS commits")
           lines.append("")
           all_variants=["android12-5.10","android13-5.10","android13-5.15","android14-5.15","android14-6.1","android15-6.6","android16-6.12"]
           def kbv_to_variant(kbv):
@@ -1483,7 +1483,7 @@ jobs:
               _flavors={"KernelSU-Next":["next"],"KernelSU":["kernelsu"],"ReSukiSU":["resukisu"],"All":["next","kernelsu","resukisu"]}.get(root,["next","kernelsu","resukisu"])
           _labels={"next":"KernelSU-Next","kernelsu":"KernelSU","resukisu":"ReSukiSU"}
           _susfs_url="https://gitlab.com/simonpunk/susfs4ksu"
-          lines.append("| SUSFS branch |" + "".join(f" {_labels.get(_fl,_fl)} SUSFS commit |" for _fl in _flavors))
+          lines.append("| SUSFS branch |" + "".join(f" {_labels.get(_fl,_fl)} |" for _fl in _flavors))
           lines.append("|---" * (len(_flavors) + 1) + "|")
           for v in variants:
               _row=f"| gki-{v} |"
