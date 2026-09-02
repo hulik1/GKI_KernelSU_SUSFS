@@ -467,7 +467,6 @@ jobs:
       uses: ./.github/actions/build-kernel
       with:
         version: ${{ inputs.version }}
-        bypass: false
 
     - name: Get Cache Stats
       uses: ./.github/actions/cache-stats
@@ -514,7 +513,6 @@ jobs:
         KBUILD_BUILD_TIMESTAMP: ${{ env.KBUILD_BUILD_TIMESTAMP }}
       uses: ./.github/actions/build-kernel
       with:
-        bypass: true
         version: ${{ inputs.version }}
 
     - name: Consolidated Build Summary
