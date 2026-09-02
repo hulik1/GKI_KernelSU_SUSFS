@@ -1249,7 +1249,7 @@ jobs:
         ak=env("ANYKERNEL3_COMMIT","")
         ds=env("DROIDSPACES_COMMIT","")
         lines.append("")
-        lines.append("## Kernel Variants")
+        lines.append("## SUSFS4KSU")
         lines.append("")
         all_variants=["android12-5.10","android13-5.10","android13-5.15","android14-5.15","android14-6.1","android15-6.6","android16-6.12"]
         def kbv_to_variant(kbv):
@@ -1458,7 +1458,7 @@ jobs:
           ak=env("ANYKERNEL3_COMMIT","")
           ds=env("DROIDSPACES_COMMIT","")
           lines.append("")
-          lines.append("## Kernel Variants")
+          lines.append("## SUSFS4KSU")
           lines.append("")
           all_variants=["android12-5.10","android13-5.10","android13-5.15","android14-5.15","android14-6.1","android15-6.6","android16-6.12"]
           def kbv_to_variant(kbv):
