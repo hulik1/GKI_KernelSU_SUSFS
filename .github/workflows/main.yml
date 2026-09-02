@@ -5,6 +5,8 @@ permissions:
   actions: write
 
 on:
+  push:
+    branches: [dev]
   workflow_dispatch:
     inputs:
       release_type:
@@ -149,7 +151,7 @@ jobs:
           # Commit resolution mode. 'latest' (default) resolves branch tips at
           # run time via git ls-remote. 'verified' uses the audited pins below for
           # NoMount, kernelsu/resukisu roots, and SUSFS; KernelSU-Next stays latest.
-          COMMIT_MODE="${{ inputs.commit_mode }}"
+          COMMIT_MODE="${{ inputs.commit_mode || 'verified' }}"
           echo "commit_mode=${COMMIT_MODE}"
 
           retry() {
@@ -239,7 +241,7 @@ jobs:
             printf '{"root_flavor":"%s","variant":"%s","root_commit":"%s"}' "$1" "$2" "$3"
           }
 
-          case "${{ inputs.root_flavor }}" in
+          case "${{ inputs.root_flavor || 'All' }}" in
             KernelSU)
               echo "root_flavor=kernelsu" >> "$GITHUB_OUTPUT"
               emit root_commit "$KERNELSU_COMMIT"
@@ -378,7 +380,7 @@ jobs:
             esac
           }
 
-          FLAVORS="${{ inputs.root_flavor }}"
+          FLAVORS="${{ inputs.root_flavor || 'All' }}"
           echo "Root flavor: ${FLAVORS}"
           LIST=""
           case "${FLAVORS}" in
@@ -438,7 +440,7 @@ jobs:
 
   list-manager-apks:
     needs: resolve-sources
-    if: "!inputs.test_release_notes && needs.resolve-sources.outputs.manager_list != ''"
+    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && needs.resolve-sources.outputs.manager_list != ''"
     runs-on: ubuntu-latest
     outputs:
       apk_list: ${{ steps.scan.outputs.apk_list }}
@@ -551,7 +553,7 @@ jobs:
 
   publish-manager-artifacts:
     needs: list-manager-apks
-    if: "!inputs.test_release_notes && needs.list-manager-apks.outputs.apk_list != ''"
+    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && needs.list-manager-apks.outputs.apk_list != ''"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -576,7 +578,7 @@ jobs:
 
   build-nomount-module:
     needs: resolve-sources
-    if: "!inputs.test_release_notes"
+    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -617,7 +619,7 @@ jobs:
     - resolve-sources
     - build-nomount-module
     - publish-manager-artifacts
-    if: "!inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '5.10.x-android12')"
+    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '5.10.x-android12')"
     strategy:
       fail-fast: false
       matrix:
@@ -646,7 +648,7 @@ jobs:
     - resolve-sources
     - build-nomount-module
     - publish-manager-artifacts
-    if: "!inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '5.10.x-android13')"
+    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '5.10.x-android13')"
     strategy:
       fail-fast: false
       matrix:
@@ -675,7 +677,7 @@ jobs:
     - resolve-sources
     - build-nomount-module
     - publish-manager-artifacts
-    if: "!inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '5.15.x-android13')"
+    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '5.15.x-android13')"
     strategy:
       fail-fast: false
       matrix:
@@ -704,7 +706,7 @@ jobs:
     - resolve-sources
     - build-nomount-module
     - publish-manager-artifacts
-    if: "!inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '5.15.x-android14')"
+    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '5.15.x-android14')"
     strategy:
       fail-fast: false
       matrix:
@@ -733,7 +735,7 @@ jobs:
     - resolve-sources
     - build-nomount-module
     - publish-manager-artifacts
-    if: "!inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '6.1.x-android14')"
+    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '6.1.x-android14')"
     strategy:
       fail-fast: false
       matrix:
@@ -762,7 +764,7 @@ jobs:
     - resolve-sources
     - build-nomount-module
     - publish-manager-artifacts
-    if: "!inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '6.6.x-android15')"
+    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '6.6.x-android15')"
     strategy:
       fail-fast: false
       matrix:
@@ -791,7 +793,7 @@ jobs:
     - resolve-sources
     - build-nomount-module
     - publish-manager-artifacts
-    if: "!inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '6.12.x-android16')"
+    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && (inputs.kernel_build_version == 'All' || inputs.kernel_build_version == '6.12.x-android16')"
     strategy:
       fail-fast: false
       matrix:
@@ -816,7 +818,7 @@ jobs:
     secrets: inherit
 
   update-verified-pins:
-    if: "!inputs.test_release_notes && inputs.commit_mode == 'update'"
+    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && inputs.commit_mode == 'update'"
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -867,7 +869,7 @@ jobs:
         git commit -m "chore(pins): promote verified commits to latest built (${STAMP})"
         git push
   rej:
-    if: "!inputs.test_release_notes && always()"
+    if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && always()"
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -1195,11 +1197,11 @@ jobs:
 
         python3 - <<'PYEOF' > release_body.md
         import json, os
-        def env(n,d=""): return os.environ.get(n,d).strip()
+        def env(n,d=""): return os.environ.get(n,d).strip() or d
         def parse_managers(raw):
             try: return json.loads(raw) if raw.strip() else []
             except: return []
-        root = env("ROOT_FLAVOR","unknown")
+        root = env("ROOT_FLAVOR","All")
         feats=[]
         if env("USE_SUSFS","true")=="true": feats.append("SUSFS")
         if env("USE_NOMOUNT","true")=="true": feats.append("NoMount")
@@ -1210,7 +1212,7 @@ jobs:
         if env("USE_PTRACE","true")=="true": feats.append("Ptrace Leak Fix")
         if env("USE_UNICODE","true")=="true": feats.append("Unicode Fix")
         if env("USE_BPF","true")=="true": feats.append("BTF / eBPF / FUSE-BPF")
-        if env("USE_PERF","true")=="true": feats.append("Performance Tuning")
+        if env("USE_PERF","false")=="true": feats.append("Performance Tuning")
         lines=[]
         lines.append("# Wild Kernels for GKI2 Devices")
         lines.append("")
@@ -1260,6 +1262,7 @@ jobs:
         if not _flavors:
             _flavors={"KernelSU-Next":["next"],"KernelSU":["kernelsu"],"ReSukiSU":["resukisu"],"All":["next","kernelsu","resukisu"]}.get(root,["next","kernelsu","resukisu"])
         _labels={"next":"KernelSU-Next","kernelsu":"KernelSU","resukisu":"ReSukiSU"}
+        _susfs_url="https://gitlab.com/simonpunk/susfs4ksu"
         for _fl in _flavors:
             _sm=sus_map_resukisu if _fl=="resukisu" else sus_map
             lines.append(f"### {_labels.get(_fl,_fl)}")
@@ -1267,9 +1270,11 @@ jobs:
             lines.append("| SUSFS branch | SUSFS commit |")
             lines.append("|---|---|")
             for v in variants:
+                _br=f"gki-{v}"
+                _br_s=f"[{_br}]({_susfs_url}/-/tree/{_br})"
                 sha=_sm.get(v,"")
-                sha_s=f"`{sha[:12]}`" if sha else "_n/a_"
-                lines.append(f"| gki-{v} | {sha_s} |")
+                sha_s=f"[`{sha[:12]}`]({_susfs_url}/-/commit/{sha})" if sha else "_n/a_"
+                lines.append(f"| {_br_s} | {sha_s} |")
             lines.append("")
         lines.append("")
         lines.append("## Commits (detailed)")
@@ -1377,7 +1382,7 @@ jobs:
           release-assets/**/*-boot*.img
 
   notes-preview:
-    if: always() && github.event_name == 'workflow_dispatch'
+    if: always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'push')
     needs: [resolve-sources, build-android12-5-10, build-android13-5-10, build-android13-5-15, build-android14-5-15, build-android14-6-1, build-android15-6-6, build-android16-6-12, release]
     runs-on: ubuntu-latest
     steps:
@@ -1425,11 +1430,11 @@ jobs:
           set -e
             python3 - <<'PYEOF' > release_body.md
           import json, os
-          def env(n,d=""): return os.environ.get(n,d).strip()
+          def env(n,d=""): return os.environ.get(n,d).strip() or d
           def parse_managers(raw):
               try: return json.loads(raw) if raw.strip() else []
               except: return []
-          root = env("ROOT_FLAVOR","unknown")
+          root = env("ROOT_FLAVOR","All")
           feats=[]
           if env("USE_SUSFS","true")=="true": feats.append("SUSFS")
           if env("USE_NOMOUNT","true")=="true": feats.append("NoMount")
@@ -1440,7 +1445,7 @@ jobs:
           if env("USE_PTRACE","true")=="true": feats.append("Ptrace Leak Fix")
           if env("USE_UNICODE","true")=="true": feats.append("Unicode Fix")
           if env("USE_BPF","true")=="true": feats.append("BTF / eBPF / FUSE-BPF")
-          if env("USE_PERF","true")=="true": feats.append("Performance Tuning")
+          if env("USE_PERF","false")=="true": feats.append("Performance Tuning")
           lines=[]
           lines.append("# Wild Kernels for GKI2 Devices")
           lines.append("")
@@ -1488,6 +1493,7 @@ jobs:
           if not _flavors:
               _flavors={"KernelSU-Next":["next"],"KernelSU":["kernelsu"],"ReSukiSU":["resukisu"],"All":["next","kernelsu","resukisu"]}.get(root,["next","kernelsu","resukisu"])
           _labels={"next":"KernelSU-Next","kernelsu":"KernelSU","resukisu":"ReSukiSU"}
+          _susfs_url="https://gitlab.com/simonpunk/susfs4ksu"
           for _fl in _flavors:
               _sm=sus_map_resukisu if _fl=="resukisu" else sus_map
               lines.append(f"### {_labels.get(_fl,_fl)}")
@@ -1495,9 +1501,11 @@ jobs:
               lines.append("| SUSFS branch | SUSFS commit |")
               lines.append("|---|---|")
               for v in variants:
+                  _br=f"gki-{v}"
+                  _br_s=f"[{_br}]({_susfs_url}/-/tree/{_br})"
                   sha=_sm.get(v,"")
-                  sha_s=f"`{sha[:12]}`" if sha else "_n/a_"
-                  lines.append(f"| gki-{v} | {sha_s} |")
+                  sha_s=f"[`{sha[:12]}`]({_susfs_url}/-/commit/{sha})" if sha else "_n/a_"
+                  lines.append(f"| {_br_s} | {sha_s} |")
               lines.append("")
           lines.append("")
           lines.append("## Commits (detailed)")
