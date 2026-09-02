@@ -19,10 +19,6 @@ on:
         description: "Use ccache/bazel cache (restore/save)"
         type: boolean
         default: true
-      bypass:
-        description: "Apply kernel version-check bypass hack"
-        type: boolean
-        default: false
       kernel_build_version:
         description: "Kernel Version"
         type: choice
@@ -637,7 +633,6 @@ jobs:
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
-      bypass: ${{ inputs.bypass }}
       use_cache: ${{ inputs.use_cache }}
     secrets: inherit
 
@@ -666,7 +661,6 @@ jobs:
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
-      bypass: ${{ inputs.bypass }}
       use_cache: ${{ inputs.use_cache }}
     secrets: inherit
 
@@ -695,7 +689,6 @@ jobs:
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
-      bypass: ${{ inputs.bypass }}
       use_cache: ${{ inputs.use_cache }}
     secrets: inherit
 
@@ -724,7 +717,6 @@ jobs:
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
-      bypass: ${{ inputs.bypass }}
       use_cache: ${{ inputs.use_cache }}
     secrets: inherit
 
@@ -753,7 +745,6 @@ jobs:
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
-      bypass: ${{ inputs.bypass }}
       use_cache: ${{ inputs.use_cache }}
     secrets: inherit
 
@@ -782,7 +773,6 @@ jobs:
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
-      bypass: ${{ inputs.bypass }}
       use_cache: ${{ inputs.use_cache }}
     secrets: inherit
 
@@ -811,7 +801,6 @@ jobs:
       droidspaces_commit: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
       os_patch_level: ${{ inputs.os_patch_level }}
-      bypass: ${{ inputs.bypass }}
       use_cache: ${{ inputs.use_cache }}
     secrets: inherit
 

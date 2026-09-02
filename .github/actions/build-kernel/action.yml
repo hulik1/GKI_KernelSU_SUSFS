@@ -1,9 +1,6 @@
 name: 'Build Kernel'
 description: 'Builds kernel using legacy build.sh or Bazel (kleaf)'
 inputs:
-  bypass:
-    description: 'Whether to add the bypass hack or not'
-    required: true
   version:
     description: 'Kernel config version (e.g., android14-6.1)'
     required: true
@@ -50,20 +47,12 @@ runs:
       set -euo pipefail
       if [ -f "bazel-bin/common/kernel_aarch64/Image" ]; then
         echo "Found Image at bazel-bin/common/kernel_aarch64/Image"
-        if [[ ${{ inputs.bypass }} == "true" ]]; then
-          cp "bazel-bin/common/kernel_aarch64/Image" "${{ github.workspace }}/AnyKernel3/Bypass-Image"
-        else
-          cp "bazel-bin/common/kernel_aarch64/Image" "${{ github.workspace }}/AnyKernel3/Image"
-        fi
+        cp "bazel-bin/common/kernel_aarch64/Image" "${{ github.workspace }}/AnyKernel3/Image"
         exit 0
         fi
       if [ -f "/home/runner/out/dist/Image" ]; then
         echo "Found Image at /home/runner/out/dist/Image"
-        if [[ ${{ inputs.bypass }} == "true" ]]; then
-          cp "/home/runner/out/dist/Image" "${{ github.workspace }}/AnyKernel3/Bypass-Image"
-        else
-          cp "/home/runner/out/dist/Image" "${{ github.workspace }}/AnyKernel3/Image"
-        fi
+        cp "/home/runner/out/dist/Image" "${{ github.workspace }}/AnyKernel3/Image"
         exit 0
       fi
 
