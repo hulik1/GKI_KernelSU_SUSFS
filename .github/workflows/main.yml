@@ -1367,6 +1367,46 @@ jobs:
           release-assets/**/*.apk
           release-assets/**/*-boot*.img
 
+  nightly-release:
+    if: always() && github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && inputs.release_type == 'Action'
+    needs: [notes-preview]
+    runs-on: ubuntu-latest
+    concurrency:
+      group: nightly-release-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download release notes preview
+        uses: actions/download-artifact@v7
+        with:
+          name: release-notes-preview
+          path: nightly
+          if-no-files-found: error
+
+      - name: Append nightly.link URL
+        run: |
+          {
+            echo ""
+            echo "- **Nightly artifacts:** https://nightly.link/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } >> nightly/release_body.md
+          cat nightly/release_body.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Replace nightly prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          gh release delete nightly --cleanup-tag -y || true
+          if git ls-remote --tags origin nightly | grep -q 'refs/tags/nightly'; then
+            git push --delete origin nightly || true
+          fi
+          gh release create nightly \
+            --target "${{ github.sha }}" \
+            --prerelease \
+            --title "Nightly (${{ github.ref_name }} $(date -u +%Y-%m-%d))" \
+            --notes-file nightly/release_body.md
+
   notes-preview:
     if: always() && github.event_name == 'workflow_dispatch'
     needs: [resolve-sources, build-android12-5-10, build-android13-5-10, build-android13-5-15, build-android14-5-15, build-android14-6-1, build-android15-6-6, build-android16-6-12, release]
