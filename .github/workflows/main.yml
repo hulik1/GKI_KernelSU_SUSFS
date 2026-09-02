@@ -364,7 +364,7 @@ jobs:
                     exit 1
                   fi
                 fi
-                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s","want":"Manager-release,Spoofed-Manager-release,Manager-debug"}' \
+                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s","want":"Manager-release,Spoofed-Manager-release"}' \
                   "$flavor" "$owner" "$repo" "$run_id" "$stock"
                 ;;
               *)
@@ -510,6 +510,23 @@ jobs:
               fi
             )
           done
+          # Filter ReSukiSU to only release universal and universal spoofed (drop debug/non-universal)
+          if grep -q "ReSukiSU|ReSukiSU|" "$MANIFEST" 2>/dev/null; then
+            tmp_manifest="${MANIFEST}.filtered"
+            : > "$tmp_manifest"
+            while IFS='|' read -r o r n; do
+              [ -n "$n" ] || continue
+              if [ "$o" = "ReSukiSU" ] && [ "$r" = "ReSukiSU" ]; then
+                ln=$(echo "$n" | tr '[:upper:]' '[:lower:]')
+                # keep only universal apks, drop debug
+                if [[ "$ln" != *universal* ]]; then echo "Dropping ReSukiSU non-universal $n" >&2; rm -f "$OUT_APKS/$n"; continue; fi
+                if [[ "$ln" == *debug* ]]; then echo "Dropping ReSukiSU debug $n" >&2; rm -f "$OUT_APKS/$n"; continue; fi
+                # now only universal release and universal spoofed remain
+              fi
+              echo "$o|$r|$n" >> "$tmp_manifest"
+            done < "$MANIFEST"
+            mv "$tmp_manifest" "$MANIFEST"
+          fi
           # Build the flat apk list from the manifest (single source of truth)
           APK_JSON="[]"
           while IFS='|' read -r o r n; do
@@ -549,7 +566,7 @@ jobs:
       - name: Upload ${{ matrix.item.apk }} as its own artifact
         uses: actions/upload-artifact@v7
         with:
-          name: manager-apk-${{ matrix.item.apk }}
+          name: ${{ matrix.item.apk }}
           path: manager_apks/${{ matrix.item.apk }}
           if-no-files-found: error
 
@@ -1200,12 +1217,9 @@ jobs:
         ksu_commit=env("KSU_COMMIT","")
         resukisu_commit=env("RESUKISU_COMMIT","")
         kernelsu_commit=env("KERNELSU_COMMIT","")
-        if ksun_commit: lines.append(f"| KernelSU-Next (SUSFS) | pershoot/KernelSU-Next#{ksun_branch} | `{ksun_commit[:12]}` `{ksun_commit}` |")
-        elif kernelsu_commit: lines.append(f"| KernelSU-Next (official) | KernelSU-Next/KernelSU-Next#dev | `{kernelsu_commit[:12]}` |")
+        if kernelsu_commit: lines.append(f"| KernelSU-Next (official) | KernelSU-Next/KernelSU-Next#dev | `{kernelsu_commit[:12]}` |")
         if ksu_commit: lines.append(f"| KernelSU (tiann) | tiann/KernelSU#main | `{ksu_commit[:12]}` `{ksu_commit}` |")
         if resukisu_commit: lines.append(f"| ReSukiSU | ReSukiSU/ReSukiSU#main | `{resukisu_commit[:12]}` `{resukisu_commit}` |")
-        if env("USE_SUSFS","true")=="true":
-            lines.append(f"| SUSFS | simonpunk/susfs4ksu | per-variant (see below) |")
         if env("USE_NOMOUNT","true")=="true":
             nm=env("NOMOUNT_COMMIT","")
             if nm: lines.append(f"| NoMount | maxsteeel/nomount#dev | `{nm[:12]}` `{nm}` |")
@@ -1279,7 +1293,7 @@ jobs:
       uses: actions/download-artifact@v7
       with:
         path: release-assets/manager
-        pattern: 'manager-apk-*'
+        pattern: '*.apk'
         merge-multiple: true
         if-no-files-found: ignore
 
@@ -1410,12 +1424,9 @@ jobs:
           ksu_commit=env("KSU_COMMIT","")
           resukisu_commit=env("RESUKISU_COMMIT","")
           kernelsu_commit=env("KERNELSU_COMMIT","")
-          if ksun_commit: lines.append(f"| KernelSU-Next (SUSFS) | pershoot/KernelSU-Next#{ksun_branch} | `{ksun_commit[:12]}` `{ksun_commit}` |")
-          elif kernelsu_commit: lines.append(f"| KernelSU-Next (official) | KernelSU-Next/KernelSU-Next#dev | `{kernelsu_commit[:12]}` |")
+          if kernelsu_commit: lines.append(f"| KernelSU-Next (official) | KernelSU-Next/KernelSU-Next#dev | `{kernelsu_commit[:12]}` |")
           if ksu_commit: lines.append(f"| KernelSU (tiann) | tiann/KernelSU#main | `{ksu_commit[:12]}` `{ksu_commit}` |")
           if resukisu_commit: lines.append(f"| ReSukiSU | ReSukiSU/ReSukiSU#main | `{resukisu_commit[:12]}` `{resukisu_commit}` |")
-          if env("USE_SUSFS","true")=="true":
-              lines.append(f"| SUSFS | simonpunk/susfs4ksu | per-variant (see below) |")
           if env("USE_NOMOUNT","true")=="true":
               nm=env("NOMOUNT_COMMIT","")
               if nm: lines.append(f"| NoMount | maxsteeel/nomount#dev | `{nm[:12]}` `{nm}` |")

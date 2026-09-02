@@ -257,7 +257,7 @@ jobs:
                     exit 1
                   fi
                 fi
-                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s","want":"Manager-release,Spoofed-Manager-release,Manager-debug"}' \
+                printf '{"flavor":"%s","owner":"%s","repo":"%s","source":"run","run_id":%s,"stock":"%s","want":"Manager-release,Spoofed-Manager-release"}' \
                   "$flavor" "$owner" "$repo" "$run_id" "$stock"
                 ;;
 
@@ -364,6 +364,21 @@ jobs:
               fi
             )
           done
+          # Filter ReSukiSU to only release universal and universal spoofed
+          if grep -q "ReSukiSU|ReSukiSU|" "$MANIFEST" 2>/dev/null; then
+            tmp_manifest="${MANIFEST}.filtered"
+            : > "$tmp_manifest"
+            while IFS='|' read -r o r n; do
+              [ -n "$n" ] || continue
+              if [ "$o" = "ReSukiSU" ] && [ "$r" = "ReSukiSU" ]; then
+                ln=$(echo "$n" | tr '[:upper:]' '[:lower:]')
+                if [[ "$ln" != *universal* ]]; then echo "Dropping ReSukiSU non-universal $n" >&2; rm -f "$OUT_APKS/$n"; continue; fi
+                if [[ "$ln" == *debug* ]]; then echo "Dropping ReSukiSU debug $n" >&2; rm -f "$OUT_APKS/$n"; continue; fi
+              fi
+              echo "$o|$r|$n" >> "$tmp_manifest"
+            done < "$MANIFEST"
+            mv "$tmp_manifest" "$MANIFEST"
+          fi
           APK_JSON="[]"
           while IFS='|' read -r o r n; do
             [ -n "$n" ] || continue
@@ -817,22 +832,37 @@ jobs:
             # Upstream tiann: ./gradlew clean assembleRelease (repack is separate job — we just build manager here)
             gradle_build "clean assembleRelease" || gradle_build "assembleRelease" || true
           elif [ "$flavor" = "resukisu" ]; then
-            # Upstream ReSukiSU: assembleRelease + assembleDebug + randomizer
+            # Upstream ReSukiSU: assembleRelease + randomizer (only universal variants)
             gradle_build "clean assembleRelease" || true
-            gradle_build "assembleDebug" || true
+            # skip assembleDebug — only release universal and universal spoofed
             if [ -x ./randomizer ]; then
               ./randomizer 2>&1 | tail -20 || true
               gradle_build "clean assembleRelease" || true
             fi
           fi
-          # Collect
+          # Collect (only release variants for resukisu)
           out="/tmp/manager_apks_${flavor}"
           mkdir -p "$out"
-          for apk in app/build/outputs/apk/release/*.apk app/build/outputs/apk/debug/*.apk; do
-            [ -f "$apk" ] || continue
-            cp -f "$apk" "$out/${flavor}-$(basename "$apk")"
-            echo "Collected $out/${flavor}-$(basename "$apk")"
-          done
+          if [ "$flavor" = "resukisu" ]; then
+            for apk in app/build/outputs/apk/release/*.apk; do
+              [ -f "$apk" ] || continue
+              cp -f "$apk" "$out/${flavor}-$(basename "$apk")"
+              echo "Collected $out/${flavor}-$(basename "$apk")"
+            done
+            # Filter resukisu to only universal + not debug (release universal and universal spoofed)
+            for f in "$out"/*.apk; do
+              [ -f "$f" ] || continue
+              ln=$(basename "$f" | tr '[:upper:]' '[:lower:]')
+              if [[ "$ln" != *universal* ]]; then echo "Dropping resukisu non-universal $(basename "$f")" >&2; rm -f "$f"; continue; fi
+              if [[ "$ln" == *debug* ]]; then echo "Dropping resukisu debug $(basename "$f")" >&2; rm -f "$f"; continue; fi
+            done
+          else
+            for apk in app/build/outputs/apk/release/*.apk app/build/outputs/apk/debug/*.apk; do
+              [ -f "$apk" ] || continue
+              cp -f "$apk" "$out/${flavor}-$(basename "$apk")"
+              echo "Collected $out/${flavor}-$(basename "$apk")"
+            done
+          fi
           if [ -f /tmp/next-spoofed.apk ]; then cp -f /tmp/next-spoofed.apk "$out/${flavor}-spoofed.apk" || true; fi
           ls -lh "$out" 2>&1 | head -30 || true
           if [ -z "$(ls -A "$out" 2>/dev/null)" ]; then echo "WARNING: no APK produced for $flavor" >&2; fi
@@ -877,6 +907,21 @@ jobs:
           set -euo pipefail
           mkdir -p manager_apks
           find manager_apks -type f -name '*.apk' | sort | tee /tmp/list.txt || true
+          # Filter ReSukiSU to only universal release and universal spoofed
+          if grep -qi "resukisu" /tmp/list.txt 2>/dev/null; then
+            tmp_list="/tmp/list.filtered"
+            : > "$tmp_list"
+            while IFS= read -r f; do
+              [ -n "$f" ] || continue
+              ln=$(basename "$f" | tr '[:upper:]' '[:lower:]')
+              if [[ "$ln" == *resukisu* ]]; then
+                if [[ "$ln" != *universal* ]]; then echo "Dropping resukisu non-universal $f" >&2; rm -f "$f"; continue; fi
+                if [[ "$ln" == *debug* ]]; then echo "Dropping resukisu debug $f" >&2; rm -f "$f"; continue; fi
+              fi
+              echo "$f" >> "$tmp_list"
+            done < /tmp/list.txt
+            mv "$tmp_list" /tmp/list.txt
+          fi
           count=$(wc -l < /tmp/list.txt 2>/dev/null | tr -d ' ' || echo 0)
           echo "Found $count source-built manager APKs"
           ls -lh manager_apks 2>&1 | head -40 || true
