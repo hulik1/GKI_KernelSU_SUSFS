@@ -1249,7 +1249,7 @@ jobs:
         lines.append("## Features")
         lines.append("")
         _kp_url="https://github.com/WildKernels/kernel_patches/commit/"
-        _feat_commit={"NoMount":("https://github.com/maxsteeel/nomount/commit/",nm),"Baseband Guard":(_kp_url,kp),"DroidSpaces-OSS":("https://github.com/ravindu644/Droidspaces-OSS/commit/",ds),"Networking":(_kp_url,kp),"NTSync":(_kp_url,kp),"Ptrace Leak Fix":(_kp_url,kp),"Unicode Fix":(_kp_url,kp),"BTF / eBPF / FUSE-BPF":(_kp_url,kp),"Performance Tuning":(_kp_url,kp)}
+        _feat_commit={"NoMount":("https://github.com/maxsteeel/nomount/commit/",nm),"Baseband Guard":(_kp_url,kp),"DroidSpaces-OSS":("https://github.com/ravindu644/Droidspaces-OSS/commit/",ds)}
         for f in feats:
             _u,_c=_feat_commit.get(f,("",""))
             if _c and len(_c)==40: lines.append(f"- {f} [`{_c[:7]}`]({_u}{_c})")
@@ -1469,7 +1469,7 @@ jobs:
           lines.append("## Features")
           lines.append("")
           _kp_url="https://github.com/WildKernels/kernel_patches/commit/"
-          _feat_commit={"NoMount":("https://github.com/maxsteeel/nomount/commit/",nm),"Baseband Guard":(_kp_url,kp),"DroidSpaces-OSS":("https://github.com/ravindu644/Droidspaces-OSS/commit/",ds),"Networking":(_kp_url,kp),"NTSync":(_kp_url,kp),"Ptrace Leak Fix":(_kp_url,kp),"Unicode Fix":(_kp_url,kp),"BTF / eBPF / FUSE-BPF":(_kp_url,kp),"Performance Tuning":(_kp_url,kp)}
+          _feat_commit={"NoMount":("https://github.com/maxsteeel/nomount/commit/",nm),"Baseband Guard":(_kp_url,kp),"DroidSpaces-OSS":("https://github.com/ravindu644/Droidspaces-OSS/commit/",ds)}
           for f in feats:
               _u,_c=_feat_commit.get(f,("",""))
               if _c and len(_c)==40: lines.append(f"- {f} [`{_c[:7]}`]({_u}{_c})")
