@@ -1270,11 +1270,9 @@ jobs:
             lines.append("| SUSFS branch | SUSFS commit |")
             lines.append("|---|---|")
             for v in variants:
-                _br=f"gki-{v}"
-                _br_s=f"[{_br}]({_susfs_url}/-/tree/{_br})"
                 sha=_sm.get(v,"")
                 sha_s=f"[`{sha[:12]}`]({_susfs_url}/-/commit/{sha})" if sha else "_n/a_"
-                lines.append(f"| {_br_s} | {sha_s} |")
+                lines.append(f"| gki-{v} | {sha_s} |")
             lines.append("")
         lines.append("")
         lines.append("## Commits (detailed)")
@@ -1501,11 +1499,9 @@ jobs:
               lines.append("| SUSFS branch | SUSFS commit |")
               lines.append("|---|---|")
               for v in variants:
-                  _br=f"gki-{v}"
-                  _br_s=f"[{_br}]({_susfs_url}/-/tree/{_br})"
                   sha=_sm.get(v,"")
                   sha_s=f"[`{sha[:12]}`]({_susfs_url}/-/commit/{sha})" if sha else "_n/a_"
-                  lines.append(f"| {_br_s} | {sha_s} |")
+                  lines.append(f"| gki-{v} | {sha_s} |")
               lines.append("")
           lines.append("")
           lines.append("## Commits (detailed)")
