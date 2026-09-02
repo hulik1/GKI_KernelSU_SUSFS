@@ -1214,7 +1214,7 @@ jobs:
         lines=[]
         lines.append("# Wild Kernels for GKI2 Devices")
         lines.append("")
-        lines.append("## Features")
+        lines.append("## Root")
         lines.append("")
         ksun_branch=env("KSUN_BRANCH","dev-susfs")
         ksun_commit=env("KSUN_COMMIT","")
@@ -1236,7 +1236,10 @@ jobs:
             _c=_root_commits.get(_fl0,"")
             if _c and len(_c)==40: _rc.append(f"{_labels0.get(_fl0,_fl0)} [`{_c[:7]}`]({_root_urls[_fl0]}{_c})")
             elif _c: _rc.append(f"{_labels0.get(_fl0,_fl0)} `{_c}`")
-        lines.append(f"- **Root:** `{root}`  ({' + '.join(_rc)})" if _rc else f"- **Root:** `{root}`")
+        for _r in _rc: lines.append(f"- {_r}")
+        lines.append("")
+        lines.append("## Features")
+        lines.append("")
         _kp_url="https://github.com/WildKernels/kernel_patches/commit/"
         _feat_commit={"NoMount":("https://github.com/maxsteeel/nomount/commit/",nm),"Baseband Guard":(_kp_url,kp),"DroidSpaces-OSS":("https://github.com/ravindu644/Droidspaces-OSS/commit/",ds),"Networking":(_kp_url,kp),"NTSync":(_kp_url,kp),"Ptrace Leak Fix":(_kp_url,kp),"Unicode Fix":(_kp_url,kp),"BTF / eBPF / FUSE-BPF":(_kp_url,kp),"Performance Tuning":(_kp_url,kp)}
         for f in feats:
@@ -1423,7 +1426,7 @@ jobs:
           lines=[]
           lines.append("# Wild Kernels for GKI2 Devices")
           lines.append("")
-          lines.append("## Features")
+          lines.append("## Root")
           lines.append("")
           ksun_branch=env("KSUN_BRANCH","dev-susfs")
           ksun_commit=env("KSUN_COMMIT","")
@@ -1445,7 +1448,10 @@ jobs:
               _c=_root_commits.get(_fl0,"")
               if _c and len(_c)==40: _rc.append(f"{_labels0.get(_fl0,_fl0)} [`{_c[:7]}`]({_root_urls[_fl0]}{_c})")
               elif _c: _rc.append(f"{_labels0.get(_fl0,_fl0)} `{_c}`")
-          lines.append(f"- **Root:** `{root}`  ({' + '.join(_rc)})" if _rc else f"- **Root:** `{root}`")
+          for _r in _rc: lines.append(f"- {_r}")
+          lines.append("")
+          lines.append("## Features")
+          lines.append("")
           _kp_url="https://github.com/WildKernels/kernel_patches/commit/"
           _feat_commit={"NoMount":("https://github.com/maxsteeel/nomount/commit/",nm),"Baseband Guard":(_kp_url,kp),"DroidSpaces-OSS":("https://github.com/ravindu644/Droidspaces-OSS/commit/",ds),"Networking":(_kp_url,kp),"NTSync":(_kp_url,kp),"Ptrace Leak Fix":(_kp_url,kp),"Unicode Fix":(_kp_url,kp),"BTF / eBPF / FUSE-BPF":(_kp_url,kp),"Performance Tuning":(_kp_url,kp)}
           for f in feats:
