@@ -1,6 +1,6 @@
 name: Kernel Build Process
 permissions:
-  contents: read
+  contents: write
   actions: write
 
 on:
