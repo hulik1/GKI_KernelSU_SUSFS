@@ -20,8 +20,7 @@ MAIN = os.path.join(REPO, ".github/workflows/main.yml")
 # approval env is "1"/"true" when the component was enabled and all its builds passed.
 PINS = [
     ("PIN_NOMOUNT", "NOMOUNT_SHA", "APPROVE_NOMOUNT"),
-    ("PIN_KERNELSU", "KERNELSU_SHA", "APPROVE_KERNELSU"),
-    ("PIN_RESUKISU", "RESUKISU_SHA", "APPROVE_RESUKISU"),
+    # KernelSU and ReSukiSU always build at latest (no pins to promote).
     # SUSFS is intentionally excluded: it is always resolved at latest so it
     # stays API-matched to the always-latest KernelSU-Next tree.
 ]

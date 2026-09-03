@@ -176,9 +176,9 @@ jobs:
           }
 
           # Audited pins (from root-variants.yml). Used only when commit_mode=verified.
+          # KernelSU (tiann) and ReSukiSU always build at latest; only NoMount
+          # and SUSFS pin in verified mode. KernelSU-Next stays latest.
           PIN_NOMOUNT="9a1431782f390453de54610fb91bdad03eab5b43"
-          PIN_KERNELSU="e38512f1255ea454d34cc2008d2ef7932547fad6"
-          PIN_RESUKISU="0b5efe9e0102c43ca5c41174d500f5a7080cd0c7"
           declare -A PIN_SUSFS=(
             [susfs_commit_android12_5_10]="ec785f47d49f7b3871ca9356f450411020af7017"
             [susfs_commit_android13_5_10]="ed3d6d9c9a2652e1c70f153f5358701e996d646c"
@@ -221,12 +221,11 @@ jobs:
           # Selected root implementation(s). Maps the human-facing choice
           # (KernelSU-Next / KernelSU / ReSukiSU / All) to internal root-setup
           # flavors (next / kernelsu / resukisu). Every build always has a root;
-          # 'All' emits a matrix of all three root flavors plus each pinned commit.
+          # 'All' emits a matrix of all three root flavors with each resolved commit.
           #
-          # kernelsu and resukisu pin in verified mode; KernelSU-Next (next) always
-          # builds at latest.
-          KERNELSU_COMMIT="$(pick "$PIN_KERNELSU" https://github.com/tiann/KernelSU.git refs/heads/main)"
-          RESUKISU_COMMIT="$(pick "$PIN_RESUKISU" https://github.com/ReSukiSU/ReSukiSU.git refs/heads/main)"
+          # kernelsu and resukisu always build at latest, like KernelSU-Next (next).
+          KERNELSU_COMMIT="$(resolve_sha https://github.com/tiann/KernelSU.git refs/heads/main)"
+          RESUKISU_COMMIT="$(resolve_sha https://github.com/ReSukiSU/ReSukiSU.git refs/heads/main)"
           emit ksu_commit "$KERNELSU_COMMIT"
           emit resukisu_commit "$RESUKISU_COMMIT"
           if [ "${{ inputs.use_susfs }}" = "true" ]; then
@@ -845,11 +844,7 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
         NOMOUNT_SHA: ${{ needs.resolve-sources.outputs.nomount_commit }}
-        KERNELSU_SHA: ${{ needs.resolve-sources.outputs.ksu_commit }}
-        RESUKISU_SHA: ${{ needs.resolve-sources.outputs.resukisu_commit }}
         APPROVE_NOMOUNT: ${{ inputs.use_nomount }}
-        APPROVE_KERNELSU: ${{ (inputs.root_flavor == 'KernelSU' || inputs.root_flavor == 'All') }}
-        APPROVE_RESUKISU: ${{ (inputs.root_flavor == 'ReSukiSU' || inputs.root_flavor == 'All') }}
 
     - name: Commit promoted pins
       if: always() && steps.promote.conclusion == 'success'
