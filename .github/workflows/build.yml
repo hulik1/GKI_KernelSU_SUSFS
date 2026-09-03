@@ -399,7 +399,7 @@ jobs:
       with:
         cache_path: /home/runner/.ccache
         cache_key: ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-${{ inputs.os_patch_level }}-${{ inputs.variant }}
-        cache_bucket: ccache-cache
+        cache_bucket: ccache-cache-${{ inputs.version }}
         restore_keys: |
           ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-
 
@@ -411,7 +411,7 @@ jobs:
       with:
         cache_path: /home/runner/.cache/bazel
         cache_key: ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-${{ inputs.os_patch_level }}-${{ inputs.variant }}
-        cache_bucket: bazel-cache
+        cache_bucket: bazel-cache-${{ inputs.version }}
         restore_keys: |
           ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-
 
@@ -491,7 +491,7 @@ jobs:
       with:
         cache_path: /home/runner/.ccache
         cache_key: ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-${{ inputs.os_patch_level }}-${{ inputs.variant }}
-        cache_bucket: "ccache-cache"
+        cache_bucket: "ccache-cache-${{ inputs.version }}"
         compression_level: 9
         github_token: ${{ github.token }}
 
@@ -502,7 +502,7 @@ jobs:
       with:
         cache_path: /home/runner/.cache/bazel
         cache_key: ${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ steps.extract.outputs.sublevel }}-${{ inputs.os_patch_level }}-${{ inputs.variant }}
-        cache_bucket: "bazel-cache"
+        cache_bucket: "bazel-cache-${{ inputs.version }}"
         compression_level: 9
         github_token: ${{ github.token }}
 
