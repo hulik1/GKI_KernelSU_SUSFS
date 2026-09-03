@@ -35,9 +35,9 @@ runs:
       else
         sed -i '/name = "kernel_aarch64",/a\    check_defconfig = "disabled",' common/BUILD.bazel
         tools/bazel build \
-          --config=local \
-          --cache_dir=/home/runner/.cache/bazel \
-          //common:kernel_aarch64_dist
+          --config=fast \
+          --disk_cache=/home/runner/.cache/bazel \
+          //common:kernel_aarch64/Image
       fi
 
   - name: 'Gather Build Artifacts'
