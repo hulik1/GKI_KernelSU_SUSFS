@@ -213,7 +213,6 @@ jobs:
         os_patch_level: ${{ inputs.os_patch_level }}
         sublevel: ${{ steps.extract.outputs.sublevel }}
         root_flavor: ${{ inputs.root_flavor }}
-        nomount_enabled: ${{ contains(inputs.feature_set, 'NoMount') }}
 
     - name: Fix selinux_hide pointer-bool-conversion on 6.6+ (ALL branches)
       shell: bash
