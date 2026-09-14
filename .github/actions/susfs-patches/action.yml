@@ -99,6 +99,8 @@ runs:
         if [ "${{ inputs.sublevel }}" -ge "157" ]; then
           echo "Applying namespace.c Android 14 6.1 Fake Patch"
           sed -i '/^#include <trace\/hooks\/blk.h>$/d' fs/namespace.c
+          echo "Applying super.c Android 14 6.1 Fake Patch"
+          sed -i '/^#include <trace\/hooks\/fs.h>$/,+1 d' fs/super.c
         fi
 
     - name: Apply Android 15 6.6 Fake Patches
