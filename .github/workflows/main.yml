@@ -1047,12 +1047,16 @@ jobs:
           gh api --paginate \
             "repos/${{ github.repository }}/actions/runs/${RUN_ID}/jobs?per_page=100" \
             > /tmp/jobs.json || { echo "jobs fetch failed; skipping announce"; exit 0; }
+          gh api --paginate \
+            "repos/${{ github.repository }}/actions/runs/${RUN_ID}/artifacts?per_page=100" \
+            > /tmp/artifacts.json || true
           python3 .github/scripts/telegram_digest.py \
             --run-id "$RUN_ID" \
             --branch "${{ github.ref_name }}" \
             --event "${{ github.event_name }}" \
             --run-url "$RUN_URL" \
             --nightly-url "$NIGHTLY_URL" \
+            --artifacts-file /tmp/artifacts.json \
             < /tmp/jobs.json > /tmp/digest.out
           rc=$?
           if [ "$rc" -ne 0 ]; then

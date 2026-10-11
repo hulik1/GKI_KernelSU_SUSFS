@@ -60,20 +60,36 @@ MARKS = {"success": "✅", "failure": "❌", "cancelled": "⛔",
 
 MAX_LEN = 4000  # Telegram cap is 4096; leave headroom for entities
 
+# Flavor -> manager APK artifact patterns (fnmatch against the run's
+# uploaded artifact names; first non-excluded match wins per entry).
+# ReSukiSU's manager is the BakaSU rebrand. KernelSU-Next ships a spoofed
+# variant: the stock manager links the flavor name, the spoofed one gets
+# a suffix link.
+FLAVOR_MANAGERS = {
+    "KernelSU": [("KernelSU_v*", None)],
+    "KernelSU-Next": [("KernelSU_Next_v*", "spoofed"),
+                      ("KernelSU_Next_v*spoofed*", None)],
+    "ReSukiSU": [("BakaSU_v*", None), ("ReSukiSU_v*", None)],
+}
 
-def load_jobs(stream) -> list:
+
+def load_json_any(stream) -> list:
     """Accept a single JSON object/array OR gh api --paginate's
-    concatenated pages; merge every 'jobs' array found."""
+    concatenated pages; merge every list found under common keys
+    ('jobs', 'artifacts') or a bare top-level array."""
     text = stream.read()
     try:
         data = json.loads(text)
         if isinstance(data, dict):
-            return data.get("jobs", [])
+            for key in ("jobs", "artifacts"):
+                if isinstance(data.get(key), list):
+                    return data[key]
+            return []
         return data if isinstance(data, list) else []
     except json.JSONDecodeError:
         pass
     dec = json.JSONDecoder()
-    jobs, idx, n = [], 0, len(text)
+    items, idx, n = [], 0, len(text)
     while idx < n:
         while idx < n and text[idx] in " \t\r\n":
             idx += 1
@@ -81,11 +97,13 @@ def load_jobs(stream) -> list:
             break
         obj, end = dec.raw_decode(text, idx)
         idx = end
-        if isinstance(obj, dict) and "jobs" in obj:
-            jobs.extend(obj["jobs"])
+        if isinstance(obj, dict):
+            for key in ("jobs", "artifacts"):
+                if isinstance(obj.get(key), list):
+                    items.extend(obj[key])
         elif isinstance(obj, list):
-            jobs.extend(obj)
-    return jobs
+            items.extend(obj)
+    return items
 
 
 def family_of(job_name: str) -> str:
@@ -99,9 +117,45 @@ def main() -> int:
     ap.add_argument("--event", required=True)
     ap.add_argument("--run-url", required=True)
     ap.add_argument("--nightly-url", required=True)
+    ap.add_argument("--artifacts-file", default="",
+                    help="JSON (single object or concatenated pages) of the "
+                         "run's artifacts; enables per-flavor manager links")
     args = ap.parse_args()
 
-    data = load_jobs(sys.stdin)
+    artifacts = []
+    if args.artifacts_file:
+        try:
+            with open(args.artifacts_file) as fh:
+                artifacts = load_json_any(fh)
+        except (OSError, ValueError) as exc:
+            print(f"telegram-digest: artifacts parse failed ({exc}); "
+                  f"flavor links disabled", file=sys.stderr)
+            artifacts = []
+
+    def manager_links(flavor: str) -> list:
+        """nightly.link deep links to this flavor's manager APK artifacts.
+
+        Links go by artifact ID (/{repo}/actions/artifacts/{id}.zip) - the
+        by-name route can't match names containing dots (every .apk artifact
+        404s there), and manager artifacts keep their versioned names.
+        """
+        import fnmatch
+        by_name = {}
+        for a in artifacts:
+            if "name" in a and "id" in a:
+                by_name.setdefault(a["name"], a["id"])
+        names = sorted(by_name)
+        urls = []
+        for pat, excl in FLAVOR_MANAGERS.get(flavor, []):
+            for n in names:
+                if fnmatch.fnmatch(n, pat) and (not excl or excl not in n):
+                    urls.append(
+                        f"{args.nightly_url.rsplit('/actions/runs/', 1)[0]}"
+                        f"/actions/artifacts/{by_name[n]}.zip")
+                    break
+        return urls
+
+    data = load_json_any(sys.stdin)
     jobs = data if isinstance(data, list) else []
     if not jobs:
         print("telegram-digest: no jobs in input", file=sys.stderr)
@@ -157,8 +211,24 @@ def main() -> int:
 
         subs = sorted(e["sublevels"], key=sub_key)
         sub_lines = "\n".join(f"- {esc(s)}" for s in subs) if subs else "—"
-        flavors = "\n".join(esc(f) for f in sorted(e["flavors"])) \
-            if e["flavors"] else "—"
+
+        # Flavors, each linking its manager APK when the run uploaded one.
+        # The flavor name links the stock manager; KernelSU-Next gets a
+        # trailing "spoofed" link for its second variant.
+        flines = []
+        for f in sorted(e["flavors"]):
+            links = manager_links(f)
+            if not links:
+                flines.append(esc(f))
+                continue
+            line = f"<a href=\"{html.escape(links[0], quote=True)}\">" \
+                   f"{esc(f)}</a>"
+            if len(links) > 1:
+                line += "  ·  " + "  ·  ".join(
+                    f"<a href=\"{html.escape(u, quote=True)}\">spoofed</a>"
+                    for u in links[1:])
+            flines.append(line)
+        flavors = "\n".join(flines) if flines else "—"
 
         msg = (
             f"<b>{icon} Wild Kernels</b>\n"
