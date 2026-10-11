@@ -140,23 +140,45 @@ def main() -> int:
 
         counts = "  ".join(f"{MARKS.get(k, '•')} {v}"
                            for k, v in sorted(e["counts"].items()))
-        subs = sorted(e["sublevels"])
-        sub_text = esc(", ".join(subs)) if subs else "—"
-        if len(sub_text) > 900:
-            sub_text = esc(f"{len(subs)} sublevels") + " (" + \
-                esc(", ".join(subs[:6])) + ", …)"
-        flavors = esc(", ".join(sorted(e["flavors"]))) if e["flavors"] else "—"
+
+        # Numeric sort: sublevel then os date ("6.6.102-...-2025-10" AFTER
+        # "6.6.118-...-2026-01"? No - 118 > 102, and 2026 > 2025). Lexicographic
+        # puts 6.6.102 before 6.6.30 - wrong. X (lts) sorts last.
+        def sub_key(tag: str):
+            parts = tag.split("-")
+            sub = parts[2] if len(parts) >= 3 else "0"
+            sub_num = 10 ** 9 if sub.upper() == "X" else \
+                int("".join(ch for ch in sub if ch.isdigit()) or 0)
+            date_num = 0
+            for p in parts[3:]:
+                digits = "".join(ch for ch in p if ch.isdigit())
+                date_num = date_num * 10000 + (int(digits) if digits else 0)
+            return (sub_num, date_num, tag)
+
+        subs = sorted(e["sublevels"], key=sub_key)
+        sub_lines = "\n".join(f"- {esc(s)}" for s in subs) if subs else "—"
+        flavors = "\n".join(esc(f) for f in sorted(e["flavors"])) \
+            if e["flavors"] else "—"
 
         msg = (
-            f"<b>{icon} Wild Kernels — {esc(fname)}</b>\n"
-            f"<b>Branch</b>: <code>{esc(args.branch)}</code>  •  "
+            f"<b>{icon} Wild Kernels</b>\n"
+            f"\n"
+            f"<b>{esc(fname)}</b>\n"
+            f"\n"
+            f"<b>Branch</b>: <code>{esc(args.branch)}</code>\n"
             f"<b>Trigger</b>: {esc(args.event)}\n"
             f"<b>Run</b>: <a href=\"{esc(args.run_url)}\">#{args.run_id}</a>\n"
-            f"<b>Sublevels</b>: {sub_text}\n"
-            f"<b>Flavors</b>: {flavors}\n"
+            f"\n"
+            f"<b>Sublevels</b>:\n"
+            f"{sub_lines}\n"
+            f"\n"
+            f"<b>Flavors</b>:\n"
+            f"{flavors}\n"
+            f"\n"
             f"<b>Jobs</b>: {counts}\n"
-            f"<b>Download</b>: <a href=\"{esc(args.nightly_url)}\">"
-            f"nightly.link — all artifacts</a>"
+            f"\n"
+            f"<b>Download</b>:\n"
+            f"<a href=\"{esc(args.nightly_url)}\">nightly.link — all artifacts</a>"
         )
         if len(msg) > MAX_LEN:
             msg = msg[:MAX_LEN - 1] + "…"
