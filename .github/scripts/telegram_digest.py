@@ -120,6 +120,13 @@ def main() -> int:
     ap.add_argument("--artifacts-file", default="",
                     help="JSON (single object or concatenated pages) of the "
                          "run's artifacts; enables per-flavor manager links")
+    ap.add_argument("--test-chat", default="",
+                    help="second chat (testing release group) that gets one "
+                         "combined 'new testing release' card")
+    ap.add_argument("--test-topic", default="",
+                    help="forum topic inside --test-chat for that card")
+    ap.add_argument("--chat-id", required=True,
+                    help="main announcements chat (per-family digests)")
     args = ap.parse_args()
 
     artifacts = []
@@ -252,9 +259,48 @@ def main() -> int:
         )
         if len(msg) > MAX_LEN:
             msg = msg[:MAX_LEN - 1] + "…"
-        # Records are separated by ASCII RS (\x1e): the HTML itself is
-        # multi-line, so the caller splits on RS and reads topic\thtml.
-        print(f"{topic}\t{msg}", end="\x1e")
+        # Records: CHAT \t TOPIC \t HTML, separated by ASCII RS (\x1e): the
+        # HTML itself is multi-line, so the caller splits on RS and reads
+        # the three fields in order.
+        print(f"{args.chat_id}\t{topic}\t{msg}", end="\x1e")
+
+    # Combined "new testing release" card for the testing group: one
+    # message listing every family built in this run with its manager
+    # links and the shared download link.
+    if args.test_chat and args.test_topic and fams:
+        esc = html.escape
+        sections = []
+        for fam, e in sorted(fams.items()):
+            fname = FAMILY_NAMES.get(fam, fam)
+            counts = "  ".join(f"{MARKS.get(k, '•')} {v}"
+                               for k, v in sorted(e["counts"].items()))
+            ml = []
+            for f in sorted(e["flavors"]):
+                links = manager_links(f)
+                if links:
+                    ml.append(f"<a href=\"{html.escape(links[0], quote=True)}\">"
+                              f"{esc(f)}</a>")
+                    for u in links[1:]:
+                        ml.append(f"<a href=\"{html.escape(u, quote=True)}\">"
+                                  f"spoofed</a>")
+                else:
+                    ml.append(esc(f))
+            sections.append(
+                f"<b>{esc(fname)}</b>  —  {counts}\n"
+                + "  ·  ".join(ml))
+        combined = (
+            f"👋 <b>Hello, new testing release here:</b>\n"
+            f"<b>{icon} Wild Kernels</b> — <code>{esc(args.branch)}</code>\n"
+            f"<b>Run</b>: <a href=\"{esc(args.run_url)}\">#{args.run_id}</a>\n"
+            f"\n"
+            + "\n\n".join(sections) +
+            f"\n\n"
+            f"<b>Download everything</b>:\n"
+            f"<a href=\"{esc(args.nightly_url)}\">nightly.link — all artifacts</a>"
+        )
+        if len(combined) > MAX_LEN:
+            combined = combined[:MAX_LEN - 1] + "…"
+        print(f"{args.test_chat}\t{args.test_topic}\t{combined}", end="\x1e")
 
     return 0
 

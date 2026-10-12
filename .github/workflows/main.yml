@@ -1028,6 +1028,10 @@ jobs:
     env:
       TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+      # Testing-release group: gets one combined "new testing release"
+      # card per run (chat id + forum topic id - edit here to re-route).
+      TG_TEST_CHAT: "-1002358137390"
+      TG_TEST_TOPIC: "245705"
     steps:
       - uses: actions/checkout@v7
       - name: Post per-family digests to Telegram topics
@@ -1056,6 +1060,9 @@ jobs:
             --event "${{ github.event_name }}" \
             --run-url "$RUN_URL" \
             --nightly-url "$NIGHTLY_URL" \
+            --chat-id "$TG_CHAT" \
+            --test-chat "$TG_TEST_CHAT" \
+            --test-topic "$TG_TEST_TOPIC" \
             --artifacts-file /tmp/artifacts.json \
             < /tmp/jobs.json > /tmp/digest.out
           rc=$?
@@ -1066,16 +1073,18 @@ jobs:
           sent=0
           while IFS= read -r -d $'\x1e' rec; do
             [ -z "$rec" ] && continue
-            topic="${rec%%$'\t'*}"
-            html_msg="${rec#*$'\t'}"
+            chat="${rec%%$'\t'*}"
+            rest="${rec#*$'\t'}"
+            topic="${rest%%$'\t'*}"
+            html_msg="${rest#*$'\t'}"
             RESP=$(curl -sf --max-time 30 \
               "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
-              --data-urlencode "chat_id=${TG_CHAT}" \
+              --data-urlencode "chat_id=${chat}" \
               --data-urlencode "message_thread_id=${topic}" \
               --data-urlencode "parse_mode=HTML" \
               --data-urlencode "disable_web_page_preview=true" \
               --data-urlencode "text=${html_msg}") \
-              || { echo "WARN: telegram send to topic ${topic} failed"; continue; }
+              || { echo "WARN: telegram send to chat ${chat} topic ${topic} failed"; continue; }
             sent=$((sent + 1))
             # Pin the digest in its topic so the latest build stays on top.
             # Topic-scoped pin; a missing pin permission only warns.
@@ -1083,9 +1092,9 @@ jobs:
             if [ -n "$MID" ]; then
               curl -sf --max-time 30 \
                 "https://api.telegram.org/bot${TG_TOKEN}/pinChatMessage" \
-                -d "chat_id=${TG_CHAT}" -d "message_id=${MID}" \
+                -d "chat_id=${chat}" -d "message_id=${MID}" \
                 -d "disable_notification=true" > /dev/null \
-                || echo "WARN: could not pin in topic ${topic} (needs pin permission)"
+                || echo "WARN: could not pin in chat ${chat} topic ${topic} (needs pin permission)"
             fi
           done < /tmp/digest.out
           echo "announced ${sent} family digest(s)"
