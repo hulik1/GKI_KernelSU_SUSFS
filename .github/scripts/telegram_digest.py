@@ -278,7 +278,7 @@ def main() -> int:
             f"<b>Run</b>: <a href=\"{esc(args.run_url)}\">#{args.run_id}</a>\n"
             f"\n"
             f"<b>Sublevels</b>:\n"
-            f"{sub_lines}\n"
+            f"{sub_text}\n"
             f"\n"
             f"<b>Flavors</b>:\n"
             f"{flavors}\n"
