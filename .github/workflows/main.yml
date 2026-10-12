@@ -1017,6 +1017,7 @@ jobs:
     name: Telegram Announce
     if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') }}
     needs:
+    - resolve-sources
     - build-android12-5-10
     - build-android13-5-10
     - build-android13-5-15
@@ -1032,6 +1033,19 @@ jobs:
       # card per run (chat id + forum topic id - edit here to re-route).
       TG_TEST_CHAT: "-1002358137390"
       TG_TEST_TOPIC: "245705"
+      # Component pins for the card's Root/Features block (release-notes
+      # parity). Empty on a failed resolve-sources - the digest degrades.
+      NOMOUNT_COMMIT: ${{ needs.resolve-sources.outputs.nomount_commit }}
+      KERNEL_PATCHES_COMMIT: ${{ needs.resolve-sources.outputs.kernel_patches_commit }}
+      DROIDSPACES_COMMIT: ${{ needs.resolve-sources.outputs.droidspaces_commit }}
+      SUSFS_ANDROID12_5_10: ${{ needs.resolve-sources.outputs.susfs_commit_android12_5_10 }}
+      SUSFS_ANDROID13_5_10: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_10 }}
+      SUSFS_ANDROID13_5_15: ${{ needs.resolve-sources.outputs.susfs_commit_android13_5_15 }}
+      SUSFS_ANDROID14_5_15: ${{ needs.resolve-sources.outputs.susfs_commit_android14_5_15 }}
+      SUSFS_ANDROID14_6_1: ${{ needs.resolve-sources.outputs.susfs_commit_android14_6_1 }}
+      SUSFS_ANDROID15_6_6: ${{ needs.resolve-sources.outputs.susfs_commit_android15_6_6 }}
+      SUSFS_ANDROID16_6_12: ${{ needs.resolve-sources.outputs.susfs_commit_android16_6_12 }}
+      DIGEST_FEATURES: "susfs,nomount,bbg,ds,net,ntsync,ptrace,unicode,bpf"
     steps:
       - uses: actions/checkout@v7
       - name: Post per-family digests to Telegram topics
@@ -1072,26 +1086,36 @@ jobs:
           fi
           sent=0
           FAMILY_LINKS=""
+          FAMILY_BTN_ROWS=""
           while IFS= read -r -d $'\x1e' rec; do
             [ -z "$rec" ] && continue
             chat="${rec%%$'\t'*}"; rest="${rec#*$'\t'}"
             topic="${rest%%$'\t'*}"; rest="${rest#*$'\t'}"
-            famname="${rest%%$'\t'*}"
-            html_msg="${rest#*$'\t'}"
+            famname="${rest%%$'\t'*}"; rest="${rest#*$'\t'}"
+            html_msg="${rest%%$'\t'*}"
+            buttons="${rest#*$'\t'}"
+            MK=( )
+            [ -n "$buttons" ] && MK=(--data-urlencode "reply_markup=${buttons}")
             RESP=$(curl -sf --max-time 30 \
               "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
               --data-urlencode "chat_id=${chat}" \
               --data-urlencode "message_thread_id=${topic}" \
               --data-urlencode "parse_mode=HTML" \
               --data-urlencode "disable_web_page_preview=true" \
-              --data-urlencode "text=${html_msg}") \
+              --data-urlencode "text=${html_msg}" \
+              "${MK[@]}") \
               || { echo "WARN: telegram send to chat ${chat} topic ${topic} failed"; continue; }
             sent=$((sent + 1))
             MID=$(printf '%s' "$RESP" | jq -r '.result.message_id // empty' 2>/dev/null)
             # Remember the in-group t.me link for the combined testing card
             TME_USER=$(printf '%s' "$RESP" | jq -r '.result.chat.username // empty' 2>/dev/null)
             if [ -n "$MID" ] && [ -n "$TME_USER" ]; then
-              FAMILY_LINKS="${FAMILY_LINKS}<li><a href=\"https://t.me/${TME_USER}/${topic}/${MID}\">${famname}</a></li>"
+              TME_URL="https://t.me/${TME_USER}/${topic}/${MID}"
+              FAMILY_LINKS="${FAMILY_LINKS}<li><a href=\"${TME_URL}\">${famname}</a></li>"
+              # One button row per family card, for the combined card.
+              ROW=$(jq -nc --arg t "🔨 ${famname}" --arg u "${TME_URL}" \
+                '[{text:$t,url:$u}]' 2>/dev/null || true)
+              [ -n "$ROW" ] && FAMILY_BTN_ROWS="${FAMILY_BTN_ROWS}${ROW},"
             fi
             # Pin the digest in its topic so the latest build stays on top.
             if [ -n "$MID" ]; then
@@ -1104,17 +1128,28 @@ jobs:
           done < /tmp/digest.out
 
           # Combined testing-release card: one message in the testing group
-          # linking each family's digest post in the announcement group.
+          # linking each family's digest post in the announcement group,
+          # with a t.me button row per family + the all-artifacts button.
           if [ -n "$TG_TEST_CHAT" ] && [ -n "$TG_TEST_TOPIC" ] && [ -n "$FAMILY_LINKS" ]; then
             COMBINED=$(printf '%s' \
               "👋 <b>Hello, new testing release here:</b><br>🔨 <b>Wild Kernels</b> — <code>${{ github.ref_name }}</code><br><b>Run</b>: <a href=\"${RUN_URL}\">#${RUN_ID}</a><br><ul>${FAMILY_LINKS}</ul>")
+            ALL_ROW=$(jq -nc --arg u "${NIGHTLY_URL}" \
+              '[{text:"📦 All artifacts",url:$u}]' 2>/dev/null || true)
+            TEST_BTN_ROWS="${FAMILY_BTN_ROWS}${ALL_ROW}"
+            MK=( )
+            if [ -n "$TEST_BTN_ROWS" ]; then
+              TEST_BUTTONS=$(jq -nc --argjson rows "[${TEST_BTN_ROWS%,}]" \
+                '{inline_keyboard:$rows}' 2>/dev/null || true)
+              [ -n "$TEST_BUTTONS" ] && MK=(--data-urlencode "reply_markup=${TEST_BUTTONS}")
+            fi
             TRESP=$(curl -sf --max-time 30 \
               "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
               --data-urlencode "chat_id=${TG_TEST_CHAT}" \
               --data-urlencode "message_thread_id=${TG_TEST_TOPIC}" \
               --data-urlencode "parse_mode=HTML" \
               --data-urlencode "disable_web_page_preview=true" \
-              --data-urlencode "text=${COMBINED}") \
+              --data-urlencode "text=${COMBINED}" \
+              "${MK[@]}") \
               || echo "WARN: combined testing card send failed"
             TMID=$(printf '%s' "${TRESP:-}" | jq -r '.result.message_id // empty' 2>/dev/null)
             if [ -n "$TMID" ]; then

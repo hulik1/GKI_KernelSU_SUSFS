@@ -28,6 +28,7 @@ import argparse
 import fnmatch
 import html
 import json
+import os
 import re
 import sys
 
@@ -40,6 +41,18 @@ TOPICS = {
     "build-android15-6-6": "13",
     "build-android16-6-12": "15",
     "build-android17-6-18": "17",
+}
+
+# build job id -> SUSFS branch variant (release-notes naming), used to pick
+# the family's SUSFS pin from the SUSFS_* env vars.
+VARIANT_OF_FAM = {
+    "build-android12-5-10": "android12-5.10",
+    "build-android13-5-10": "android13-5.10",
+    "build-android13-5-15": "android13-5.15",
+    "build-android14-5-15": "android14-5.15",
+    "build-android14-6-1": "android14-6.1",
+    "build-android15-6-6": "android15-6.6",
+    "build-android16-6-12": "android16-6.12",
 }
 FALLBACK_TOPIC = "3"
 
@@ -177,7 +190,16 @@ def main() -> int:
         if not fam.startswith("build-android") or fam in EXCLUDED:
             continue  # resolve-sources, nomount, rej, release, ...
         e = fams.setdefault(fam, {"sublevels": [], "flavors": [],
-                                  "counts": {}, "sub_jobs": {}})
+                                  "counts": {}, "sub_jobs": {}, "root": None})
+        # The matrix parent part embeds the root: "build-android15-6-6
+        # (next, KernelSU-Next, <40-hex-sha>) / <sublevel> (<flavor>)".
+        if e["root"] is None:
+            parent = name.split(" / ")[0]
+            if "(" in parent:
+                inner = parent[parent.index("(") + 1:parent.rindex(")")]
+                bits = [b.strip() for b in inner.split(",")]
+                if len(bits) >= 3 and len(bits[2]) == 40:
+                    e["root"] = (bits[0], bits[1], bits[2])
         last = name.split(" / ")[-1]
         if " / " in name and "(" in last:
             tag = last.rsplit(" (", 1)[0]
@@ -228,6 +250,7 @@ def main() -> int:
         # sublevels with any failed/cancelled job get a ❌ mark and no link.
         art_base = args.nightly_url.rsplit("/actions/runs/", 1)[0]
         sub_lines = []
+        sub_links = {}
         for s in subs:
             sj = e["sub_jobs"].get(s, {})
             bad = sj.get("failure", 0) + sj.get("cancelled", 0) + \
@@ -258,6 +281,7 @@ def main() -> int:
                     break
             if link_id:
                 url = f"{art_base}/actions/artifacts/{link_id}.zip"
+                sub_links[s] = url
                 sub_lines.append(f"- <a href=\"{html.escape(url, quote=True)}\">"
                                  f"{esc(s)}</a>")
             else:
@@ -282,6 +306,85 @@ def main() -> int:
             flines.append(line)
         flavors = "\n".join(flines) if flines else "—"
 
+        # Root + Features + SUSFS commit info, mirroring the release notes
+        # (main.yml notes-preview job). The root comes from the job names;
+        # component commits + the SUSFS pin per family arrive via env vars
+        # fed from resolve-sources outputs. Empty env = the line is skipped,
+        # so a failed resolve-sources degrades gracefully.
+        root_line = ""
+        if e.get("root"):
+            rid, rlabel, rsha = e["root"]
+            rurl = {
+                "next": "https://github.com/pershoot/KernelSU-Next/commit/",
+                "kernelsu": "https://github.com/tiann/KernelSU/commit/",
+                "resukisu": "https://github.com/ReSukiSU/ReSukiSU/commit/",
+                "sukisu-ultra": "https://github.com/SukiSU-Ultra/SukiSU-Ultra/commit/",
+                "kowsu": "https://github.com/KOWX712/KernelSU/commit/",
+            }.get(rid)
+            if rurl:
+                root_line = (f"<b>Root</b>: {esc(rlabel)} "
+                             f"<a href=\"{rurl}{rsha}\">{esc(rsha[:7])}</a>")
+            else:
+                root_line = (f"<b>Root</b>: {esc(rlabel)} "
+                             f"<code>{esc(rsha[:7])}</code>")
+
+        feats_on = {f.strip().lower()
+                    for f in os.environ.get("DIGEST_FEATURES", "").split(",")
+                    if f.strip()}
+        variant = VARIANT_OF_FAM.get(fam, "")
+        susfs_sha = os.environ.get(
+            "SUSFS_" + variant.replace(".", "_").replace("-", "_").upper(), "")
+        flines2 = []
+        if "susfs" in feats_on:
+            if susfs_sha:
+                flines2.append(f"- SUSFS <a href=\"https://gitlab.com/simonpunk/"
+                               f"susfs4ksu/-/commit/{susfs_sha}\">"
+                               f"{esc(susfs_sha[:7])}</a>")
+            else:
+                flines2.append("- SUSFS")
+        if "nomount" in feats_on and (c := os.environ.get("NOMOUNT_COMMIT", "")):
+            flines2.append(f"- NoMount <a href=\"https://github.com/maxsteeel/"
+                           f"nomount/commit/{c}\">{esc(c[:7])}</a>")
+        if "bbg" in feats_on and (c := os.environ.get("KERNEL_PATCHES_COMMIT", "")):
+            flines2.append(f"- Baseband Guard <a href=\"https://github.com/"
+                           f"WildKernels/kernel_patches/commit/{c}\">{esc(c[:7])}</a>")
+        if "ds" in feats_on and (c := os.environ.get("DROIDSPACES_COMMIT", "")):
+            flines2.append(f"- DroidSpaces-OSS <a href=\"https://github.com/"
+                           f"ravindu644/Droidspaces-OSS/commit/{c}\">{esc(c[:7])}</a>")
+        net_bits = [b for b, k in (("NTSync", "ntsync"), ("Ptrace Leak Fix", "ptrace"),
+                                   ("Unicode Fix", "unicode")) if k in feats_on]
+        if net_bits:
+            flines2.append("- Networking: " + " · ".join(net_bits))
+        if "bpf" in feats_on:
+            flines2.append("- BTF / eBPF / FUSE-BPF")
+        feat_text = "\n".join(flines2)
+
+        # Inline keyboard buttons (URL buttons only - no backend needed):
+        # the newest passing sublevel's kernel zip, manager APKs, and the
+        # whole-run download. Emitted as the record's 5th field for the
+        # workflow to pass as reply_markup.
+        kb_rows = []
+        for s in reversed(subs):
+            if s in sub_links:
+                kb_rows.append([{"text": "⬇️ Download Kernel",
+                                 "url": sub_links[s]}])
+                break
+        for f in sorted(e["flavors"]):
+            links = manager_links(f)
+            if links:
+                row = [{"text": f"🧩 {f}",
+                        "url": links[0]}]
+                if len(links) > 1:
+                    row.append({"text": "spoofed", "url": links[1]})
+                kb_rows.append(row)
+                break
+        kb_rows.append([{"text": "📦 All artifacts",
+                         "url": args.nightly_url}])
+        buttons = json.dumps({"inline_keyboard": kb_rows},
+                             separators=(",", ":"), ensure_ascii=False)
+
+        root_block = f"{root_line}\n\n" if root_line else ""
+        feat_block = f"<b>Features</b>:\n{feat_text}\n\n" if feat_text else ""
         msg = (
             f"<b>{icon} Wild Kernels</b>\n"
             f"\n"
@@ -291,6 +394,8 @@ def main() -> int:
             f"<b>Trigger</b>: {esc(args.event)}\n"
             f"<b>Run</b>: <a href=\"{esc(args.run_url)}\">#{args.run_id}</a>\n"
             f"\n"
+            f"{root_block}"
+            f"{feat_block}"
             f"<b>Sublevels</b>:\n"
             f"{sub_text}\n"
             f"\n"
@@ -304,10 +409,11 @@ def main() -> int:
         )
         if len(msg) > MAX_LEN:
             msg = msg[:MAX_LEN - 1] + "…"
-        # Records: CHAT \t TOPIC \t FAMILY \t HTML, separated by ASCII RS
-        # (\x1e). The caller sends each record, then builds the combined
-        # testing-group card from the returned t.me message links.
-        print(f"{args.chat_id}\t{topic}\t{fname}\t{msg}", end="\x1e")
+        # Records: CHAT \t TOPIC \t FAMILY \t HTML \t BUTTONS_JSON,
+        # separated by ASCII RS (\x1e). The caller sends each record with
+        # reply_markup=BUTTONS_JSON, then builds the combined testing-group
+        # card from the returned t.me message links.
+        print(f"{args.chat_id}\t{topic}\t{fname}\t{msg}\t{buttons}", end="\x1e")
 
     return 0
 
