@@ -81,6 +81,11 @@ on:
         required: false
         type: string
         default: "4k"
+      stock_config_artifact:
+        description: "Artifact name with prefetched stock configs (stock_<kver>[_16k].config)"
+        required: false
+        type: string
+        default: ""
 
 jobs:
   build-gki:
@@ -97,6 +102,14 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v7
+
+    - name: Download Prefetched Stock Configs
+      if: inputs.stock_config_artifact != ''
+      continue-on-error: true
+      uses: actions/download-artifact@v7
+      with:
+        name: ${{ inputs.stock_config_artifact }}
+        path: stock-configs
 
     - name: Validate Page Size
       shell: bash
@@ -159,6 +172,13 @@ jobs:
         android_version: ${{ inputs.android_version }}
         kernel_version: ${{ inputs.kernel_version }}
         os_patch_level: ${{ inputs.os_patch_level }}
+
+    - name: Spoof /proc/config.gz With Stock Config
+      uses: ./.github/actions/stock-config
+      with:
+        version: ${{ inputs.version }}
+        page_size: ${{ inputs.page_size }}
+        stock_config_dir: stock-configs
 
     - name: Set Build Timestamp from Kernel Commit
       shell: bash
