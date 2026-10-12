@@ -77,14 +77,14 @@ MAX_LEN = 4000  # Telegram cap is 4096; leave headroom for entities
 
 # Flavor -> manager APK artifact patterns (fnmatch against the run's
 # uploaded artifact names; first non-excluded match wins per entry).
-# ReSukiSU's manager is the BakaSU rebrand. KernelSU-Next ships a spoofed
+# BakaSU (formerly ReSukiSU) ships its manager as BakaSU_v*. KernelSU-Next ships a spoofed
 # variant: the stock manager links the flavor name, the spoofed one gets
 # a suffix link.
 FLAVOR_MANAGERS = {
     "KernelSU": [("KernelSU_v*", None)],
     "KernelSU-Next": [("KernelSU_Next_v*", "spoofed"),
                       ("KernelSU_Next_v*spoofed*", None)],
-    "ReSukiSU": [("BakaSU_v*", None), ("ReSukiSU_v*", None)],
+    "BakaSU": [("BakaSU_v*", None)],
 }
 
 
@@ -246,7 +246,7 @@ def main() -> int:
         subs = sorted(e["sublevels"], key=sub_key)
 
         # Per-sublevel lines: passing sublevels link their AnyKernel3
-        # artifact (KernelSU-Next preferred, then KernelSU, then ReSukiSU);
+        # artifact (KernelSU-Next preferred, then KernelSU, then BakaSU);
         # sublevels with any failed/cancelled job get a ❌ mark and no link.
         art_base = args.nightly_url.rsplit("/actions/runs/", 1)[0]
         sub_lines = []
@@ -259,7 +259,7 @@ def main() -> int:
                 sub_lines.append(f"- ❌ {esc(s)}")
                 continue
             link_id = None
-            for fl in ("KernelSU-Next", "KernelSU", "ReSukiSU"):
+            for fl in ("KernelSU-Next", "KernelSU", "BakaSU"):
                 art_name = f"{s}-{fl}-AnyKernel3"
                 # LTS runs build a REAL kernel version, so the artifact is
                 # named e.g. 6.6.144-android15-lts-... while the job tag is
@@ -317,7 +317,7 @@ def main() -> int:
             rurl = {
                 "next": "https://github.com/pershoot/KernelSU-Next/commit/",
                 "kernelsu": "https://github.com/tiann/KernelSU/commit/",
-                "resukisu": "https://github.com/ReSukiSU/ReSukiSU/commit/",
+                "bakasu": "https://github.com/Baka-SU/BakaSU/commit/",
                 "sukisu-ultra": "https://github.com/SukiSU-Ultra/SukiSU-Ultra/commit/",
                 "kowsu": "https://github.com/KOWX712/KernelSU/commit/",
             }.get(rid)

@@ -252,8 +252,8 @@ jobs:
           echo "ROOT_COMMIT=N/A"
         } >> "$GITHUB_ENV"
 
-    - name: Disable SUSFS for ReSukiSU without SUSFS feature
-      if: inputs.root_flavor == 'resukisu' && !contains(inputs.feature_set, 'SUSFS')
+    - name: Disable SUSFS for BakaSU without SUSFS feature
+      if: inputs.root_flavor == 'bakasu' && !contains(inputs.feature_set, 'SUSFS')
       uses: ./.github/actions/set-kernel-config
       with:
         config_list: |
@@ -291,7 +291,7 @@ jobs:
         set -euo pipefail
         # KernelSU-Next (next) always uses the latest susfs4ksu gki branch tip so
         # SUSFS stays API-matched to the always-latest KernelSU-Next tree. All
-        # other roots (kernelsu, resukisu, sukisu-ultra) use the pinned
+        # other roots (kernelsu, bakasu, sukisu-ultra) use the pinned
         # verified SUSFS commit.
         if [ "${{ inputs.root_flavor }}" = "next" ]; then
           BRANCH="gki-${{ inputs.android_version }}-${{ inputs.kernel_version }}"
@@ -328,7 +328,7 @@ jobs:
             #   if (func) / if (func != NULL) both trigger -Werror:
             #     -Wpointer-bool-conversion  vs  -Wtautological-pointer-compare
             # For the function form,  &func != NULL  silences both (clang note).
-            # For the pointer form (resukisu/next/sukisu-ultra, no 10_enable) we want ptr != NULL.
+            # For the pointer form (bakasu/next/sukisu-ultra, no 10_enable) we want ptr != NULL.
             if grep -q "extern void security_dump_masked_av_fn" "$f"; then
               echo "[*] $f is extern-function form (10_enable applied), patching with &"
               sed -i 's/if (security_dump_masked_av_fn)/if (\&security_dump_masked_av_fn)/g' "$f"
@@ -346,7 +346,7 @@ jobs:
             fi
             # Next (and tiann without 10_enable fallback) declares the 3 helpers as
             # static on 6.6, but kernel hooks.c/selinuxfs.c reference them as extern
-            # after SUSFS (ReSukiSU uses __maybe_static -> global). Strip static so
+            # after SUSFS (BakaSU uses __maybe_static -> global). Strip static so
             # the linker can resolve security_context_to_sid_with_policy etc.
             if grep -q "^static int security_context_to_sid_with_policy" "$f"; then
               echo "[*] Stripping static from $f helpers (Next 6.6)"
