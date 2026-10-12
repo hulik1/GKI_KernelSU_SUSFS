@@ -1071,11 +1071,12 @@ jobs:
             exit 0
           fi
           sent=0
+          FAMILY_LINKS=""
           while IFS= read -r -d $'\x1e' rec; do
             [ -z "$rec" ] && continue
-            chat="${rec%%$'\t'*}"
-            rest="${rec#*$'\t'}"
-            topic="${rest%%$'\t'*}"
+            chat="${rec%%$'\t'*}"; rest="${rec#*$'\t'}"
+            topic="${rest%%$'\t'*}"; rest="${rest#*$'\t'}"
+            famname="${rest%%$'\t'*}"
             html_msg="${rest#*$'\t'}"
             RESP=$(curl -sf --max-time 30 \
               "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
@@ -1086,9 +1087,13 @@ jobs:
               --data-urlencode "text=${html_msg}") \
               || { echo "WARN: telegram send to chat ${chat} topic ${topic} failed"; continue; }
             sent=$((sent + 1))
-            # Pin the digest in its topic so the latest build stays on top.
-            # Topic-scoped pin; a missing pin permission only warns.
             MID=$(printf '%s' "$RESP" | jq -r '.result.message_id // empty' 2>/dev/null)
+            # Remember the in-group t.me link for the combined testing card
+            TME_USER=$(printf '%s' "$RESP" | jq -r '.result.chat.username // empty' 2>/dev/null)
+            if [ -n "$MID" ] && [ -n "$TME_USER" ]; then
+              FAMILY_LINKS="${FAMILY_LINKS}<li><a href=\"https://t.me/${TME_USER}/${topic}/${MID}\">${famname}</a></li>"
+            fi
+            # Pin the digest in its topic so the latest build stays on top.
             if [ -n "$MID" ]; then
               curl -sf --max-time 30 \
                 "https://api.telegram.org/bot${TG_TOKEN}/pinChatMessage" \
@@ -1097,7 +1102,31 @@ jobs:
                 || echo "WARN: could not pin in chat ${chat} topic ${topic} (needs pin permission)"
             fi
           done < /tmp/digest.out
-          echo "announced ${sent} family digest(s)"
+
+          # Combined testing-release card: one message in the testing group
+          # linking each family's digest post in the announcement group.
+          if [ -n "$TG_TEST_CHAT" ] && [ -n "$TG_TEST_TOPIC" ] && [ -n "$FAMILY_LINKS" ]; then
+            COMBINED=$(printf '%s' \
+              "👋 <b>Hello, new testing release here:</b><br>🔨 <b>Wild Kernels</b> — <code>${{ github.ref_name }}</code><br><b>Run</b>: <a href=\"${RUN_URL}\">#${RUN_ID}</a><br><ul>${FAMILY_LINKS}</ul>")
+            TRESP=$(curl -sf --max-time 30 \
+              "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+              --data-urlencode "chat_id=${TG_TEST_CHAT}" \
+              --data-urlencode "message_thread_id=${TG_TEST_TOPIC}" \
+              --data-urlencode "parse_mode=HTML" \
+              --data-urlencode "disable_web_page_preview=true" \
+              --data-urlencode "text=${COMBINED}") \
+              || echo "WARN: combined testing card send failed"
+            TMID=$(printf '%s' "${TRESP:-}" | jq -r '.result.message_id // empty' 2>/dev/null)
+            if [ -n "$TMID" ]; then
+              curl -sf --max-time 30 \
+                "https://api.telegram.org/bot${TG_TOKEN}/pinChatMessage" \
+                -d "chat_id=${TG_TEST_CHAT}" -d "message_id=${TMID}" \
+                -d "disable_notification=true" > /dev/null \
+                || echo "WARN: could not pin in the testing group (needs pin permission)"
+            fi
+            sent=$((sent + 1))
+          fi
+          echo "announced ${sent} message(s)"
 
   update-verified-pins:
     concurrency:

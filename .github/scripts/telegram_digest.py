@@ -290,48 +290,10 @@ def main() -> int:
         )
         if len(msg) > MAX_LEN:
             msg = msg[:MAX_LEN - 1] + "…"
-        # Records: CHAT \t TOPIC \t HTML, separated by ASCII RS (\x1e): the
-        # HTML itself is multi-line, so the caller splits on RS and reads
-        # the three fields in order.
-        print(f"{args.chat_id}\t{topic}\t{msg}", end="\x1e")
-
-    # Combined "new testing release" card for the testing group: one
-    # message listing every family built in this run with its manager
-    # links and the shared download link.
-    if args.test_chat and args.test_topic and fams:
-        esc = html.escape
-        sections = []
-        for fam, e in sorted(fams.items()):
-            fname = FAMILY_NAMES.get(fam, fam)
-            counts = "  ".join(f"{MARKS.get(k, '•')} {v}"
-                               for k, v in sorted(e["counts"].items()))
-            ml = []
-            for f in sorted(e["flavors"]):
-                links = manager_links(f)
-                if links:
-                    ml.append(f"<a href=\"{html.escape(links[0], quote=True)}\">"
-                              f"{esc(f)}</a>")
-                    for u in links[1:]:
-                        ml.append(f"<a href=\"{html.escape(u, quote=True)}\">"
-                                  f"spoofed</a>")
-                else:
-                    ml.append(esc(f))
-            sections.append(
-                f"<b>{esc(fname)}</b>  —  {counts}\n"
-                + "  ·  ".join(ml))
-        combined = (
-            f"👋 <b>Hello, new testing release here:</b>\n"
-            f"<b>{icon} Wild Kernels</b> — <code>{esc(args.branch)}</code>\n"
-            f"<b>Run</b>: <a href=\"{esc(args.run_url)}\">#{args.run_id}</a>\n"
-            f"\n"
-            + "\n\n".join(sections) +
-            f"\n\n"
-            f"<b>Download everything</b>:\n"
-            f"<a href=\"{esc(args.nightly_url)}\">nightly.link — all artifacts</a>"
-        )
-        if len(combined) > MAX_LEN:
-            combined = combined[:MAX_LEN - 1] + "…"
-        print(f"{args.test_chat}\t{args.test_topic}\t{combined}", end="\x1e")
+        # Records: CHAT \t TOPIC \t FAMILY \t HTML, separated by ASCII RS
+        # (\x1e). The caller sends each record, then builds the combined
+        # testing-group card from the returned t.me message links.
+        print(f"{args.chat_id}\t{topic}\t{fname}\t{msg}", end="\x1e")
 
     return 0
 
