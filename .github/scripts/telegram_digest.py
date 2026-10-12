@@ -25,8 +25,10 @@ Usage: telegram_digest.py --run-id ID --branch BR --event EV
                           --run-url URL --nightly-url URL < jobs.json
 """
 import argparse
+import fnmatch
 import html
 import json
+import re
 import sys
 
 TOPICS = {
@@ -236,8 +238,20 @@ def main() -> int:
             link_id = None
             for fl in ("KernelSU-Next", "KernelSU", "ReSukiSU"):
                 art_name = f"{s}-{fl}-AnyKernel3"
+                # LTS runs build a REAL kernel version, so the artifact is
+                # named e.g. 6.6.144-android15-lts-... while the job tag is
+                # 6.6.X-android15-lts (run 38210657645 posted the lts line
+                # with no link). Match exactly first, then glob the X away
+                # (X sits before '-' in lts tags, so match on ".X" followed
+                # by a '-' or '.' boundary, not the ".X." substring).
+                pat = None
+                if re.search(r"\.X(?=[.-])", art_name):
+                    pat = re.sub(r"\.X(?=[.-])", ".*", art_name)
                 for a in artifacts:
-                    if a.get("name") == art_name and "id" in a:
+                    aname = a.get("name", "")
+                    if "id" not in a:
+                        continue
+                    if aname == art_name or (pat and fnmatch.fnmatch(aname, pat)):
                         link_id = a["id"]
                         break
                 if link_id:
