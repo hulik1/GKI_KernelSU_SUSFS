@@ -175,7 +175,7 @@ def main() -> int:
         if not fam.startswith("build-android") or fam in EXCLUDED:
             continue  # resolve-sources, nomount, rej, release, ...
         e = fams.setdefault(fam, {"sublevels": [], "flavors": [],
-                                  "counts": {}})
+                                  "counts": {}, "sub_jobs": {}})
         last = name.split(" / ")[-1]
         if " / " in name and "(" in last:
             tag = last.rsplit(" (", 1)[0]
@@ -184,6 +184,9 @@ def main() -> int:
                 e["sublevels"].append(tag)
             if flavor and flavor not in e["flavors"]:
                 e["flavors"].append(flavor)
+            sj = e["sub_jobs"].setdefault(tag, {})
+            c = j.get("conclusion") or j.get("status") or "unknown"
+            sj[c] = sj.get(c, 0) + 1
         c = j.get("conclusion") or j.get("status") or "unknown"
         e["counts"][c] = e["counts"].get(c, 0) + 1
 
@@ -217,7 +220,35 @@ def main() -> int:
             return (sub_num, date_num, tag)
 
         subs = sorted(e["sublevels"], key=sub_key)
-        sub_lines = "\n".join(f"- {esc(s)}" for s in subs) if subs else "—"
+
+        # Per-sublevel lines: passing sublevels link their AnyKernel3
+        # artifact (KernelSU-Next preferred, then KernelSU, then ReSukiSU);
+        # sublevels with any failed/cancelled job get a ❌ mark and no link.
+        art_base = args.nightly_url.rsplit("/actions/runs/", 1)[0]
+        sub_lines = []
+        for s in subs:
+            sj = e["sub_jobs"].get(s, {})
+            bad = sj.get("failure", 0) + sj.get("cancelled", 0) + \
+                sj.get("startup_failure", 0)
+            if bad:
+                sub_lines.append(f"- ❌ {esc(s)}")
+                continue
+            link_id = None
+            for fl in ("KernelSU-Next", "KernelSU", "ReSukiSU"):
+                art_name = f"{s}-{fl}-AnyKernel3"
+                for a in artifacts:
+                    if a.get("name") == art_name and "id" in a:
+                        link_id = a["id"]
+                        break
+                if link_id:
+                    break
+            if link_id:
+                url = f"{art_base}/actions/artifacts/{link_id}.zip"
+                sub_lines.append(f"- <a href=\"{html.escape(url, quote=True)}\">"
+                                 f"{esc(s)}</a>")
+            else:
+                sub_lines.append(f"- {esc(s)}")
+        sub_text = "\n".join(sub_lines) if sub_lines else "—"
 
         # Flavors, each linking its manager APK when the run uploaded one.
         # The flavor name links the stock manager; KernelSU-Next gets a
