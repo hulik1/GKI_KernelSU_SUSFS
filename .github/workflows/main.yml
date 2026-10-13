@@ -1134,12 +1134,12 @@ jobs:
           : > /tmp/jobs.json
           for page in $(seq 1 12); do
             got=""
-            for try in 1 2 3 4 5; do
+            for try in 1 2 3 4 5 6 7 8; do
               if gh api \
                 "repos/${{ github.repository }}/actions/runs/${RUN_ID}/jobs?per_page=100&page=${page}" \
                 > /tmp/jobs_page.json; then got=1; break; fi
-              echo "WARN: jobs page ${page} fetch attempt ${try} failed; retrying in $((try*10))s"
-              sleep $((try*10))
+              echo "WARN: jobs page ${page} fetch attempt ${try} failed; retrying in $((try*30))s"
+              sleep $((try*30))
             done
             if [ -z "$got" ]; then
               if [ "$page" -gt 1 ]; then
