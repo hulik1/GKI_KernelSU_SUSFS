@@ -135,7 +135,12 @@ on:
     - cron: '0 5 * * 1'  # Monday 12am EST (5am UTC)
 
 jobs:
+  # Fork gate (#328): scheduled (cron) runs only proceed when the repo sets
+  # the Actions variable ENABLE_SCHEDULED_BUILDS=true. Forks don't copy
+  # variables, so their inherited nightly+sync crons skip (no minutes burned);
+  # workflow_dispatch is unaffected. Upstream sets the variable to 'true'.
   resolve-sources:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && vars.ENABLE_SCHEDULED_BUILDS == 'true')
     runs-on: ubuntu-latest
     outputs:
       nomount_commit: ${{ steps.resolve.outputs.nomount_commit }}
@@ -1051,7 +1056,7 @@ jobs:
     # when some jobs failed - the counts carry the bad news. Non-fatal by
     # design: a Telegram outage must never fail a build.
     name: Telegram Announce
-    if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') }}
+    if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && vars.ENABLE_SCHEDULED_BUILDS == 'true')) }}
     needs:
     - resolve-sources
     - build-android12-5-10
@@ -1906,7 +1911,7 @@ jobs:
         exit "$failed"
 
   notes-preview:
-    if: always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
+    if: always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && vars.ENABLE_SCHEDULED_BUILDS == 'true'))
     needs: [resolve-sources, build-android12-5-10, build-android13-5-10, build-android13-5-15, build-android14-5-15, build-android14-6-1, build-android15-6-6, build-android16-6-12]
     runs-on: ubuntu-latest
     steps:
