@@ -916,3 +916,59 @@ jobs:
         path: /tmp/build-summary-${{ env.SUMMARY_BASE }}.md
         if-no-files-found: warn
         compression-level: 9
+
+    # --- Self-reporting digest record -------------------------------------
+    # The Telegram announce assembles its digest from these records instead
+    # of bulk-fetching the jobs API at announce time (600+ job listings
+    # 502/504 under platform stress). See assemble_digest_input.py. These
+    # MUST stay the last steps of the job: job.status is only meaningful
+    # once every earlier step has run.
+    - name: Write digest record
+      if: always()
+      id: digest-record
+      shell: bash
+      env:
+        DR_FAMILY: build-${{ inputs.android_version }}-${{ inputs.kernel_version }}
+        DR_TAG: ${{ inputs.kernel_version }}.${{ inputs.sublevel }}-${{ inputs.android_version }}-${{ inputs.os_patch_level }}
+        DR_FLAVOR: ${{ inputs.variant }}
+        DR_ROOT_ID: ${{ inputs.root_flavor }}
+        DR_ROOT_COMMIT: ${{ inputs.root_commit }}
+        DR_CONCLUSION: ${{ job.status }}
+        DR_ARTIFACT_ID: ${{ steps.kernel-artifact.outputs.artifact-id }}
+        DR_ARTIFACT_NAME: ${{ steps.extract.outputs.file_name }}-AnyKernel3
+        DR_PAGE_SIZE: ${{ inputs.page_size }}
+      run: |
+        set -euo pipefail
+        family="$(printf '%s' "$DR_FAMILY" | tr ' .' '--')"
+        tag="$(printf '%s' "$DR_TAG" | tr -c 'a-zA-Z0-9.' '-')"
+        flavor="$(printf '%s' "$DR_FLAVOR" | tr -c 'a-zA-Z0-9' '-')"
+        slug="rec-${family}-${flavor}-${tag}"
+        # 16k page-size legs share tag+flavor with the 4k leg - keep them
+        # distinct so concurrent uploads don't 422 on a duplicate name.
+        [ "$DR_PAGE_SIZE" = "16k" ] && slug="${slug}-16k"
+        slug="$(printf '%s' "$slug" | cut -c1-140)"
+        mkdir -p /tmp/digest_rec
+        python3 - > "/tmp/digest_rec/${slug}.json" <<'PYEOF'
+        import json, os
+        print(json.dumps({
+            "kind": "kernel-leg",
+            "family": os.environ["DR_FAMILY"],
+            "tag": os.environ["DR_TAG"],
+            "flavor": os.environ["DR_FLAVOR"],
+            "root_id": os.environ["DR_ROOT_ID"],
+            "root_commit": os.environ["DR_ROOT_COMMIT"],
+            "conclusion": os.environ["DR_CONCLUSION"],
+            "artifact_id": os.environ["DR_ARTIFACT_ID"],
+            "artifact_name": os.environ["DR_ARTIFACT_NAME"],
+        }))
+        PYEOF
+        echo "slug=$slug" >> "$GITHUB_OUTPUT"
+
+    - name: Upload digest record
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ steps.digest-record.outputs.slug }}
+        path: /tmp/digest_rec/${{ steps.digest-record.outputs.slug }}.json
+        if-no-files-found: error
+        compression-level: 0

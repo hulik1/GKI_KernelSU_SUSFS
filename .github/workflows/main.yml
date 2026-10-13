@@ -781,11 +781,39 @@ jobs:
           merge-multiple: true
 
       - name: Upload ${{ matrix.item.apk }} as its own artifact
+        id: apk-artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.item.apk }}
           path: manager_apks/${{ matrix.item.apk }}
           if-no-files-found: error
+
+      # Self-report record for the Telegram announce (see
+      # assemble_digest_input.py): carries this manager artifact's id so
+      # the digest can deep-link it without listing run artifacts via REST.
+      - name: Write + upload digest record (manager)
+        shell: bash
+        env:
+          DR_NAME: ${{ matrix.item.apk }}
+          DR_ID: ${{ steps.apk-artifact.outputs.artifact-id }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/digest_rec
+          python3 - > "/tmp/digest_rec/${DR_NAME}.json" <<'PYEOF'
+          import json, os
+          print(json.dumps({
+              "kind": "manager",
+              "artifact_name": os.environ["DR_NAME"],
+              "artifact_id": os.environ["DR_ID"],
+          }))
+          PYEOF
+      - name: Upload digest record (manager)
+        uses: actions/upload-artifact@v7
+        with:
+          name: rec-manager-${{ matrix.item.apk }}
+          path: /tmp/digest_rec/${{ matrix.item.apk }}.json
+          if-no-files-found: error
+          compression-level: 0
 
   build-nomount-module:
     needs: resolve-sources
@@ -1118,6 +1146,37 @@ jobs:
             sleep 3
           done
           echo "WARN: local Bot API server did not come up; falling back to the cloud API (plain HTML cards)."
+
+      # --- Records-first digest input ---------------------------------------
+      # Per-leg self-report records (rec-* artifacts uploaded by every build
+      # leg and manager job) replace the bulk jobs/artifacts REST fetches,
+      # which 502/504 on 600+ job runs under platform stress. The download
+      # uses the runtime artifact service, not the REST API. If no records
+      # are found (run predates them / upload failure), the Post step below
+      # falls back to the old REST fetch.
+      - name: Download per-leg digest records
+        continue-on-error: true
+        uses: actions/download-artifact@v7
+        with:
+          pattern: rec-*
+          merge-multiple: true
+          path: /tmp/recs
+
+      - name: Assemble digest input from records
+        shell: bash
+        run: |
+          set -uo pipefail
+          if python3 .github/scripts/assemble_digest_input.py \
+              --records-dir /tmp/recs \
+              --jobs-out /tmp/jobs.json \
+              --artifacts-out /tmp/artifacts.json; then
+            echo "DIGEST_SOURCE=records" >> "$GITHUB_ENV"
+            echo "Digest input assembled from per-leg records (no jobs API calls)."
+          else
+            echo "DIGEST_SOURCE=api" >> "$GITHUB_ENV"
+            echo "No usable records; will fall back to the jobs API fetch."
+          fi
+
       - name: Post per-family digests to Telegram topics
         shell: bash
         env:
@@ -1131,6 +1190,7 @@ jobs:
           RUN_ID="${{ github.run_id }}"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${RUN_ID}"
           NIGHTLY_URL="https://nightly.link/${{ github.repository }}/actions/runs/${RUN_ID}"
+          if [ "${DIGEST_SOURCE:-api}" != "records" ]; then
           # Collect every page of the run's jobs (large runs exceed one page).
           # Page-by-page with per-page retries: a monolithic `gh api
           # --paginate` 504s on 600+ job runs and used to exit 0 silently -
@@ -1161,13 +1221,17 @@ jobs:
           gh api --paginate \
             "repos/${{ github.repository }}/actions/runs/${RUN_ID}/artifacts?per_page=100" \
             > /tmp/artifacts.json || true
+          fi
           # No kernels built -> nothing to announce. The gate is the
           # artifact list: zero AnyKernel3 zips means every build failed
           # (or nothing ran), and a card that only says "it all failed"
           # is noise. A missing/unparseable artifact list still announces
           # (old behavior) rather than silently dropping good builds.
+          # Accepts both shapes: gh api --paginate page objects
+          # ([{artifacts: [...]}, ...]) and the records-assembled flat
+          # array of artifact dicts ([{name, id}, ...]).
           if [ -s /tmp/artifacts.json ] \
-             && AK3_COUNT=$(jq -s '[.[] | .artifacts[]? | select((.name // "") | contains("AnyKernel3"))] | length' /tmp/artifacts.json 2>/dev/null) \
+             && AK3_COUNT=$(jq -s '[.[] | if type == "object" and has("artifacts") then .artifacts[]? elif type == "array" then .[] else . end | select(((.name // "") | contains("AnyKernel3")))] | length' /tmp/artifacts.json 2>/dev/null) \
              && [ "${AK3_COUNT:-0}" -eq 0 ]; then
             echo "No AnyKernel3 artifacts in this run - no kernels built; skipping Telegram announce."
             exit 0
