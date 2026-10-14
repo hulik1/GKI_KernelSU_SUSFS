@@ -781,39 +781,11 @@ jobs:
           merge-multiple: true
 
       - name: Upload ${{ matrix.item.apk }} as its own artifact
-        id: apk-artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.item.apk }}
           path: manager_apks/${{ matrix.item.apk }}
           if-no-files-found: error
-
-      # Self-report record for the Telegram announce (see
-      # assemble_digest_input.py): carries this manager artifact's id so
-      # the digest can deep-link it without listing run artifacts via REST.
-      - name: Write + upload digest record (manager)
-        shell: bash
-        env:
-          DR_NAME: ${{ matrix.item.apk }}
-          DR_ID: ${{ steps.apk-artifact.outputs.artifact-id }}
-        run: |
-          set -euo pipefail
-          mkdir -p /tmp/digest_rec
-          python3 - > "/tmp/digest_rec/${DR_NAME}.json" <<'PYEOF'
-          import json, os
-          print(json.dumps({
-              "kind": "manager",
-              "artifact_name": os.environ["DR_NAME"],
-              "artifact_id": os.environ["DR_ID"],
-          }))
-          PYEOF
-      - name: Upload digest record (manager)
-        uses: actions/upload-artifact@v7
-        with:
-          name: rec-manager-${{ matrix.item.apk }}
-          path: /tmp/digest_rec/${{ matrix.item.apk }}.json
-          if-no-files-found: error
-          compression-level: 0
 
   build-nomount-module:
     needs: resolve-sources
@@ -1147,34 +1119,63 @@ jobs:
           done
           echo "WARN: local Bot API server did not come up; falling back to the cloud API (plain HTML cards)."
 
-      # --- Records-first digest input ---------------------------------------
-      # Per-leg self-report records (rec-* artifacts uploaded by every build
-      # leg and manager job) replace the bulk jobs/artifacts REST fetches,
-      # which 502/504 on 600+ job runs under platform stress. The download
-      # uses the runtime artifact service, not the REST API. If no records
-      # are found (run predates them / upload failure), the Post step below
-      # falls back to the old REST fetch.
-      - name: Download per-leg digest records
+      # --- BuildInfo-first digest input --------------------------------------
+      # The BuildInfo artifacts every successful leg ALREADY uploads carry
+      # everything the digest needs (kmi, root id/commit, kernel artifact
+      # id inside artifact_url). The announce downloads them with
+      # actions/download-artifact (runtime artifact service - not the REST
+      # jobs listing, which 502/504s on 600+ job runs) and assembles the
+      # digest input from them. Zero new artifacts. If a family failed /
+      # was cancelled (or no BuildInfo exists), the assembler exits 3 and
+      # the Post step falls back to the old REST fetch for the full
+      # picture with per-leg failure marks.
+      - name: Download BuildInfo artifacts
         continue-on-error: true
         uses: actions/download-artifact@v7
         with:
-          pattern: rec-*
-          merge-multiple: true
-          path: /tmp/recs
+          pattern: '*-BuildInfo'
+          path: /tmp/buildinfo
 
-      - name: Assemble digest input from records
+      - name: Assemble digest input from BuildInfo
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FR_1: ${{ needs.build-android12-5-10.result }}
+          FR_2: ${{ needs.build-android13-5-10.result }}
+          FR_3: ${{ needs.build-android13-5-15.result }}
+          FR_4: ${{ needs.build-android14-5-15.result }}
+          FR_5: ${{ needs.build-android14-6-1.result }}
+          FR_6: ${{ needs.build-android15-6-6.result }}
+          FR_7: ${{ needs.build-android16-6-12.result }}
         run: |
           set -uo pipefail
+          results="build-android12-5-10=$FR_1,build-android13-5-10=$FR_2,build-android13-5-15=$FR_3,build-android14-5-15=$FR_4,build-android14-6-1=$FR_5,build-android15-6-6=$FR_6,build-android16-6-12=$FR_7"
           if python3 .github/scripts/assemble_digest_input.py \
-              --records-dir /tmp/recs \
+              --buildinfo-dir /tmp/buildinfo \
+              --family-results "$results" \
               --jobs-out /tmp/jobs.json \
               --artifacts-out /tmp/artifacts.json; then
-            echo "DIGEST_SOURCE=records" >> "$GITHUB_ENV"
-            echo "Digest input assembled from per-leg records (no jobs API calls)."
+            echo "DIGEST_SOURCE=buildinfo" >> "$GITHUB_ENV"
+            echo "Digest input assembled from BuildInfo artifacts (no jobs API calls)."
+            # Manager deep-links: manager APK artifacts are parent-run
+            # artifacts uploaded last, so one LIGHT listing page holds
+            # them. Failure here only drops manager buttons, not the post.
+            if gh api \
+              "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts?per_page=100&page=1" \
+              > /tmp/artifacts_p1.json 2>/dev/null; then
+              jq -s '[.[0].artifacts[]? | {name, id}]' /tmp/artifacts_p1.json > /tmp/mgr.json
+              if [ -s /tmp/mgr.json ] && [ "$(jq length /tmp/mgr.json)" -gt 0 ]; then
+                jq -s '.[0] + .[1] | unique_by(.name)' \
+                  /tmp/artifacts.json /tmp/mgr.json > /tmp/artifacts.merged.json \
+                  && mv /tmp/artifacts.merged.json /tmp/artifacts.json \
+                  && echo "merged $(jq length /tmp/mgr.json) listing-page artifacts (manager links)."
+              fi
+            else
+              echo "WARN: manager artifacts page fetch failed; posting without manager deep-links."
+            fi
           else
             echo "DIGEST_SOURCE=api" >> "$GITHUB_ENV"
-            echo "No usable records; will fall back to the jobs API fetch."
+            echo "BuildInfo input unusable; will fall back to the jobs API fetch."
           fi
 
       - name: Post per-family digests to Telegram topics
@@ -1190,7 +1191,7 @@ jobs:
           RUN_ID="${{ github.run_id }}"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${RUN_ID}"
           NIGHTLY_URL="https://nightly.link/${{ github.repository }}/actions/runs/${RUN_ID}"
-          if [ "${DIGEST_SOURCE:-api}" != "records" ]; then
+          if [ "${DIGEST_SOURCE:-api}" != "buildinfo" ]; then
           # Collect every page of the run's jobs (large runs exceed one page).
           # Page-by-page with per-page retries: a monolithic `gh api
           # --paginate` 504s on 600+ job runs and used to exit 0 silently -

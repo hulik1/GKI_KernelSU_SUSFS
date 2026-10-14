@@ -175,42 +175,6 @@ jobs:
           echo "matrix=$FINAL" >> "$GITHUB_OUTPUT"
           echo "version_slug=$(jq -r '.include[0].version' <<< "$FINAL" | tr '._' '-')" >> "$GITHUB_OUTPUT"
 
-      # Self-report record for the Telegram announce (see
-      # assemble_digest_input.py): keeps the per-family job counts identical
-      # to the old jobs-API view without any REST call at announce time.
-      - name: Write + upload digest record (helper)
-        if: always()
-        shell: bash
-        env:
-          DR_FAMILY: build-${{ steps.final.outputs.version_slug }}
-          DR_ROOT_ID: ${{ inputs.root_flavor }}
-          DR_ROOT_COMMIT: ${{ inputs.root_commit }}
-          DR_CONCLUSION: ${{ job.status }}
-        run: |
-          set -euo pipefail
-          family="$(printf '%s' "$DR_FAMILY" | tr -c 'a-zA-Z0-9' '-')"
-          rid="$(printf '%s' "$DR_ROOT_ID" | tr -c 'a-zA-Z0-9' '-')"
-          mkdir -p /tmp/digest_rec
-          python3 - > "/tmp/digest_rec/rec-helper-${family}-${rid}-generate-matrix.json" <<'PYEOF'
-          import json, os
-          print(json.dumps({
-              "kind": "helper",
-              "family": os.environ["DR_FAMILY"],
-              "helper": "generate-matrix",
-              "root_id": os.environ["DR_ROOT_ID"],
-              "root_commit": os.environ["DR_ROOT_COMMIT"],
-              "conclusion": os.environ["DR_CONCLUSION"],
-          }))
-          PYEOF
-      - name: Upload digest record (helper)
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: rec-helper-${{ steps.final.outputs.version_slug }}-${{ inputs.root_flavor }}-generate-matrix
-          path: /tmp/digest_rec/rec-helper-${{ steps.final.outputs.version_slug }}-${{ inputs.root_flavor }}-generate-matrix.json
-          if-no-files-found: error
-          compression-level: 0
-
   stock-configs:
     # Produces the stock GKI configs ONCE per family. main.yml sets
     # produce_stock_configs=false for the non-first flavor legs of an
@@ -346,43 +310,6 @@ jobs:
           name: stock-configs-${{ steps.prep.outputs.version_slug }}
           path: ${{ runner.temp }}/stock-configs/stock_*.config
           if-no-files-found: warn
-
-      # Self-report record for the Telegram announce (see
-      # assemble_digest_input.py); mirrors the generate-matrix one. Runs only
-      # on producer legs (this job itself is skipped otherwise), so skipped
-      # legs contribute nothing - same as the jobs-API view.
-      - name: Write + upload digest record (helper)
-        if: always()
-        shell: bash
-        env:
-          DR_FAMILY: build-${{ steps.prep.outputs.version_slug }}
-          DR_ROOT_ID: ${{ inputs.root_flavor }}
-          DR_ROOT_COMMIT: ${{ inputs.root_commit }}
-          DR_CONCLUSION: ${{ job.status }}
-        run: |
-          set -euo pipefail
-          family="$(printf '%s' "$DR_FAMILY" | tr -c 'a-zA-Z0-9' '-')"
-          rid="$(printf '%s' "$DR_ROOT_ID" | tr -c 'a-zA-Z0-9' '-')"
-          mkdir -p /tmp/digest_rec
-          python3 - > "/tmp/digest_rec/rec-helper-${family}-${rid}-stock-configs.json" <<'PYEOF'
-          import json, os
-          print(json.dumps({
-              "kind": "helper",
-              "family": os.environ["DR_FAMILY"],
-              "helper": "stock-configs",
-              "root_id": os.environ["DR_ROOT_ID"],
-              "root_commit": os.environ["DR_ROOT_COMMIT"],
-              "conclusion": os.environ["DR_CONCLUSION"],
-          }))
-          PYEOF
-      - name: Upload digest record (helper)
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: rec-helper-${{ steps.prep.outputs.version_slug }}-${{ inputs.root_flavor }}-stock-configs
-          path: /tmp/digest_rec/rec-helper-${{ steps.prep.outputs.version_slug }}-${{ inputs.root_flavor }}-stock-configs.json
-          if-no-files-found: error
-          compression-level: 0
 
   build:
     # stock-configs may be skipped on non-producer legs (produce_stock_configs=false)
