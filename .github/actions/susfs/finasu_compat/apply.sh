@@ -55,6 +55,16 @@ if [ "$KSU_VARIANT" == "FinaSU" ]; then
     sed -i 's|^kernelsu-objs += hook/setuid_hook.o$|kernelsu-objs += hook/setuid_hook.o\nkernelsu-objs += hook/lsm_hook.o\nkernelsu-objs += infra/symbol_resolver.o\n\nifeq ($(CONFIG_ARM64),y)\nkernelsu-objs += hook/arm64/patch_memory.o\nelse ifeq ($(CONFIG_X86_64),y)\nkernelsu-objs += hook/x86_64/patch_memory.o\nelse ifeq ($(CONFIG_RISCV),y)\nkernelsu-objs += hook/riscv64/patch_memory.o\nendif|' "$FINASU_KSU/Kbuild"
   fi
 
+  # 0c) 40c97e24 起 preinit 依赖 hook/<arch>/syscall_hook.o（ksu_syscall_table），
+  #     而补丁/上面的恢复可能只保留 patch_memory —— 逐架构补回缺失项
+  for ARCH in arm64 x86_64 riscv64; do
+    if [ -f "$FINASU_KSU/hook/$ARCH/syscall_hook.c" ] && \
+       ! grep -q "hook/$ARCH/syscall_hook.o" "$FINASU_KSU/Kbuild" && \
+       grep -q "hook/$ARCH/patch_memory.o" "$FINASU_KSU/Kbuild"; then
+      sed -i "s|^kernelsu-objs += hook/$ARCH/patch_memory.o\$|kernelsu-objs += hook/$ARCH/patch_memory.o\nkernelsu-objs += hook/$ARCH/syscall_hook.o|" "$FINASU_KSU/Kbuild"
+    fi
+  done
+
   # 0b) SUSFS 内核补丁在 security/selinux/*.c 中以 extern 引用了这些符号，需与 BakaSU 一致
   #     改为全局定义，否则 ThinLTO 链接阶段会报 undefined symbol。
   #     - 6 个通用符号（>=5.10 用到）：
