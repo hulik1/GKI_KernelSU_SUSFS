@@ -7,11 +7,6 @@ permissions:
 concurrency:
   group: build-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: false
-  # Default is queue: single — one running, one pending. A third dispatch
-  # displaces the pending one, which cancelled a queued build. queue: max
-  # holds up to 100 pending runs and runs them FIFO, so back-to-back
-  # dispatches run in order instead of overwriting each other.
-  queue: max
 
 on:
   workflow_dispatch:
@@ -270,7 +265,7 @@ jobs:
           PIN_SUKISU_ULTRA="6c284e957feaa9a388a9f1c37dc4ec80d95e434b"
           # FinaSU: susfs-integrated fork of the tiann restructure; pin tracks
           # the susfs4ksu v2.3 ABI era its supercall dispatch is written against.
-          PIN_FINASU="650a0f745b45674ff6114193ee700a396ea1fdf8"
+          PIN_FINASU="40c97e24d155f23364d8ebfe4b247034dc6547ef"
           declare -A PIN_SUSFS=(
             [susfs_commit_android12_5_10]="82f08351fadb8b19dd6591bd14634d02ad832145"
             [susfs_commit_android13_5_10]="14c45388ec8cb3ca72f2ac8bf83097b9285a8418"
@@ -1454,7 +1449,6 @@ jobs:
   update-verified-pins:
     concurrency:
       group: update-verified-pins-${{ github.repository }}
-      queue: max
       cancel-in-progress: false
     if: "github.event_name == 'workflow_dispatch' && !inputs.test_release_notes && inputs.commit_mode == 'update'"
     runs-on: ubuntu-latest
