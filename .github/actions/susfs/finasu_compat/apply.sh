@@ -58,9 +58,9 @@ if [ "$KSU_VARIANT" == "FinaSU" ]; then
   # 0c) 40c97e24 起 preinit 依赖 hook/<arch>/syscall_hook.o（ksu_syscall_table），
   #     而补丁/上面的恢复可能只保留 patch_memory —— 逐架构补回缺失项
   for ARCH in arm64 x86_64 riscv64; do
-    if [ -f "$FINASU_KSU/hook/$ARCH/syscall_hook.c" ] && \
-       ! grep -q "hook/$ARCH/syscall_hook.o" "$FINASU_KSU/Kbuild" && \
-       grep -q "hook/$ARCH/patch_memory.o" "$FINASU_KSU/Kbuild"; then
+    if [ -f "$FINASU_KSU/hook/$ARCH/syscall_hook.c" ] &&
+      ! grep -q "hook/$ARCH/syscall_hook.o" "$FINASU_KSU/Kbuild" &&
+      grep -q "hook/$ARCH/patch_memory.o" "$FINASU_KSU/Kbuild"; then
       sed -i "s|^kernelsu-objs += hook/$ARCH/patch_memory.o\$|kernelsu-objs += hook/$ARCH/patch_memory.o\nkernelsu-objs += hook/$ARCH/syscall_hook.o|" "$FINASU_KSU/Kbuild"
     fi
   done
@@ -311,11 +311,17 @@ PYEOF
   #      而 ksud_integration/sucompat 的调用点还在 → 编译期 undeclared identifier。
   if [ -f "$FINASU_KSI" ]; then
     for KEY in ksu_is_init_rc_hook_enabled ksu_is_input_hook_enabled is_init_second_stage_not_executed is_first_zygote; do
-      if ! grep -q "DEFINE_STATIC_KEY_TRUE($KEY)" "$FINASU_KSI" && \
-         grep -q "$KEY" "$FINASU_KSI"; then
-        sed -i "s|^#include \"hook/syscall_event_bridge.h\"$|#include \"hook/syscall_event_bridge.h\"\n\nDEFINE_STATIC_KEY_TRUE($KEY);|" "$FINASU_KSI"
+      if ! grep -q "DEFINE_STATIC_KEY_TRUE($KEY)" "$FINASU_KSI" &&
+        ! grep -rq "DEFINE_STATIC_KEY_TRUE($KEY)" "$FINASU_KSU" --include="*.c" --include="*.h" &&
+        grep -q "$KEY" "$FINASU_KSI"; then
+        sed -i "s|^#include \"hook/syscall_event_bridge.h\"$|#include \"hook/syscall_event_bridge.h\"\n#include \"linux/jump_label.h\"\n\nDEFINE_STATIC_KEY_TRUE($KEY);|" "$FINASU_KSI"
       fi
     done
+    # 跳转标签定义存在但 jump_label 头缺失时补上（上游补丁的定义 hunk 不带 include）
+    if grep -q 'DEFINE_STATIC_KEY_TRUE' "$FINASU_KSI" &&
+       ! grep -q 'jump_label' "$FINASU_KSI"; then
+      sed -i 's|^#include "hook/syscall_event_bridge.h"$|#include "hook/syscall_event_bridge.h"\n#include "linux/jump_label.h"|' "$FINASU_KSI"
+    fi
   fi
 
   # 2) 恢复 ksu_late_loaded / ksu_bundled（补丁从 ksu.h 与 init.c 删除，
