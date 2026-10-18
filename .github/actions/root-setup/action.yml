@@ -5,7 +5,7 @@ inputs:
     description: "kernelsu, next, bakasu, finasu, sukisu-ultra, or kowsu"
     required: true
   commit:
-    description: "Full immutable commit SHA"
+    description: 'Full immutable commit SHA'
     required: true
 
 runs:

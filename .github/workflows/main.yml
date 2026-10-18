@@ -2265,56 +2265,56 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           path: release-assets
-          pattern: "5.10.*-android12-*-AnyKernel3"
+          pattern: '5.10.*-android12-*-AnyKernel3'
           merge-multiple: false
 
       - name: Download AnyKernel3 (5.10 android13)
         uses: actions/download-artifact@v7
         with:
           path: release-assets
-          pattern: "5.10.*-android13-*-AnyKernel3"
+          pattern: '5.10.*-android13-*-AnyKernel3'
           merge-multiple: false
 
       - name: Download AnyKernel3 (5.15 android13)
         uses: actions/download-artifact@v7
         with:
           path: release-assets
-          pattern: "5.15.*-android13-*-AnyKernel3"
+          pattern: '5.15.*-android13-*-AnyKernel3'
           merge-multiple: false
 
       - name: Download AnyKernel3 (5.15 android14)
         uses: actions/download-artifact@v7
         with:
           path: release-assets
-          pattern: "5.15.*-android14-*-AnyKernel3"
+          pattern: '5.15.*-android14-*-AnyKernel3'
           merge-multiple: false
 
       - name: Download AnyKernel3 (6.1 android14)
         uses: actions/download-artifact@v7
         with:
           path: release-assets
-          pattern: "6.1.*-android14-*-AnyKernel3"
+          pattern: '6.1.*-android14-*-AnyKernel3'
           merge-multiple: false
 
       - name: Download AnyKernel3 (6.6 android15)
         uses: actions/download-artifact@v7
         with:
           path: release-assets
-          pattern: "6.6.*-android15-*-AnyKernel3"
+          pattern: '6.6.*-android15-*-AnyKernel3'
           merge-multiple: false
 
       - name: Download AnyKernel3 (6.12 android16)
         uses: actions/download-artifact@v7
         with:
           path: release-assets
-          pattern: "6.12.*-android16-*-AnyKernel3"
+          pattern: '6.12.*-android16-*-AnyKernel3'
           merge-multiple: false
 
       - name: Download NoMount metamodule
         uses: actions/download-artifact@v7
         with:
           path: release-assets
-          pattern: "*NoMount-Metamodule"
+          pattern: '*NoMount-Metamodule'
           merge-multiple: false
 
       - name: Zip artifacts for Release
