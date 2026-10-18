@@ -316,6 +316,14 @@ PYEOF
     sed -i 's|^#include "hook/setuid_hook.h"$|#include "hook/setuid_hook.h"\n#include "hook/lsm_hook.h"|' "$FINASU_INIT"
   fi
 
+  # 4a3) sucompat.c：40c97e24 起 userspace_stack_buffer 移入 include/util.h，
+  #      补丁/适配层重写的 include 块可能丢掉该 include，而 ksud_user_path 等仍调用它
+  FINASU_SUCOMPAT="$FINASU_KSU/feature/sucompat.c"
+  if [ -f "$FINASU_SUCOMPAT" ] && grep -q 'userspace_stack_buffer(' "$FINASU_SUCOMPAT" && \
+    ! grep -q '#include "util.h"' "$FINASU_SUCOMPAT" && grep -q 'userspace_stack_buffer' "$FINASU_KSU/include/util.h" 2>/dev/null; then
+    sed -i 's|^#include "feature/sucompat.h"$|#include "feature/sucompat.h"\n#include "util.h"|' "$FINASU_SUCOMPAT"
+  fi
+
   # 4b) SUSFS 初始化（补丁已在 init.c 顶部加入 susfs.h 头文件）
   if ! grep -q 'susfs_init();' "$FINASU_INIT"; then
     sed -i 's|^[[:space:]]*ksu_feature_init();$|#ifdef CONFIG_KSU_SUSFS\n    susfs_init();\n#endif // #ifdef CONFIG_KSU_SUSFS\n    ksu_feature_init();|' "$FINASU_INIT"
@@ -360,6 +368,9 @@ KSU_KBUILD_EOF
     ! grep -q 'ksu_lsm_hook_exit();' "$FINASU_INIT" ||
     ! grep -q '#include "hook/lsm_hook.h"' "$FINASU_INIT" ||
     ! grep -q '^bool ksu_late_loaded;' "$FINASU_INIT" ||
+    ! { ! grep -q 'userspace_stack_buffer(' "$FINASU_KSU/feature/sucompat.c" 2>/dev/null || \
+        grep -q '#include "util.h"' "$FINASU_KSU/feature/sucompat.c" 2>/dev/null || \
+        ! grep -q 'userspace_stack_buffer' "$FINASU_KSU/include/util.h" 2>/dev/null; } ||
     ! grep -q 'extern bool ksu_late_loaded;' "$FINASU_KSU_H" ||
     ! grep -q 'hook/lsm_hook.o' "$FINASU_KSU/Kbuild" ||
     ! grep -q 'infra/symbol_resolver.o' "$FINASU_KSU/Kbuild" ||
