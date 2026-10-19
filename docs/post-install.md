@@ -2,7 +2,7 @@
 
 After flashing a Wild Kernels GKI kernel, do these checks in order.
 
-## 1. Download matching manager — KernelSU / KernelSU-Next / ReSukiSU / FinaSU
+## 1. Download matching manager — KernelSU / KernelSU-Next / BakaSU / FinaSU / Suki-SU Ultra / KowSU
 
 - [ ] Download the `manager-apk-*` from the same [Releases](https://github.com/WildKernels/GKI_KernelSU_SUSFS/releases) page you got the kernel from.
 - [ ] Install / update it over any existing manager.
