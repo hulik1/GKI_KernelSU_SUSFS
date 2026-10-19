@@ -20,7 +20,7 @@ Generic kernels built on [Google's GKI sources](https://android.googlesource.com
 
 ## Features
 
-- **KernelSU / KernelSU-Next / ReSukiSU** — root implementations
+- **KernelSU / KernelSU-Next / BakaSU** — root implementations
 - **susfs4ksu** — root hiding (incl. Ptrace Leak Fix, Unicode Fix)
 - **NoMount / Mountify** — mount metamodules
 - **Baseband Guard** — partition protection
