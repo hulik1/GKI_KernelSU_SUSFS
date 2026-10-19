@@ -65,7 +65,7 @@ See **[Installation Guide](https://github.com/WildKernels/GKI_KernelSU_SUSFS/wik
 - **KernelSU** — [tiann](https://github.com/tiann/KernelSU)
 - **KernelSU-Next** — [rifsxd](https://github.com/KernelSU-Next/KernelSU-Next)
 - **KernelSU-Next SUSFS Fork** — [pershoot](https://github.com/pershoot/KernelSU-Next)
-- **ReSukiSU** — [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU)
+- **BakaSU** (formerly ReSukiSU) — [BakaSU](https://github.com/Baka-SU/BakaSU)
 - **Magic-KSU** — [5ec1cff](https://github.com/5ec1cff/KernelSU)
 - **SUSFS** — [simonpunk](https://gitlab.com/simonpunk/susfs4ksu)
 - **SUSFS Module** — [sidex15](https://github.com/sidex15)
