@@ -1,4 +1,7 @@
    {
+  "version": "android12-5.10",
+  "include": [
+    {
       "sublevel": "246",
       "date": "2025-12"
     },
